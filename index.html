@@ -355,6 +355,14 @@
   .sig-card .sig-foot{display:flex; align-items:center; gap:6px; font-size:11.5px; color:var(--ink-muted); margin-top:2px;}
   .sig-legend{display:flex; flex-wrap:wrap; gap:6px 16px; font-size:12px; color:var(--ink-muted); margin-top:8px;}
   .sig-legend span{display:inline-flex; align-items:center; gap:6px;}
+
+  /* ---------- como ler (gráfico por loja) ---------- */
+  .how-to{background:var(--surface-2); border:1px solid var(--border); border-radius:10px; padding:10px 14px; margin:6px 0 12px; font-size:12.5px; color:var(--ink-2); line-height:1.5;}
+  .how-to b{color:var(--ink);}
+  .how-to ul{margin:4px 0 0; padding-left:18px;}
+  .how-to li{margin:2px 0;}
+  .div-meta{stroke:var(--good); stroke-width:1.2; stroke-dasharray:2,3;}
+  .div-meta-label{fill:var(--good); font-size:10.5px; font-weight:700;}
 </style>
 
 <div class="page">
@@ -489,7 +497,17 @@
 
     <div class="card">
       <div class="chart-title">Resultado operacional por loja, do melhor para o pior (ago/26)</div>
-      <div class="chart-note">Ordenado por resultado % — a linha tracejada separa as 6 lojas com resultado positivo (acima) das 11 negativas (abaixo)</div>
+      <div class="chart-note">Agosto/2026 · ordenado do melhor para o pior resultado % · passe o mouse na barra para ver os detalhes da loja</div>
+      <div class="how-to">
+        <b>Como ler este gráfico</b>
+        <ul>
+          <li><b>Resultado operacional</b> = faturamento − descontos − cartão/apps − royalties e marketing − CMV − entregas − custos fixos (pessoal, marketing e administrativas). É o que a loja gera com a operação, antes de investimentos e empréstimos.</li>
+          <li>Cada barra mostra esse resultado em <b>% do faturamento líquido</b> da loja: à direita do zero é lucro, à esquerda é prejuízo.</li>
+          <li><b>Sinaleiro:</b> <span class="sig-good">●</span> verde = na meta (≥ 8%) · <span class="sig-warn">●</span> amarelo = lucro, mas abaixo da meta (0% a 8%) · <span class="sig-bad">●</span> vermelho = prejuízo.</li>
+          <li>A linha pontilhada verde marca a meta de 8%; a linha tracejada separa as lojas com lucro (acima) das com prejuízo (abaixo).</li>
+        </ul>
+      </div>
+      <div class="sig-legend" id="divLegend" style="margin:0 0 10px;"></div>
       <svg id="divChart" class="divchart" viewBox="0 0 720 560" preserveAspectRatio="xMidYMid meet"></svg>
     </div>
 
@@ -510,7 +528,7 @@
         <tbody></tbody>
       </table>
     </div>
-    <p class="chart-note" style="margin-top:8px;">Em vermelho: lojas com prejuízo em pelo menos 3 dos últimos 4 meses (mai–ago) — candidatas prioritárias a plano de recuperação individual: <b>Biggs 06, Biggs 10, Mapoli e Isaías 01</b> (negativas nos 4 meses); <b>Biggs 03, 04, 07/Açaí, 08 e 09, Isaías 02, Isaías 03 e Robs</b> (negativas em 3 dos 4 meses). CMV Ideal/Desvio/Impacto: fonte <code>Analise_CMV_Alimentar</code> (Biggs) e <code>Analise_CMV_Rede_Isaias</code> — CMV Ideal = custo de ficha técnica aplicado ao mix real de vendas do mês; Desvio = CMV Real − CMV Ideal; Impacto = quanto isso representou em R$ sobre o faturamento. Robs e Mapoli aparecem com "—" nessas três colunas — ainda não têm CMV Ideal calculado. *Faturamento: líquido de itens (convenção do DRE Voxel) para as 16 lojas; a Biggs 13 é a única exceção e usa faturamento bruto, pois o DRE dela não discrimina o líquido. *Biggs 13 também: CMV, margem e resultado reportados no formato próprio do arquivo enviado (sem cartão/apps/descontos discriminados) — não comparável 1:1 com as demais 16 lojas; seu CMV Ideal usa o proxy de Biggs 04.</p>
+    <p class="chart-note" style="margin-top:8px;">Em vermelho: lojas com prejuízo em pelo menos 3 dos últimos 4 meses (mai–ago) — candidatas prioritárias a plano de recuperação individual: <b>Biggs 06, Biggs 10, Mapoli e Isaías 01</b> (negativas nos 4 meses); <b>Biggs 03, 04, 07/Açaí, 08 e 09, Isaías 02, Isaías 03 e Robs</b> (negativas em 3 dos 4 meses). CMV Ideal/Desvio/Impacto: fonte <code>Analise_CMV_Alimentar</code> (Biggs) e <code>Analise_CMV_Rede_Isaias</code> — CMV Ideal = custo de ficha técnica aplicado ao mix real de vendas do mês; Desvio = CMV Real − CMV Ideal; Impacto = quanto isso representou em R$ sobre o faturamento. Robs e Mapoli aparecem com "—" nessas três colunas — ainda não têm CMV Ideal calculado. *Faturamento: líquido de itens (convenção do DRE Voxel). Na Biggs 13 o líquido é igual ao bruto, porque a planilha dela informa descontos de R$ 0; seu CMV Ideal usa o proxy de Biggs 04.</p>
   </section>
 
   <section id="biggs13">
@@ -1577,7 +1595,7 @@
     // a tabela abaixo mantém a ordem fixa Biggs 01→13, Isaías, Robs, Mapoli para consulta.
     var storesSorted = stores.slice().sort(function(a,b){ return b.pct_lucro_operacional - a.pct_lucro_operacional; });
     var nPos = storesSorted.filter(function(s){ return s.lucro_operacional>0; }).length;
-    var W=760, rowH=32, gap=2, padL=170, padR=90, padT=6;
+    var W=760, rowH=32, gap=2, padL=170, padR=90, padT=22;
     var H = padT + storesSorted.length*(rowH+gap);
     svg.setAttribute('viewBox','0 0 '+W+' '+H);
     var plotL = padL, plotR = W-padR;
@@ -1589,6 +1607,20 @@
     function el(tag, attrs){ var e=document.createElementNS(ns,tag); for(var k in attrs) e.setAttribute(k,attrs[k]); return e; }
 
     svg.appendChild(el('line',{x1:mid,x2:mid,y1:padT,y2:H-4,class:'div-zero'}));
+    var zeroLbl = el('text',{x:mid, y:14, 'text-anchor':'middle', class:'div-row-sub'}); zeroLbl.textContent = '0%'; svg.appendChild(zeroLbl);
+    var metaX = mid + scale(SIG.lop.g);
+    svg.appendChild(el('line',{x1:metaX,x2:metaX,y1:padT-4,y2:H-4,class:'div-meta'}));
+    var metaLbl = el('text',{x:metaX, y:14, 'text-anchor':'middle', class:'div-meta-label'}); metaLbl.textContent = 'meta '+fmt1.format(SIG.lop.g).replace(',0','')+'%'; svg.appendChild(metaLbl);
+
+    var sigCount = {'sig-good':0,'sig-warn':0,'sig-bad':0};
+    storesSorted.forEach(function(s){ sigCount[sigClass('lop', s.pct_lucro_operacional)]++; });
+    document.getElementById('divLegend').innerHTML =
+      '<span><i class="sig-dot sig-good"></i><b style="color:var(--ink)">'+sigCount['sig-good']+'</b> na meta</span>'+
+      '<span><i class="sig-dot sig-warn"></i><b style="color:var(--ink)">'+sigCount['sig-warn']+'</b> com lucro abaixo da meta</span>'+
+      '<span><i class="sig-dot sig-bad"></i><b style="color:var(--ink)">'+sigCount['sig-bad']+'</b> no prejuízo</span>';
+    var SIG_FILL = {'sig-good':'var(--good)','sig-warn':'var(--warning)','sig-bad':'var(--critical)'};
+    var SIG_TXT = {'sig-good':'#ffffff','sig-warn':'#3a2900','sig-bad':'#ffffff'};
+    var SIG_NAME = {'sig-good':'Na meta','sig-warn':'Lucro abaixo da meta','sig-bad':'Prejuízo'};
 
     // divisor entre o bloco positivo e o negativo (contagem já aparece nos cards acima e na nota do gráfico)
     if(nPos>0 && nPos<storesSorted.length){
@@ -1602,12 +1634,13 @@
       var neg = s.pct_lucro_operacional < 0;
       var x0 = neg ? mid+w : mid;
       var barW = Math.abs(w);
-      var barColor = s.dadosIncompletos ? 'var(--warning)' : (neg?'var(--div-neg)':'var(--div-pos)');
+      var sc = sigClass('lop', s.pct_lucro_operacional);
+      var barColor = SIG_FILL[sc];
       var rect = el('rect',{x:x0, y:cy+4, width:Math.max(barW,1.5), height:rowH-8, rx:4, fill: barColor, class:'div-bar'});
       rect.addEventListener('mousemove', function(evt){
         var fatTip = (s.fat_liquido!==null && s.fat_liquido!==undefined) ? s.fat_liquido : s.fat_bruto;
         var fatTipLabel = (s.fat_liquido!==null && s.fat_liquido!==undefined) ? 'Faturamento líquido' : 'Faturamento bruto*';
-        var tip = '<b>'+s.label+'</b> ('+s.legal+')<br>'+fatTipLabel+': '+brl(fatTip)+'<br>Resultado: '+brl(s.lucro_operacional)+' ('+pct(s.pct_lucro_operacional)+')<br>CMV: '+fmt1.format(s.pct_cmv)+'% · Margem contrib.: '+fmt1.format(s.pct_margem_contrib)+'%'+(s.abaixo_equilibrio?'<br><b style="color:#ff9d9d;">Abaixo do ponto de equilíbrio</b>':'');
+        var tip = '<b>'+s.label+'</b> ('+s.legal+')<br>Sinal: '+SIG_NAME[sc]+' (meta ≥ '+fmt1.format(SIG.lop.g)+'%)<br>'+fatTipLabel+': '+brl(fatTip)+'<br>Resultado: '+brl(s.lucro_operacional)+' ('+pct(s.pct_lucro_operacional)+')<br>CMV: '+fmt1.format(s.pct_cmv)+'% · Margem contrib.: '+fmt1.format(s.pct_margem_contrib)+'%'+(s.abaixo_equilibrio?'<br><b style="color:#ff9d9d;">Abaixo do ponto de equilíbrio</b>':'');
         if(s.dadosIncompletos){ tip += '<br><b style="color:#ffd27a;">DRE sem descontos discriminados — resultado pode estar superestimado (ver seção "Biggs 13")</b>'; }
         showTip(evt, tip);
       });
@@ -1620,7 +1653,7 @@
 
       var inside = barW > 46; // enough room to set the value inside the bar, near its outer tip
       var labelTxt = pct(s.pct_lucro_operacional) + (s.dadosIncompletos ? '*' : '');
-      var outColor = s.dadosIncompletos ? '#8a5a00' : (neg ? 'var(--critical)' : 'var(--good)');
+      var outColor = sc==='sig-warn' ? 'var(--warning)' : SIG_FILL[sc];
       var valText;
       if(inside){
         valText = el('text',{
@@ -1628,7 +1661,7 @@
           y: cy+rowH/2+4,
           'text-anchor': neg ? 'start' : 'end',
           class:'div-val tabular',
-          fill: s.dadosIncompletos ? '#3a2900' : '#ffffff'
+          fill: SIG_TXT[sc]
         });
       } else {
         valText = el('text',{

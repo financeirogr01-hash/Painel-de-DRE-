@@ -101,9 +101,7 @@
 
   /* ---------- topbar ---------- */
   .topbar{
-    position: sticky; top: env(safe-area-inset-top,0px); z-index: 20;
-    background: var(--page); padding: 14px 0 12px; margin-bottom: 8px;
-    border-bottom: 1px solid var(--border);
+    padding: 14px 0 4px;
   }
   .eyebrow{
     display:block; font-size:12px; font-weight:700; letter-spacing:.06em; text-transform:uppercase;
@@ -111,6 +109,12 @@
   }
   .brand-logo{color: var(--accent); height:26px; width:auto; display:block; margin-bottom:10px;}
   .brand-logo svg{height:100%; width:auto; display:block;}
+  .stickybar{
+    position: sticky; top: env(safe-area-inset-top,0px); z-index: 20;
+    background: var(--page); padding: 8px 0 10px; margin-bottom: 8px;
+    border-bottom: 1px solid var(--border);
+  }
+  .stickybar[data-nofilter] .filterbar{display:none;}
   .topbar h1{font-size: clamp(20px,3vw,28px); font-weight:800; letter-spacing:-0.01em;}
   .meta{color:var(--ink-2); font-size:13px; margin:6px 0 12px;}
   .tabnav{display:flex; gap:4px; flex-wrap:wrap;}
@@ -122,7 +126,7 @@
   .tabnav a.active{background:var(--accent); color:#fff;}
   .tabnav a.active:hover{background:var(--accent); color:#fff;}
 
-  section{padding-top:28px; scroll-margin-top: 96px;}
+  section{padding-top:28px; scroll-margin-top: 120px;}
   section[id]{display:none;}
   section[id].view-active{display:block;}
   .section-head{display:flex; align-items:baseline; justify-content:space-between; gap:12px; margin-bottom:14px; flex-wrap:wrap;}
@@ -276,7 +280,7 @@
 
   table.voxel-table{table-layout:fixed;}
   table.voxel-table th:first-child, table.voxel-table td:first-child{width:38%; white-space:normal;}
-  .voxel-row td:first-child{display:flex; align-items:baseline; gap:6px;}
+  .voxel-cell{display:flex; align-items:baseline; gap:6px;}
   .voxel-row.level-0 td{font-weight:700;}
   .voxel-row.level-1 .voxel-label-text{padding-left:18px;}
   .voxel-row.level-2 .voxel-label-text{padding-left:36px;}
@@ -296,6 +300,40 @@
   .voxel-table[data-active-col="6"] td:nth-child(6), .voxel-table[data-active-col="6"] th:nth-child(6){
     background: var(--accent-wash);
   }
+
+  /* ---------- filtros globais ---------- */
+  .filterbar{display:flex; flex-wrap:wrap; align-items:center; gap:10px 20px; margin-top:12px; padding-top:10px; border-top:1px solid var(--border);}
+  .filter-group{display:flex; align-items:center; gap:8px; min-width:0; max-width:100%;}
+  .filter-group .voxel-tabs{margin-top:0; padding-bottom:0;}
+  .filter-label{font-size:11.5px; font-weight:700; color:var(--ink-muted); text-transform:uppercase; letter-spacing:.04em; flex:none;}
+  .fselect{font:inherit; font-size:13.5px; font-weight:700; color:var(--ink); background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:7px 10px; min-width:180px; max-width:100%; cursor:pointer;}
+  .fselect:focus-visible, .cmp-swap:focus-visible{outline:2px solid var(--accent); outline-offset:2px;}
+  @media (max-width:640px){
+    .tabnav{flex-wrap:nowrap; overflow-x:auto; scrollbar-width:none;}
+    .tabnav a{flex:none;}
+    .filterbar{gap:8px 14px; margin-top:8px; padding-top:8px;}
+    .fselect{min-width:0;}
+  }
+  .kpi-of{font-size:15px; color:var(--ink-muted); font-weight:600;}
+
+  /* ---------- big numbers (cada R$ 100) ---------- */
+  .bn-grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:10px; margin-top:4px;}
+  .bn{border:1px solid var(--border); border-radius:10px; padding:10px 12px; background:var(--surface-2); min-width:0;}
+  .bn-label{display:flex; align-items:center; gap:6px; font-size:12px; color:var(--ink-2); font-weight:600; line-height:1.3;}
+  .bn-value{font-size:26px; font-weight:800; margin-top:4px; letter-spacing:-0.01em; line-height:1.1;}
+  .bn-sub{font-size:11.5px; color:var(--ink-muted); margin-top:3px;}
+  .bn.result{grid-column:1/-1; display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center; gap:6px 12px; background:transparent; border-style:dashed;}
+  .bn.result .bn-value{margin-top:0;}
+
+  /* ---------- comparativo ---------- */
+  .cmp-controls{display:flex; flex-wrap:wrap; gap:10px; align-items:center; margin-bottom:12px;}
+  .cmp-tag{font-size:11px; font-weight:800; color:#fff; background:var(--accent); border-radius:6px; padding:2px 7px;}
+  .cmp-tag.b{background:var(--cat-2);}
+  .cmp-swap{font:inherit; font-size:15px; font-weight:800; background:var(--surface-2); color:var(--ink); border:1px solid var(--border); border-radius:8px; padding:5px 12px; cursor:pointer;}
+  .cmp-head{display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:12px;}
+  .cmp-table td.better{color:var(--good); font-weight:800;}
+  .cmp-table tr.strong td{font-weight:800;}
+  .cmp-table td:first-child{white-space:normal; min-width:170px;}
 </style>
 
 <div class="page">
@@ -319,8 +357,11 @@
     <span class="eyebrow">Grupo Ragga · Gestão Financeira</span>
     <h1>Painel de DRE — Rede Biggs (Londrina-PR)</h1>
     <p class="meta">Competência Agosto/2026 · 17 lojas: Biggs 01–13, Isaías 01–03, Robs e Mapoli (Biggs 01–12 + Isaías/Robs/Mapoli com DRE completo, base Voxel; Biggs 13 em DRE ajustado à parte) · dados enviados em 23/09/2026</p>
+  </header>
+  <div class="stickybar" id="stickyBar">
     <nav class="tabnav">
       <a href="#resumo">Resumo da rede</a>
+      <a href="#comparativo">Comparativo</a>
       <a href="#lojas">As 17 lojas</a>
       <a href="#biggs13">Biggs 13</a>
       <a href="#criticos">Pontos críticos</a>
@@ -328,37 +369,18 @@
       <a href="#plano">Plano do mês</a>
       <a href="#setor">Setor</a>
     </nav>
-  </header>
+    <div class="filterbar" role="region" aria-label="Filtros de mês e loja">
+      <div class="filter-group"><span class="filter-label">Mês</span><div class="voxel-tabs" id="fMonth"></div></div>
+      <div class="filter-group"><label class="filter-label" for="fStore">Loja</label><select id="fStore" class="fselect"></select></div>
+    </div>
+  </div>
 
   <section id="resumo">
     <div class="section-head">
-      <h2>Resumo da rede — Agosto/2026</h2>
+      <h2 id="resumoTitle">Resumo da rede — Agosto/2026</h2>
     </div>
 
-    <div class="grid kpi-row">
-      <div class="card kpi">
-        <div class="kpi-label">Faturamento bruto</div>
-        <div class="kpi-value tabular">R$ 7.035.185</div>
-        <div class="kpi-sub">soma das 17 lojas em agosto (16 + Biggs 13)</div>
-      </div>
-      <div class="card kpi">
-        <div class="kpi-label">Resultado operacional</div>
-        <div class="kpi-value tabular" style="color:var(--critical)">-R$ 215.869</div>
-        <div class="kpi-sub">-3,1% do faturamento bruto · já com a Biggs 13 somada</div>
-        <span class="chip warning">melhorou vs. jun/jul, ainda negativo</span>
-      </div>
-      <div class="card kpi">
-        <div class="kpi-label">Lojas no prejuízo</div>
-        <div class="kpi-value tabular">11 <span style="font-size:15px;color:var(--ink-muted);font-weight:600;">/ 17</span></div>
-        <div class="kpi-sub">10 delas abaixo do próprio ponto de equilíbrio</div>
-      </div>
-      <div class="card kpi">
-        <div class="kpi-label">CMV da rede</div>
-        <div class="kpi-value tabular">41,7%</div>
-        <div class="kpi-sub">Meta ≤31,0% (CMV ideal) · 17 lojas · sobre faturamento líquido</div>
-        <span class="chip critical">+10,7pp acima da meta</span>
-      </div>
-    </div>
+    <div class="grid kpi-row" id="resumoKpis"></div>
 
     <div class="grid two-col" style="margin-top:14px;">
       <div class="card">
@@ -367,17 +389,10 @@
         <svg id="lineChart" class="linechart" viewBox="0 0 640 260" preserveAspectRatio="xMidYMid meet"></svg>
       </div>
       <div class="card">
-        <div class="chart-title">Para onde foi cada R$ 100 faturados (ago/26)</div>
-        <div class="chart-note">Rede consolidada, 17 lojas (16 + Biggs 13) — passe o mouse para ver o valor</div>
-        <div class="stack-wrap">
-          <div id="stackBar" class="stack-bar"></div>
-          <div id="stackLegend" class="stack-legend"></div>
-          <div class="result-line">
-            <span style="font-size:12.5px;color:var(--ink-2);">Resultado operacional</span>
-            <span class="tabular" style="font-weight:800; color:var(--critical);">-R$ 3,07 <span style="font-weight:600;color:var(--ink-muted);font-size:11.5px;">a cada R$100</span></span>
-          </div>
-          <p class="chart-note" style="margin-top:2px;">A Biggs 13 entra com CMV, custos fixos, royalties, cartão/apps, entregas e devoluções do seu DRE. Ela não discrimina descontos — então essa linha reflete só as outras 16 lojas; o percentual real da rede tende a ser um pouco maior.</p>
-        </div>
+        <div class="chart-title" id="bnTitle">Para onde foi cada R$ 100 faturados</div>
+        <div class="chart-note" id="bnNote"></div>
+        <div class="bn-grid" id="bnGrid"></div>
+        <p class="chart-note" id="bnFoot" style="margin:10px 0 0;"></p>
       </div>
     </div>
 
@@ -410,6 +425,28 @@
         <tbody></tbody>
       </table>
     </div>
+  </section>
+
+  <section id="comparativo">
+    <div class="section-head">
+      <h2>Comparativo entre lojas</h2>
+      <span class="section-sub" id="cmpSub"></span>
+    </div>
+    <div class="cmp-controls">
+      <span class="cmp-tag">A</span>
+      <select id="cmpA" class="fselect" aria-label="Loja A"></select>
+      <button type="button" class="cmp-swap" id="cmpSwap" title="Inverter A e B" aria-label="Inverter A e B">⇄</button>
+      <span class="cmp-tag b">B</span>
+      <select id="cmpB" class="fselect" aria-label="Loja B"></select>
+    </div>
+    <div class="cmp-head" id="cmpHead"></div>
+    <div class="table-scroll">
+      <table class="cmp-table" id="cmpTable">
+        <thead><tr><th>Indicador</th><th class="num" id="cmpThA">A</th><th class="num" id="cmpThB">B</th><th class="num">Diferença (A − B)</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+    <p class="chart-note" style="margin-top:8px;">Em verde, o melhor número de cada indicador — para custos e descontos, o menor percentual. O período segue o filtro de mês no topo. CMV, CMO e margem de contribuição são sobre o faturamento líquido (convenção do DRE Voxel); as demais linhas em %, sobre o faturamento bruto. Biggs 13 só tem dados de agosto e não discrimina descontos.</p>
   </section>
 
   <section id="lojas">
@@ -447,32 +484,32 @@
   <section id="biggs13">
     <div class="section-head">
       <h2>Biggs 13 — leitura do DRE enviado</h2>
-      <span class="section-sub">Agosto/2026 · já somada à rede consolidada (17 lojas), DRE na estrutura Voxel, mas ainda sem descontos discriminados</span>
+      <span class="section-sub">Agosto/2026 · já somada à rede consolidada (17 lojas) · DRE completa na estrutura Voxel, igual às outras lojas</span>
     </div>
     <div class="grid two-col">
       <div class="card">
-        <div class="chart-title">Como a Biggs 13 reportou o mês</div>
+        <div class="chart-title">DRE da Biggs 13 — agosto/2026</div>
         <table style="margin-top:8px;">
           <tbody>
             <tr><td>Faturamento bruto</td><td class="num tabular">R$ 433.764</td></tr>
             <tr><td>Taxas de cartão e apps de delivery</td><td class="num tabular">R$ 41.222 · 9,5%</td></tr>
             <tr><td>Devoluções de vendas</td><td class="num tabular">R$ 154 · 0,0%</td></tr>
-            <tr><td>Royalties (inclui taxa de marketing e distribuição)</td><td class="num tabular">R$ 64.631 · 14,9%</td></tr>
+            <tr><td>Royalties + taxa de marketing + taxa administrativa</td><td class="num tabular">R$ 64.631 · 14,9%</td></tr>
             <tr><td>CMV</td><td class="num tabular">R$ 154.874 · 35,7%</td></tr>
             <tr><td>Despesas com entregas</td><td class="num tabular">R$ 3.272 · 0,8%</td></tr>
             <tr><td>Margem de contribuição</td><td class="num tabular">R$ 169.611 · 39,1%</td></tr>
-            <tr><td>Custos fixos (pessoal, marketing, administrativas)</td><td class="num tabular">R$ 154.638 · 35,7%</td></tr>
+            <tr><td>Custos fixos (pessoal R$ 108.027, marketing R$ 9.109, administrativas R$ 37.502)</td><td class="num tabular">R$ 154.638 · 35,7%</td></tr>
             <tr><td style="font-weight:800;">Resultado operacional</td><td class="num tabular" style="font-weight:800; color:var(--good);">R$ 14.973 · +3,5%</td></tr>
             <tr><td>Ponto de equilíbrio</td><td class="num tabular">R$ 395.471</td></tr>
           </tbody>
         </table>
       </div>
       <div class="callout warn">
-        <h3>⚠ Falta discriminar os descontos</h3>
-        <p>A DRE da Biggs 13 agora segue a estrutura Voxel e já traz <b>taxas de cartão/apps</b> (R$ 41.222 · 9,5%), <b>devoluções</b> (R$ 154) e <b>entregas</b> (R$ 3.272, reclassificadas de custos fixos). Com isso o resultado caiu de +13,0% para <b>+3,5%</b>.</p>
-        <p>Ainda falta discriminar os <b>descontos concedidos</b> — nas outras 16 lojas eles somaram <b>-8,7%</b> do faturamento bruto em agosto.</p>
-        <p>Se a Biggs 13 tiver um nível de descontos parecido, o resultado operacional real fica perto de <b style="color:var(--critical);">-5%</b> — simulação para orientar a apuração, não um número fechado.</p>
-        <p><b>Ação recomendada:</b> confirmar se o faturamento de R$ 433.764 já está líquido de descontos ou pedir essa linha separada.</p>
+        <h3>⚠ Pontos para conferir</h3>
+        <p>A DRE da Biggs 13 agora está completa na estrutura Voxel, com o mesmo detalhamento das outras lojas (royalties, CMV, pessoal e administrativas abertos por conta).</p>
+        <p><b>Cartão/apps e devoluções:</b> a planilha não traz essas linhas — o painel usa os valores informados à parte (R$ 41.222 e R$ 154). Por isso o resultado aqui é <b>R$ 14.973 (+3,5%)</b>, e não os R$ 56.349 da planilha.</p>
+        <p><b>Descontos:</b> a planilha informa <b>R$ 0</b>. Nas outras 16 lojas eles somaram <b>8,7%</b> do faturamento bruto em agosto — vale confirmar se o faturamento de R$ 433.764 já vem líquido de descontos.</p>
+        <p><b>CMV:</b> R$ 13.861 do total de insumos ainda dependem de detalhamento da origem (observação da própria planilha).</p>
       </div>
     </div>
   </section>
@@ -515,12 +552,12 @@
           <tr><td>CMV (% faturamento)</td><td class="num tabular">41,7%</td><td class="num tabular">35,7%*</td><td class="num tabular">25–35% (fast-food/hamburgueria)</td></tr>
           <tr><td>Folha de pessoal (% faturamento bruto)</td><td class="num tabular">23,7%</td><td class="num tabular">24,9%*</td><td class="num tabular">~20%</td></tr>
           <tr><td>Taxas de cartão + apps de delivery</td><td class="num tabular">10,7%</td><td class="num tabular">9,5%</td><td class="num tabular">12–30% (conforme mix de delivery)</td></tr>
-          <tr><td>Descontos concedidos</td><td class="num tabular">8,2%†</td><td class="num tabular">não discriminado</td><td class="num tabular">item de controle, não um "padrão" de mercado</td></tr>
+          <tr><td>Descontos concedidos</td><td class="num tabular">8,2%†</td><td class="num tabular">0,0% (informado)</td><td class="num tabular">item de controle, não um "padrão" de mercado</td></tr>
           <tr><td>Resultado operacional (% faturamento)</td><td class="num tabular" style="color:var(--critical); font-weight:700;">-3,1%</td><td class="num tabular">+3,5%*</td><td class="num tabular">8–15% saudável · mediana Brasil 6–9%</td></tr>
         </tbody>
       </table>
     </div>
-    <p class="chart-note" style="margin-top:8px;">*Biggs 13: números sem descontos discriminados — ver seção acima. †Descontos da "Rede" refletem só as 16 lojas com essa linha discriminada (a Biggs 13 está somada no faturamento e no resultado, mas não informa descontos separadamente) — o percentual real da rede completa tende a ser um pouco maior. Benchmarks setoriais são faixas de referência de mercado (2025–2026), não um alvo único: variam por formato (à la carte, self-service, delivery puro) e devem ser lidos com essa margem de variação.</p>
+    <p class="chart-note" style="margin-top:8px;">*Biggs 13: DRE na estrutura Voxel, com descontos informados como R$ 0 — ver seção acima. †Descontos da "Rede": a Biggs 13 entra com R$ 0 — o percentual real da rede completa tende a ser um pouco maior. Benchmarks setoriais são faixas de referência de mercado (2025–2026), não um alvo único: variam por formato (à la carte, self-service, delivery puro) e devem ser lidos com essa margem de variação.</p>
     <div class="src">
       Fontes de mercado: <a href="https://sischef.com/cmv-ideal-para-restaurantes-benchmarks-por-segmento/" target="_blank" rel="noopener">Sischef — CMV ideal por segmento</a> ·
       <a href="https://www.sisfood.com.br/saiba-mais/gestao-financeira/margem-lucro-restaurante" target="_blank" rel="noopener">Sisfood — margem de lucro por tipo de restaurante</a> ·
@@ -603,6 +640,9 @@
     });
     if(!found && sections[0]){ sections[0].classList.add('view-active'); id = sections[0].id; }
     navLinks.forEach(function(a){ a.classList.toggle('active', a.getAttribute('href') === '#'+id); });
+    // filtros de mês/loja só valem para o resumo e o comparativo
+    var sb = document.getElementById('stickyBar');
+    if(sb){ if(id==='resumo' || id==='comparativo') sb.removeAttribute('data-nofilter'); else sb.setAttribute('data-nofilter',''); }
     if(opts.scroll!==false){ window.scrollTo({top:0, behavior:'instant'}); }
   }
 
@@ -649,7 +689,7 @@
   // (R$ 7.035.186 em ago/26) — é a única base em que as 6 fatias somam ~100% sem contar nada
   // 2x, já que Descontos e Cartão/Apps são deduções que saem do bruto antes de chegar no
   // líquido. CMV, Custos Fixos, Royalties, Cartão/Apps e Entregas+devoluções já somam a
-  // Biggs 13; só Descontos reflete as 16 lojas com Voxel (Biggs 13 não discrimina descontos
+  // Biggs 13; Descontos da Biggs 13 informados como R$ 0 na planilha (ver nota abaixo do gráfico
   // — ver nota abaixo do gráfico). Valores conferidos linha a linha com a tabela da
   // DRE Voxel (Consolidado, ago/26).
   var waterfall = [
@@ -674,7 +714,7 @@
     {"label":"Biggs 10","legal":"Panti Foods","fat_bruto":262374,"fat_liquido":234972,"pct_cmv":42.3,"pct_margem_contrib":33.8,"lucro_operacional":-56119,"pct_lucro_operacional":-23.9,"ponto_equilibrio":401041,"abaixo_equilibrio":true},
     {"label":"Biggs 11","legal":"Roli Foods","fat_bruto":375827,"fat_liquido":352593,"pct_cmv":31.3,"pct_margem_contrib":49.9,"lucro_operacional":42723,"pct_lucro_operacional":12.1,"ponto_equilibrio":267034,"abaixo_equilibrio":false},
     {"label":"Biggs 12","legal":"Lana Foods","fat_bruto":401072,"fat_liquido":352073,"pct_cmv":41.7,"pct_margem_contrib":35.9,"lucro_operacional":5565,"pct_lucro_operacional":1.6,"ponto_equilibrio":336550,"abaixo_equilibrio":false},
-    {"label":"Biggs 13","legal":"DRE ajustada","fat_bruto":433764,"fat_liquido":null,"pct_cmv":35.7,"pct_margem_contrib":39.1,"lucro_operacional":14973,"pct_lucro_operacional":3.5,"ponto_equilibrio":395471,"abaixo_equilibrio":false,"dadosIncompletos":true},
+    {"label":"Biggs 13","legal":"DRE Voxel (planilha)","fat_bruto":433764,"fat_liquido":433764,"pct_cmv":35.7,"pct_margem_contrib":39.1,"lucro_operacional":14973,"pct_lucro_operacional":3.5,"ponto_equilibrio":395471,"abaixo_equilibrio":false},
     {"label":"Isaías 01","legal":"Elma Foods","fat_bruto":554195,"fat_liquido":515043,"pct_cmv":50.2,"pct_margem_contrib":30.6,"lucro_operacional":-62199,"pct_lucro_operacional":-12.1,"ponto_equilibrio":718375,"abaixo_equilibrio":true},
     {"label":"Isaías 02","legal":"Madri Foods","fat_bruto":245799,"fat_liquido":237147,"pct_cmv":33.4,"pct_margem_contrib":52.5,"lucro_operacional":6052,"pct_lucro_operacional":2.5,"ponto_equilibrio":225630,"abaixo_equilibrio":false},
     {"label":"Isaías 03","legal":"Japi Foods","fat_bruto":231838,"fat_liquido":225536,"pct_cmv":39.6,"pct_margem_contrib":46.0,"lucro_operacional":-5329,"pct_lucro_operacional":-2.4,"ponto_equilibrio":237120,"abaixo_equilibrio":true},
@@ -858,31 +898,64 @@
     return {cls:'ok', txt:'Meta ≥'+voxelPct1(meta)+' · +'+voxelPP1(diff)+' acima da meta'};
   }
 
-  // Biggs 13: DRE na estrutura Voxel enviada à parte, só agosto/2026 (ver seção "Biggs 13").
-  // Sem descontos discriminados. Custos Variáveis = Taxas (cartão/apps + devoluções + royalties) + CMV + entregas.
+  // Biggs 13: só agosto/2026. Detalhamento da aba "DRE Estrutura Voxel" (Biggs_13_DRE_Agosto_2026_Ajustada (2).xlsx)
+  // + taxas de cartão/apps (41.221,95) e devoluções (153,82) informadas à parte, que a planilha não traz.
+  // Mesmas regras das outras lojas: Taxas e Impostos = cartão + impostos + devoluções + royalties + marketing + tx. adm.;
+  // Custos Variáveis = Taxas + CMV + entregas; Custos Fixos = pessoal + marketing + administrativas + a identificar.
   var voxelBiggs13Data = {
     'Faturamento Bruto Total': 433764,
     'Faturamento Bruto de Itens': 433764,
-    'Faturamento Líquido de Itens': 433764, // Biggs 13 não discrimina descontos/impostos — entra sem dedução
-    'Faturamento Líquido Total': 433764,    // idem
-    'Taxas e Impostos sobre Vendas': -106006.77, // cartão/apps + devoluções + royalties (mesma soma do Voxel)
+    'Descontos': 0,
+    'Faturamento Líquido de Itens': 433764,
+    'Faturamento Líquido Total': 433764,
+    'Taxas e Impostos sobre Vendas': -106006.77,
     'Taxas de Cartão e Apps de Delivery': -41221.95,
+    'Impostos sobre Vendas': 0,
     'Devoluções de Vendas': -153.82,
-    'Royalties': -64631,
+    'Taxa de Marketing': -16539.76,
+    'Royalties': -43147.40,
+    'Taxa Administrativa': -4943.84,
     'CMV - Custo da Mercadoria Vendida': -154874,
-    'Despesas com entregas': -3272,          // reclassificado de Custos Fixos (DRE na estrutura Voxel)
+    'Insumos': -132949.48,
+    'Embalagens': -1746.60,
+    'Produtos para Comercialização': -20177.92,
+    'Despesas com entregas': -3272,
+    'Combustível e Entregas': -3272,
+    'Serviços Logísticos': 0,
     'Custos Variáveis': -264152.77,
     'Margem de Contribuição': 169611.23,
-    'Despesas com Pessoal': -108027,
-    'Despesas com Vendas e Marketing': -9109,
-    'Despesas Operacionais e Administrativas': -37502,
     'Custos Fixos': -154638,
+    'Despesas com Pessoal': -108027,
+    'Salários': -61582.80,
+    'Bonificações': -488.76,
+    'Impostos Sobre Salários': -6029.48,
+    'Vale Alimentação': 0,
+    'Vale Transporte': -2362.50,
+    'Rescisões': -4143.68,
+    'Freelancers e Terceirizados': -24797.50,
+    'Outros Encargos com Funcionários': -4693.12,
+    'Férias': -3929.16,
+    '13º Salário': 0,
+    'Despesas com Vendas e Marketing': -9109,
+    'Despesas com Marketing': -9109,
+    'Pacote Anúncios Ifood': 0,
+    'Despesas Operacionais e Administrativas': -37185.53,
+    'Aluguel e Condomínio': -18581.50,
+    'Água e Energia': -5314.79,
+    'Gás de Cozinha': -4971.30,
+    'Aluguel de Equipamentos': 0,
+    'Segurança, Telefonia e Internet': -607.77,
+    'Softwares e Terceirizados': -4567.50,
+    'Limpeza e Higiene': -2124.69,
+    'Manutenção Predial e de Equipamentos': 0,
+    'Transporte': 0,
+    'Materiais de Escritório': -542.40,
+    'Tarifas Bancárias': -100,
+    'Outras Despesas Administrativas': -375.58,
+    'Despesas a Identificar': -316.47,
     'Lucro/Prejuízo Operacional': 14973.23,
     'Ponto de Equilíbrio (Receita Bruta Necessária)': 395471,
-    'Impostos sobre Vendas': 0,
-    // Abaixo do operacional: DRE da loja não informa investimentos, empréstimos, reembolsos nem
-    // transferências — entram zerados. Mesmas fórmulas do Voxel:
-    // Lucro Líquido = Operacional + Investimentos; Resultado Líquido = Lucro Líquido + Empréstimos/Aportes/Retiradas
+    // Abaixo do operacional: planilha informa tudo zerado
     'Investimentos': 0,
     'Investimento em Equipamentos e Estrutura': 0,
     'Impostos sobre Aplicações': 0,
@@ -904,22 +977,6 @@
   };
 
   function voxelRenderKpis(scope){
-    if(scope === 'Biggs 13'){
-      var mCmvB = voxelMetaMax(35.7, 31.0);
-      var mCmoB = voxelMetaMax(24.9, 22.0);
-      var html2 = '';
-      html2 += voxelKpiTile('Faturamento Bruto (ago)', voxelBRL(433764), null, 'só agosto — sem histórico mai–jul', 'na', '100,0%');
-      html2 += voxelKpiTile('CMV %', voxelPct1(35.7), (mCmvB.cls==='miss'?'var(--critical)':'var(--good)'), mCmvB.txt, mCmvB.cls, voxelBRL(-154874));
-      html2 += voxelKpiTile('CMO %', voxelPct1(24.9), (mCmoB.cls==='miss'?'var(--critical)':'var(--good)'), mCmoB.txt, mCmoB.cls, voxelBRL(-108027));
-      html2 += voxelKpiTile('Royalties %', voxelPct1(14.9), null, 'taxa de marketing + distribuição (franquia)', 'na', voxelBRL(-64631));
-      html2 += voxelKpiTile('Cartão + apps de delivery %', voxelPct1(9.5), null, 'devoluções: '+voxelBRL(-153.82), 'na', voxelBRL(-41221.95));
-      html2 += voxelKpiTile('Despesas com entregas %', voxelPct1(0.8), null, 'reclassificado de custos fixos', 'na', voxelBRL(-3272));
-      html2 += voxelKpiTile('Custos fixos %', voxelPct1(35.7), null, 'pessoal + marketing + administrativas', 'na', voxelBRL(-154638));
-      html2 += voxelKpiTile('Margem de contribuição %', voxelPct1(39.1), null, 'ponto de equilíbrio: '+voxelBRL(395471), 'na', voxelBRL(169611));
-      html2 += voxelKpiTile('Lucro Operacional', voxelBRL(14973), 'var(--good)', '+3,5% do fat. bruto · sem descontos discriminados', 'na', '3,5%');
-      document.getElementById('voxelKpis').innerHTML = html2;
-      return;
-    }
     var fli = voxelPick(voxelGetVals(scope,'Faturamento Líquido de Itens'));
     var cmv = voxelPick(voxelGetVals(scope,'CMV - Custo da Mercadoria Vendida'));
     var pessoal = voxelPick(voxelGetVals(scope,'Despesas com Pessoal'));
@@ -977,9 +1034,7 @@
     wrap.innerHTML = html;
     Array.prototype.forEach.call(wrap.querySelectorAll('.voxel-tab:not(.disabled)'), function(btn){
       btn.addEventListener('click', function(){
-        voxelActiveScope = btn.getAttribute('data-scope');
-        if(voxelActiveScope==='Biggs 13' && voxelActiveMonth!==-1 && voxelActiveMonth!==3){ voxelActiveMonth = 3; }
-        voxelRenderAll();
+        setFilter(btn.getAttribute('data-scope'), voxelActiveMonth);
       });
     });
   }
@@ -997,10 +1052,7 @@
     wrap.innerHTML = html;
     Array.prototype.forEach.call(wrap.querySelectorAll('.voxel-tab:not(.disabled)'), function(btn){
       btn.addEventListener('click', function(){
-        voxelActiveMonth = parseInt(btn.getAttribute('data-month'),10);
-        voxelRenderKpis(voxelActiveScope);
-        voxelRenderTable();
-        voxelRenderMonthTabs();
+        setFilter(voxelActiveScope, parseInt(btn.getAttribute('data-month'),10));
       });
     });
   }
@@ -1047,7 +1099,7 @@
       if(entry.parent){ tr.setAttribute('data-parent', entry.parent); tr.hidden = true; }
 
       var expandHtml = node.c ? '<button class="voxel-expand" data-toggle="'+entry.id+'">▸</button>' : '<span class="voxel-expand spacer"></span>';
-      var labelCell = '<td>'+expandHtml+'<span class="voxel-label-text">'+node.l+'</span></td>';
+      var labelCell = '<td><div class="voxel-cell">'+expandHtml+'<span class="voxel-label-text">'+node.l+'</span></div></td>';
 
       var cells = '';
       if(node.ratio){
@@ -1098,7 +1150,238 @@
     voxelRenderMonthTabs();
     voxelRenderTable();
   }
-  voxelRenderAll();
+
+  // ---------------- filtros globais (mês + loja) ----------------
+  var MONTH_FULL = ['Maio','Junho','Julho','Agosto'];
+  var fState = {scope:'Consolidado', month:3};
+  var cmpState = {a:'Biggs 01', b:'Biggs 02'};
+  var fmt2 = new Intl.NumberFormat('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2});
+  var fmt0 = new Intl.NumberFormat('pt-BR', {maximumFractionDigits:0});
+  function brl0(v){ return (v<0?'-R$ ':'R$ ') + fmt0.format(Math.abs(Math.round(v))); }
+  function scopeName(s){ return s==='Consolidado' ? 'Rede (consolidado)' : s; }
+  function periodName(m){ return m===-1 ? 'acumulado mai–ago/2026' : MONTH_FULL[m]+'/2026'; }
+  function periodShort(m){ return m===-1 ? 'mai–ago/26' : VOXEL_MONTH_LABELS[m].toLowerCase()+'/26'; }
+  function scopeHasData(s, m){ return s!=='Biggs 13' || m===3 || m===-1; }
+
+  // Indicadores de uma loja (ou da rede) num mês (0–3) ou no acumulado (-1), direto da DRE Voxel.
+  // Identidade conferida em todas as lojas/meses: Fat. bruto − descontos − cartão/apps − impostos −
+  // devoluções − royalties/marketing − CMV − entregas − custos fixos = resultado operacional.
+  function storeMetrics(s, m){
+    if(!scopeHasData(s, m)) return null;
+    function g(line){
+      var vals = voxelGetVals(s, line);
+      var v = m===-1 ? voxelAcc(vals) : vals[m];
+      return (v===null || v===undefined) ? 0 : v;
+    }
+    var fb = g('Faturamento Bruto Total');
+    if(!fb) return null;
+    var o = {
+      fb: fb, fli: g('Faturamento Líquido de Itens'), flt: g('Faturamento Líquido Total'),
+      desc: -g('Descontos'),
+      cartao: -g('Taxas de Cartão e Apps de Delivery'),
+      roy: -(g('Royalties') + g('Taxa de Marketing') + g('Taxa Administrativa')),
+      entregas: -(g('Despesas com entregas') + g('Devoluções de Vendas') + g('Impostos sobre Vendas')),
+      cmv: -g('CMV - Custo da Mercadoria Vendida'),
+      cmo: -g('Despesas com Pessoal'),
+      cf: -g('Custos Fixos'),
+      mc: g('Margem de Contribuição'),
+      lop: g('Lucro/Prejuízo Operacional'),
+      ll: g('Lucro/Prejuízo Líquido')
+    };
+    o.pe = (o.mc>0 && o.flt) ? o.cf/(o.mc/o.flt) : null;
+    o.peOk = o.pe!==null && o.fb>=o.pe;
+    o.pctLop = o.lop/fb*100;
+    o.pctCmv = o.fli ? o.cmv/o.fli*100 : null;
+    o.pctCmo = o.fli ? o.cmo/o.fli*100 : null;
+    o.pctMc = o.flt ? o.mc/o.flt*100 : null;
+    o.markup = o.cmv ? o.flt/o.cmv : null;
+    return o;
+  }
+
+  function setFilter(scope, month){
+    if(scope==='Biggs 13' && month!==-1 && month!==3){ month = 3; }
+    fState.scope = scope; fState.month = month;
+    voxelActiveScope = scope; voxelActiveMonth = month;
+    renderFiltered();
+  }
+
+  function fillStoreSelect(sel, withRede){
+    if(sel.options.length) return;
+    var opts = (withRede ? ['Consolidado'] : []).concat(voxelTabsList);
+    opts.forEach(function(t){ var o = document.createElement('option'); o.value = t; o.textContent = scopeName(t); sel.appendChild(o); });
+  }
+
+  function renderFilterBar(){
+    var sel = document.getElementById('fStore');
+    if(!sel.options.length){
+      fillStoreSelect(sel, true);
+      sel.addEventListener('change', function(){ setFilter(sel.value, fState.month); });
+    }
+    sel.value = fState.scope;
+    var wrap = document.getElementById('fMonth');
+    var isB13 = fState.scope==='Biggs 13';
+    var html = '';
+    VOXEL_MONTH_LABELS.forEach(function(lbl, i){
+      var dis = isB13 && i!==3;
+      html += '<button type="button" class="voxel-tab'+(dis?' disabled':'')+(fState.month===i?' active':'')+'" data-month="'+i+'"'+(dis?' disabled title="Biggs 13 só tem dados de agosto"':'')+'>'+lbl+'</button>';
+    });
+    html += '<button type="button" class="voxel-tab'+(fState.month===-1?' active':'')+'" data-month="-1">Acumulado</button>';
+    wrap.innerHTML = html;
+    Array.prototype.forEach.call(wrap.querySelectorAll('.voxel-tab:not(.disabled)'), function(btn){
+      btn.addEventListener('click', function(){ setFilter(fState.scope, parseInt(btn.getAttribute('data-month'),10)); });
+    });
+  }
+
+  function kpiCard(label, value, color, sub, extra){
+    return '<div class="card kpi"><div class="kpi-label">'+label+'</div>'+
+      '<div class="kpi-value tabular"'+(color?' style="color:'+color+'"':'')+'>'+value+'</div>'+
+      '<div class="kpi-sub">'+sub+'</div>'+(extra||'')+'</div>';
+  }
+
+  function renderResumo(){
+    var s = fState.scope, m = fState.month, M = storeMetrics(s, m), isRede = s==='Consolidado';
+    document.getElementById('resumoTitle').textContent = (isRede ? 'Resumo da rede' : 'Resumo — '+s) + ' · ' + periodName(m);
+    var box = document.getElementById('resumoKpis');
+    if(!M){ box.innerHTML = '<div class="card kpi" style="grid-column:1/-1;">Sem dados de '+scopeName(s)+' em '+periodName(m)+'.</div>'; return; }
+    var lojas = voxelTabsList.map(function(t){ return storeMetrics(t, m); }).filter(Boolean);
+    var html = '';
+    html += kpiCard('Faturamento bruto', brl0(M.fb), null,
+      isRede ? 'soma das '+lojas.length+' lojas'+(lojas.length<voxelTabsList.length?' (Biggs 13 só a partir de agosto)':'') : 'faturamento líquido: '+brl0(M.fli));
+    var chip = '';
+    if(m>0){
+      var P = storeMetrics(s, m-1);
+      if(P){
+        var d = M.pctLop - P.pctLop;
+        chip = '<span class="chip '+(d>=0?'good':'critical')+'">'+(d>=0?'+':'−')+fmt1.format(Math.abs(d))+' pp vs. '+VOXEL_MONTH_LABELS[m-1].toLowerCase()+'</span>';
+      }
+    }
+    html += kpiCard('Resultado operacional', brl0(M.lop), M.lop<0?'var(--critical)':'var(--good)', pct(M.pctLop)+' do faturamento bruto', chip);
+    if(isRede){
+      var neg = lojas.filter(function(x){ return x.lop<0; }).length;
+      var abaixo = lojas.filter(function(x){ return !x.peOk; }).length;
+      html += kpiCard('Lojas no prejuízo', neg+' <span class="kpi-of">/ '+lojas.length+'</span>', null, abaixo+' abaixo do próprio ponto de equilíbrio');
+    } else {
+      var peSub = M.pe===null ? 'margem de contribuição negativa — a loja não se paga' :
+        (M.peOk ? 'folga de '+brl0(M.fb-M.pe)+' sobre o faturamento' : 'faltam '+brl0(M.pe-M.fb)+' de faturamento');
+      html += kpiCard('Ponto de equilíbrio', M.pe===null ? '—' : brl0(M.pe), null, peSub,
+        '<span class="chip '+(M.peOk?'good':'critical')+'">'+(M.peOk?'atingido':'não atingido')+'</span>');
+    }
+    var dc = M.pctCmv - 31;
+    html += kpiCard(isRede ? 'CMV da rede' : 'CMV', fmt1.format(M.pctCmv)+'%', null, 'Meta ≤31,0% (CMV ideal) · sobre faturamento líquido',
+      '<span class="chip '+(dc>0.05?'critical':'good')+'">'+(dc>0.05 ? '+'+fmt1.format(dc)+'pp acima da meta' : 'dentro da meta')+'</span>');
+    box.innerHTML = html;
+  }
+
+  var BN_CATS = [
+    {k:'cmv', label:'CMV (insumos, embalagens)', color:'var(--cat-1)'},
+    {k:'cf', label:'Custos fixos (pessoal + admin.)', color:'var(--cat-2)'},
+    {k:'cartao', label:'Cartão + apps de delivery', color:'var(--cat-3)'},
+    {k:'desc', label:'Descontos concedidos', color:'var(--cat-4)'},
+    {k:'roy', label:'Royalties + taxa de marketing', color:'var(--cat-5)'},
+    {k:'entregas', label:'Entregas + devoluções', color:'var(--cat-6)'}
+  ];
+  function renderBigNumbers(){
+    var s = fState.scope, m = fState.month, M = storeMetrics(s, m);
+    document.getElementById('bnTitle').textContent = 'Para onde foi cada R$ 100 faturados ('+periodShort(m)+')';
+    var grid = document.getElementById('bnGrid'), foot = document.getElementById('bnFoot'), note = document.getElementById('bnNote');
+    if(!M){ grid.innerHTML = '<div class="bn">Sem dados neste período.</div>'; foot.textContent = ''; note.textContent = ''; return; }
+    var n = voxelTabsList.filter(function(t){ return storeMetrics(t, m); }).length;
+    note.textContent = (s==='Consolidado' ? 'Rede consolidada, '+n+' lojas' : s) + ' · sobre o faturamento bruto de '+brl0(M.fb);
+    var html = '';
+    BN_CATS.forEach(function(c){
+      var v = M[c.k], per = v/M.fb*100;
+      html += '<div class="bn"><div class="bn-label"><span class="swatch" style="background:'+c.color+'"></span>'+c.label+'</div>'+
+        '<div class="bn-value tabular">R$ '+fmt2.format(per)+'</div>'+
+        '<div class="bn-sub tabular">'+brl0(-v)+' no período</div></div>';
+    });
+    var perRes = M.lop/M.fb*100;
+    html += '<div class="bn result"><div><div class="bn-label">Resultado operacional</div><div class="bn-sub tabular">'+brl0(M.lop)+' no período</div></div>'+
+      '<div class="bn-value tabular" style="color:'+(perRes<0?'var(--critical)':'var(--good)')+'">'+(perRes<0?'-':'+')+'R$ '+fmt2.format(Math.abs(perRes))+' <span class="bn-sub" style="font-weight:600;">a cada R$ 100</span></div></div>';
+    grid.innerHTML = html;
+    var inclB13 = s==='Biggs 13' || (s==='Consolidado' && (m===3 || m===-1));
+    foot.textContent = !inclB13 ? '' : (s==='Biggs 13' ? 'A planilha da Biggs 13 informa descontos de R$ 0 — vale confirmar se o faturamento já vem líquido de descontos.' :
+      'A Biggs 13 entra com descontos de R$ 0, como informado na planilha dela.');
+  }
+
+  // better: 'high' = maior é melhor, 'low' = menor é melhor, null = neutro
+  var CMP_ROWS = [
+    {l:'Faturamento bruto', f:function(M){ return M.fb; }, t:'brl', better:'high'},
+    {l:'Faturamento líquido', f:function(M){ return M.fli; }, t:'brl', better:'high'},
+    {l:'Descontos (% fat. bruto)', f:function(M){ return M.desc/M.fb*100; }, t:'pct', better:'low'},
+    {l:'Cartão + apps de delivery (% fat. bruto)', f:function(M){ return M.cartao/M.fb*100; }, t:'pct', better:'low'},
+    {l:'Royalties + marketing (% fat. bruto)', f:function(M){ return M.roy/M.fb*100; }, t:'pct', better:'low'},
+    {l:'CMV (% fat. líquido)', f:function(M){ return M.pctCmv; }, t:'pct', better:'low'},
+    {l:'Pessoal / CMO (% fat. líquido)', f:function(M){ return M.pctCmo; }, t:'pct', better:'low'},
+    {l:'Entregas + devoluções (% fat. bruto)', f:function(M){ return M.entregas/M.fb*100; }, t:'pct', better:'low'},
+    {l:'Custos fixos (% fat. bruto)', f:function(M){ return M.cf/M.fb*100; }, t:'pct', better:'low'},
+    {l:'Margem de contribuição (% fat. líquido)', f:function(M){ return M.pctMc; }, t:'pct', better:'high'},
+    {l:'Markup (fat. líquido ÷ CMV)', f:function(M){ return M.markup; }, t:'x', better:'high'},
+    {l:'Resultado operacional', f:function(M){ return M.lop; }, t:'brl', better:'high', strong:true},
+    {l:'Resultado operacional (% fat. bruto)', f:function(M){ return M.pctLop; }, t:'pct', better:'high', strong:true},
+    {l:'Ponto de equilíbrio', f:function(M){ return M.pe; }, t:'brl', better:null},
+    {l:'Folga sobre o ponto de equilíbrio', f:function(M){ return M.pe===null ? null : (M.fb-M.pe)/M.pe*100; }, t:'pct', better:'high'},
+    {l:'Lucro líquido', f:function(M){ return M.ll; }, t:'brl', better:'high'}
+  ];
+  function cmpOk(v){ return v!==null && v!==undefined && !isNaN(v); }
+  function cmpFmt(v, t){
+    if(!cmpOk(v)) return '—';
+    if(t==='brl') return brl0(v);
+    if(t==='x') return fmt2.format(v)+'x';
+    return fmt1.format(v)+'%';
+  }
+  function cmpDiff(a, b, t){
+    if(!cmpOk(a) || !cmpOk(b)) return '—';
+    var d = a-b, sign = d>0 ? '+' : (d<0 ? '−' : '');
+    if(t==='brl') return sign+'R$ '+fmt0.format(Math.abs(Math.round(d)));
+    if(t==='x') return sign+fmt2.format(Math.abs(d))+'x';
+    return sign+fmt1.format(Math.abs(d))+' pp';
+  }
+  function renderCompare(){
+    var selA = document.getElementById('cmpA'), selB = document.getElementById('cmpB');
+    if(!selA.options.length){
+      fillStoreSelect(selA, true); fillStoreSelect(selB, true);
+      selA.addEventListener('change', function(){ cmpState.a = selA.value; renderCompare(); });
+      selB.addEventListener('change', function(){ cmpState.b = selB.value; renderCompare(); });
+      document.getElementById('cmpSwap').addEventListener('click', function(){ var t = cmpState.a; cmpState.a = cmpState.b; cmpState.b = t; renderCompare(); });
+    }
+    selA.value = cmpState.a; selB.value = cmpState.b;
+    var m = fState.month, A = storeMetrics(cmpState.a, m), B = storeMetrics(cmpState.b, m);
+    document.getElementById('cmpSub').textContent = 'Período: '+periodName(m)+' (filtro de mês no topo) · escolha as duas lojas abaixo';
+    document.getElementById('cmpThA').textContent = scopeName(cmpState.a);
+    document.getElementById('cmpThB').textContent = scopeName(cmpState.b);
+    function head(name, M, tag){
+      var lbl = '<div class="kpi-label"><span class="cmp-tag'+(tag==='B'?' b':'')+'">'+tag+'</span> '+scopeName(name)+'</div>';
+      if(!M) return '<div class="card kpi">'+lbl+'<div class="kpi-sub" style="margin-top:8px;">Sem dados em '+periodName(m)+'.</div></div>';
+      return '<div class="card kpi">'+lbl+
+        '<div class="kpi-value tabular" style="color:'+(M.lop<0?'var(--critical)':'var(--good)')+'">'+brl0(M.lop)+'</div>'+
+        '<div class="kpi-sub">resultado operacional · '+pct(M.pctLop)+' de '+brl0(M.fb)+'</div>'+
+        '<span class="chip '+(M.peOk?'good':'critical')+'">ponto de equilíbrio '+(M.peOk?'atingido':'não atingido')+'</span></div>';
+    }
+    document.getElementById('cmpHead').innerHTML = head(cmpState.a, A, 'A') + head(cmpState.b, B, 'B');
+    var html = '';
+    CMP_ROWS.forEach(function(row){
+      var a = A ? row.f(A) : null, b = B ? row.f(B) : null;
+      var ca = '', cb = '';
+      if(row.better && cmpOk(a) && cmpOk(b) && Math.abs(a-b) > 1e-9){
+        var aWins = row.better==='high' ? a>b : a<b;
+        if(aWins) ca = ' better'; else cb = ' better';
+      }
+      html += '<tr'+(row.strong?' class="strong"':'')+'><td>'+row.l+'</td>'+
+        '<td class="num tabular'+ca+'">'+cmpFmt(a, row.t)+'</td>'+
+        '<td class="num tabular'+cb+'">'+cmpFmt(b, row.t)+'</td>'+
+        '<td class="num tabular" style="color:var(--ink-2);">'+cmpDiff(a, b, row.t)+'</td></tr>';
+    });
+    document.querySelector('#cmpTable tbody').innerHTML = html;
+  }
+
+  function renderFiltered(){
+    voxelRenderAll();
+    renderFilterBar();
+    renderResumo();
+    renderBigNumbers();
+    renderCompare();
+  }
+  renderFiltered();
 
 
   // ---------------- line chart ----------------
@@ -1156,31 +1439,6 @@
       });
       hit.addEventListener('mouseleave', hideTip);
       svg.appendChild(hit);
-    });
-  })();
-
-  // ---------------- stacked breakdown bar ----------------
-  (function(){
-    var bar = document.getElementById('stackBar');
-    var legend = document.getElementById('stackLegend');
-    waterfall.forEach(function(d){
-      var seg = document.createElement('div');
-      seg.className='stack-seg';
-      seg.style.width = d.value+'%';
-      seg.style.background = d.color;
-      seg.addEventListener('mousemove', function(evt){
-        showTip(evt, '<b>'+d.label+'</b>'+fmt1.format(d.value)+'% do faturamento bruto<br>'+brl(d.abs));
-      });
-      seg.addEventListener('mouseleave', hideTip);
-      bar.appendChild(seg);
-
-      var li = document.createElement('div');
-      li.className='legend-item';
-      var sw = document.createElement('span'); sw.className='swatch'; sw.style.background=d.color;
-      li.appendChild(sw);
-      var txt = document.createElement('span'); txt.textContent = d.label+' · '+fmt1.format(d.value)+'%';
-      li.appendChild(txt);
-      legend.appendChild(li);
     });
   })();
 
@@ -1396,7 +1654,7 @@
     {t:'CMV deu um salto estrutural desde maio e não voltou a cair', p:'CMV da rede (16 lojas com histórico) foi de <span class="stat">33,8% em maio para 42,2% em junho</span> e segue acima de 38% desde então (41,7% em agosto, já com a Biggs 13 incluída). Para o segmento (fast-food/hamburgueria), o ideal fica entre 25% e 35% — a rede opera hoje bem acima do teto saudável.'},
     {t:'Descontos e taxas de cartão/apps dispararam ao mesmo tempo', p:'Descontos foram de <span class="stat">1,1% para 8,7%</span> do faturamento bruto entre maio e agosto, subindo todo mês sem sinal de estabilização. Taxas de cartão/apps de delivery praticamente dobraram só entre julho e agosto (6,5% → 10,8%). Juntas, essas duas linhas consomem hoje ~13 pontos percentuais a mais de faturamento do que em maio.'},
     {t:'Dispersão enorme entre lojas mascara o problema no consolidado', p:'Em agosto, Biggs 02 lucrou <span class="stat">14,6%</span> e Biggs 11 <span class="stat">12,1%</span>, enquanto Biggs 06 perdeu <span class="stat">-24,7%</span> e Biggs 10 <span class="stat">-23,9%</span> do faturamento. Dez das 16 lojas nem atingiram o próprio ponto de equilíbrio no mês — olhar só o número da rede esconde lojas em situação grave.'},
-    {t:'Biggs 13: resultado caiu para +3,5% com cartão/apps incluídos, e ainda faltam os descontos', p:'Com a DRE na estrutura Voxel, as taxas de cartão/apps (<span class="stat">9,5%</span>) derrubaram o resultado de +13,0% para <span class="stat">+3,5%</span> (R$ 14.973). Os descontos ainda não estão discriminados — nas outras 16 lojas eles somam <span class="stat">~8,7%</span> do faturamento; se a Biggs 13 tiver algo parecido, o resultado fica negativo (ver seção "Biggs 13" acima).'}
+    {t:'Biggs 13: resultado de +3,5% depois de cartão/apps; descontos informados como zero', p:'Com a DRE completa na estrutura Voxel e as taxas de cartão/apps (<span class="stat">9,5%</span>) incluídas, a Biggs 13 fecha agosto com <span class="stat">+3,5%</span> (R$ 14.973). A planilha informa descontos de R$ 0 — nas outras 16 lojas eles somam <span class="stat">~8,7%</span> do faturamento; se houver descontos embutidos no faturamento, o resultado real é menor (ver seção "Biggs 13" acima).'}
   ];
   var improvements = [
     {t:'Padronizar o modelo de DRE em todas as 17 lojas', p:'Adotar o formato completo (tipo Voxel, com faturamento líquido, margem de contribuição e ponto de equilíbrio discriminados) para a Biggs 13 também — hoje a comparação entre lojas e ao longo do tempo é prejudicada por bases diferentes.'},
@@ -1406,7 +1664,7 @@
     {t:'Plano de recuperação dedicado às lojas cronicamente deficitárias', p:'Biggs 06, Biggs 10, Mapoli e Isaías 01 deram prejuízo nos 4 meses analisados (mai–ago). Decidir, loja a loja, entre reestruturação de custo fixo, renegociação de aluguel/condições de franquia ou avaliação de fechamento/realocação.'}
   ];
   var actions = [
-    {d:'Até 30/09', t:'Reconstruir o DRE da Biggs 13 no formato completo', p:'Solicitar/montar o DRE da Biggs 13 com cartão, apps, descontos e impostos discriminados, no mesmo padrão das outras 16 lojas, antes de usar o resultado atual em qualquer decisão.'},
+    {d:'Até 30/09', t:'Fechar as pendências do DRE da Biggs 13', p:'Levar cartão/apps e devoluções para a planilha da loja, confirmar se os descontos são mesmo R$ 0 e detalhar a origem dos R$ 13.861 de insumos pendentes.'},
     {d:'Até 30/09', t:'Implantar teto de desconto e relatório semanal', p:'Definir alçada de desconto por loja/gerente e passar a reportar semanalmente o desconto acumulado do mês, com meta de reverter a tendência de alta.'},
     {d:'Até 08/10', t:'Auditar o salto de taxas de cartão/apps de jul→ago', p:'Revisar extratos de maquininha e faturas dos apps de delivery loja a loja; renegociar condições/planos onde houver espaço, usando como referência as faixas de mercado (débito 1,7–2,5%, crédito 3,0–4,2%, apps 12–30%).'},
     {d:'Até 15/10', t:'Reunião individual com as 5 piores lojas', p:'Biggs 06, Biggs 10, Isaías 01, Robs e Biggs 03 — construir plano de ação específico (CMV, quadro de pessoal, aluguel) com meta de reduzir o prejuízo em pelo menos 50% no mês seguinte.'},

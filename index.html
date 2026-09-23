@@ -363,6 +363,17 @@
   .how-to li{margin:2px 0;}
   .div-meta{stroke:var(--good); stroke-width:1.2; stroke-dasharray:2,3;}
   .div-meta-label{fill:var(--good); font-size:10.5px; font-weight:700;}
+
+  /* ---------- realizado x meta nos cards do sinaleiro ---------- */
+  .sig-rm{display:grid; grid-template-columns:auto 1fr; gap:1px 8px; font-size:11.5px; color:var(--ink-muted); margin-top:6px;}
+  .sig-rm b{color:var(--ink-2); font-weight:700; text-align:right; font-variant-numeric:tabular-nums;}
+  .sig-bar{position:relative; height:7px; border-radius:4px; background:var(--surface-2); margin-top:8px; overflow:visible;}
+  .sig-bar .fill{position:absolute; top:0; bottom:0; border-radius:4px;}
+  .sig-bar .fill.sig-good{background:var(--good);} .sig-bar .fill.sig-warn{background:var(--warning);} .sig-bar .fill.sig-bad{background:var(--critical);}
+  .sig-bar .mark{position:absolute; top:-4px; bottom:-4px; width:2px; background:var(--ink); border-radius:1px;}
+  .sig-bar .zero{position:absolute; top:-2px; bottom:-2px; width:1px; background:var(--baseline);}
+  .sig-gap{display:inline-flex; white-space:nowrap; align-items:center; gap:5px; font-size:11.5px; font-weight:800; margin-top:8px; padding:2px 8px; border-radius:999px; background:color-mix(in srgb, currentColor 14%, transparent);}
+  .sig-gap .rs{font-weight:600; opacity:.9;}
 </style>
 
 <div class="page">
@@ -416,6 +427,7 @@
     <div class="sig-panel" id="sigPanel"></div>
     <div class="sig-legend" style="justify-content:center;">
       <span><i class="sig-dot sig-good"></i>Dentro da meta</span>
+      <span><i style="display:inline-block;width:2px;height:12px;background:var(--ink);"></i>Marcador = meta</span>
       <span><i class="sig-dot sig-warn"></i>Atenção</span>
       <span><i class="sig-dot sig-bad"></i>Fora da meta</span>
       <span>A cor da borda e da bolinha em cada linha da DRE é a mesma do "cada R$ 100".</span>
@@ -1162,14 +1174,36 @@
 
   function renderSigPanel(){
     var s = voxelActiveScope, m = voxelActiveMonth, M = storeMetrics(s, m);
-    document.getElementById('sigTitle').textContent = 'Sinaleiro da DRE · '+scopeName(s)+' · '+periodName(m);
+    document.getElementById('sigTitle').textContent = 'Sinaleiro da DRE · realizado x meta · '+scopeName(s)+' · '+periodName(m);
     var html = '';
     SIG_ORDER.forEach(function(k){
-      var p = sigPct(k, M), cls = sigClass(k, p);
-      html += '<div class="sig-card" style="--sig-c:'+SIG[k].color+'">'+
-        '<div class="sig-name"><span class="cat-dot" style="background:'+SIG[k].color+'"></span>'+SIG[k].label+'</div>'+
-        '<div class="sig-val tabular">'+(p===null?'—':fmt1.format(p)+'%')+'</div>'+
-        '<div class="sig-foot"><i class="sig-dot '+cls+'"></i>'+sigMeta(k)+' · '+sigBaseName(k)+'</div></div>';
+      var d = SIG[k], p = sigPct(k, M), cls = sigClass(k, p);
+      var body = '';
+      if(p!==null){
+        var base = M[d.base] || 0;
+        var diff = p - d.g;                                  // em pp
+        var ok = d.dir==='low' ? diff<=0 : diff>=0;
+        var rs = Math.abs(diff)/100*base;                    // impacto em R$ da distância até a meta
+        var gapTxt = (diff>0?'+':(diff<0?'−':''))+fmt1.format(Math.abs(diff))+' pp '+(diff>0?'acima':'abaixo');
+        var rsTxt = ok ? 'folga de '+brl0(rs) : (d.dir==='low' ? brl0(rs)+' a mais que a meta' : 'faltam '+brl0(rs));
+        // barra: realizado (cor do sinal) e marcador da meta
+        var lo = Math.min(0, p), hi = Math.max(p, d.g, 1)*1.2;
+        function pos(v){ return ((v-lo)/(hi-lo)*100).toFixed(1)+'%'; }
+        var z = (0-lo)/(hi-lo)*100, px = (p-lo)/(hi-lo)*100;
+        var fill = '<span class="fill '+cls+'" style="left:'+Math.min(z,px).toFixed(1)+'%; width:'+Math.max(Math.abs(px-z),0.8).toFixed(1)+'%"></span>';
+        body =
+          '<div class="sig-bar" title="Realizado '+fmt1.format(p)+'% · meta '+fmt1.format(d.g)+'%">'+
+            (lo<0 ? '<span class="zero" style="left:'+z.toFixed(1)+'%"></span>' : '')+fill+
+            '<span class="mark" style="left:calc('+pos(d.g)+' - 1px)"></span></div>'+
+          '<div class="sig-rm"><span>Meta</span><b>'+(d.dir==='low'?'≤ ':'≥ ')+fmt1.format(d.g)+'%</b></div>'+
+          '<span class="sig-gap '+cls+'"><i class="sig-dot '+cls+'"></i>'+gapTxt+'</span>'+
+          '<div class="sig-foot" style="margin-top:4px;">'+rsTxt+' · '+sigBaseName(k)+'</div>';
+      } else {
+        body = '<div class="sig-foot"><i class="sig-dot sig-na"></i>sem dados · '+sigMeta(k)+'</div>';
+      }
+      html += '<div class="sig-card" style="--sig-c:'+d.color+'">'+
+        '<div class="sig-name"><span class="cat-dot" style="background:'+d.color+'"></span>'+d.label+'</div>'+
+        '<div class="sig-val tabular">'+(p===null?'—':fmt1.format(p)+'%')+' <span style="font-size:11.5px;font-weight:600;color:var(--ink-muted);">realizado</span></div>'+body+'</div>';
     });
     document.getElementById('sigPanel').innerHTML = html;
   }

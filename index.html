@@ -436,6 +436,17 @@
   .fn-gap{font-weight:800;}
   .fn-gap.below{color:var(--critical);} .fn-gap.above{color:var(--good);}
   .fn-legend{display:flex; flex-wrap:wrap; gap:6px 16px; font-size:12px; color:var(--ink-muted); margin-top:8px;}
+
+  .fn-tag{display:block; font-size:10.5px; font-weight:700; margin-top:1px; white-space:nowrap;}
+  .fn-tag.atual{color:var(--ink-muted); font-weight:600;}
+  .fn-tag.cen{color:var(--accent);}
+  :root:not([data-theme="light"]) .fn-tag.cen{color:color-mix(in srgb, var(--accent) 55%, #fff);}
+  .fn-table td.fn-val.cenario{background:color-mix(in srgb, var(--accent) 8%, transparent);}
+  .fn-table td.fn-val .fn-detail{display:none; font-size:10.5px; color:var(--ink-2); font-weight:600; white-space:normal; min-width:150px; text-align:right; margin-top:2px;}
+  .fn-table td.fn-val.show-full .fn-detail{display:block;}
+  .fn-prem{display:flex; align-items:center; gap:8px; flex-wrap:wrap; font-size:12.5px; color:var(--ink-2); margin:0 0 10px;}
+  .fn-prem input{width:64px; font:inherit; font-weight:800; color:var(--ink); background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:5px 8px; text-align:right;}
+  .fn-prem input:focus-visible{outline:2px solid var(--accent); outline-offset:1px;}
 </style>
 
 <div class="page">
@@ -525,6 +536,11 @@
       </div>
     </div>
     <div class="fn-note">Simulação baseada na margem de contribuição e nos custos fixos do período selecionado. Pressupõe que os custos fixos permaneçam no mesmo valor e que os custos variáveis mantenham a mesma proporção do faturamento. Resultado operacional não equivale à geração de caixa.</div>
+    <div class="fn-prem">
+      <label for="fnPrem"><b>Premissa de simulação:</b> margem mínima = meta +</label>
+      <input type="number" id="fnPrem" value="10" min="1" max="60" step="1" inputmode="decimal"> <span>pp</span>
+      <span style="color:var(--ink-muted);">— usada só quando a margem atual não sustenta a meta; é um cenário, não um resultado alcançado.</span>
+    </div>
     <div class="table-scroll">
       <table class="fn-table" id="fnTable">
         <thead><tr>
@@ -541,12 +557,15 @@
       </table>
     </div>
     <div class="fn-legend">
-      <span>Faturamento bruto necessário = custos fixos ÷ (margem de contribuição sobre o bruto − meta de resultado)</span>
+      <span>Faturamento bruto necessário = custos fixos ÷ (margem usada − meta), com margem usada = máximo(margem atual; meta + premissa)</span>
+      <span><span class="fn-tag atual" style="display:inline;">margem atual</span> = calculado com a margem de contribuição do período</span>
+      <span><span class="fn-tag cen" style="display:inline;">▲ cenário</span> = Cenário com melhoria de margem</span>
       <span><b class="fn-gap below">■</b> abaixo do equilíbrio bruto</span>
       <span><b class="fn-gap above">■</b> no equilíbrio ou acima</span>
       <span><span class="fn-flag">⚠</span> Meta depende de revisão de margem e capacidade de vendas (mais que 2× o bruto realizado)</span>
-      <span>Toque ou passe o cursor na célula para ver o valor completo.</span>
+      <span>Toque ou passe o cursor na célula para ver o valor completo e as margens usadas.</span>
     </div>
+    <p class="fn-note" style="margin-top:10px;">Valores de cenário dependem de reduzir custos variáveis ou descontos para alcançar a margem indicada. Resultado operacional projetado não equivale a reserva de caixa.</p>
 
     <div class="section-head" style="margin-top:32px;">
       <h3 style="font-size:17px; font-weight:800;">DRE Voxel — Regime de Competência</h3>
@@ -1713,36 +1732,37 @@
     if(fnUnit==='mi') return 'R$ '+fmt2.format(v/1e6)+' mi';
     return brl0(v);
   }
-  function fnCell(v, extraTitle){
-    return '<td class="num tabular fn-val" title="'+brl2(v)+(extraTitle?' — '+extraTitle:'')+'"><span class="fn-abbr">'+fnFmt(v)+'</span><span class="fn-full">'+brl2(v)+'</span>';
-  }
+  var fnPremissa = 0.10; // margem mínima = meta + premissa (editável no painel)
   function fnCalc(fb, mc, cf){
     if(!(fb>0) || mc===null || mc===undefined || isNaN(mc) || cf===null || cf===undefined || isNaN(cf)) return null;
     var mcB = mc/fb, cfa = Math.abs(cf);
-    return {fb:fb, mcB:mcB, cf:cfa, metas: FN_TARGETS.map(function(p){
-      var den = mcB - p;
-      if(den <= 0) return {p:p, rever:true};
-      var v = cfa/den;
-      if(!isFinite(v) || v<0) return {p:p, rever:true};
-      return {p:p, v:v, alto: v > 2*fb};
+    return {fb:fb, mcB:mcB, cf:cfa, lop: mc - cfa, metas: FN_TARGETS.map(function(p){
+      var mu = Math.max(mcB, p + fnPremissa);       // margem usada (nunca abaixo de meta + premissa)
+      var v = cfa/(Math.round((mu - p)*1e10)/1e10);  // mu − p >= premissa > 0: sempre finito e positivo (arredonda ruído de ponto flutuante)
+      return {p:p, v:v, mu:mu, cenario: mu > mcB + 1e-12, alto: v > 2*fb};
     })};
+  }
+  function fnMetaCell(C, mt){
+    var detail = 'Margem atual: '+fmt2.format(C.mcB*100)+'% · margem usada: '+fmt2.format(mt.mu*100)+'% · '+
+      (mt.cenario ? 'melhoria necessária: +'+fmt2.format((mt.mu-C.mcB)*100)+' pp' : 'sem melhoria de margem');
+    var title = brl2(mt.v)+' — '+(mt.cenario ? 'Cenário com melhoria de margem. ' : 'Com margem atual. ')+detail+
+      (mt.alto ? ' · Meta depende de revisão de margem e capacidade de vendas' : '');
+    return '<td class="num tabular fn-val'+(mt.cenario?' cenario':'')+'" title="'+title+'">'+
+      '<span class="fn-abbr">'+fnFmt(mt.v)+'</span><span class="fn-full">'+brl2(mt.v)+'</span>'+
+      (mt.alto ? '<span class="fn-flag" title="Meta depende de revisão de margem e capacidade de vendas">⚠</span>' : '')+
+      (mt.cenario ? '<span class="fn-tag cen">▲ Cenário com melhoria de margem</span>' : '<span class="fn-tag atual">Com margem atual</span>')+
+      '<span class="fn-detail">'+detail+'</span></td>';
   }
   function fnRow(label, C, cls){
     if(!C) return '<tr><td>'+label+'</td><td class="num fn-msg" colspan="7">Dados insuficientes</td></tr>';
-    var eq = C.metas[0], below = eq.rever ? true : C.fb < eq.v;
+    var eq = C.metas[0], below = C.lop < 0;
     var h = '<tr class="'+(cls||'')+' '+(below?'fn-below':'fn-above')+'"><td>'+label+'</td>';
-    h += fnCell(C.fb)+'</td>';
-    h += eq.rever ? '<td class="num fn-msg">Rever margem</td>' : fnCell(eq.v, 'margem de contribuição sobre o bruto '+fmt2.format(C.mcB*100)+'%')+(eq.alto?'<span class="fn-flag" title="Meta depende de revisão de margem e capacidade de vendas">⚠</span>':'')+'</td>';
-    if(eq.rever) h += '<td class="num fn-msg">Rever margem</td>';
-    else {
-      var falta = Math.max(0, eq.v - C.fb);
-      h += falta>0 ? '<td class="num tabular fn-val" title="'+brl2(falta)+'"><span class="fn-abbr fn-gap below">'+fnFmt(falta)+'</span><span class="fn-full fn-gap below">'+brl2(falta)+'</span></td>'
-                   : '<td class="num tabular"><span class="fn-gap above" title="Folga de '+brl2(C.fb-eq.v)+'">✓ acima</span></td>';
-    }
-    C.metas.slice(1).forEach(function(mt){
-      if(mt.rever){ h += '<td class="num fn-msg">Rever margem</td>'; return; }
-      h += fnCell(mt.v, mt.alto ? 'Meta depende de revisão de margem e capacidade de vendas' : '')+(mt.alto?'<span class="fn-flag" title="Meta depende de revisão de margem e capacidade de vendas">⚠</span>':'')+'</td>';
-    });
+    h += '<td class="num tabular fn-val" title="'+brl2(C.fb)+'"><span class="fn-abbr">'+fnFmt(C.fb)+'</span><span class="fn-full">'+brl2(C.fb)+'</span></td>';
+    h += fnMetaCell(C, eq);
+    var falta = Math.max(0, eq.v - C.fb);
+    h += falta>0 ? '<td class="num tabular fn-val" title="'+brl2(falta)+(eq.cenario?' (sobre o equilíbrio de cenário)':'')+'"><span class="fn-abbr fn-gap below">'+fnFmt(falta)+'</span><span class="fn-full fn-gap below">'+brl2(falta)+'</span></td>'
+                 : '<td class="num tabular"><span class="fn-gap above" title="Folga de '+brl2(C.fb-eq.v)+'">✓ acima</span></td>';
+    C.metas.slice(1).forEach(function(mt){ h += fnMetaCell(C, mt); });
     return h+'</tr>';
   }
   function renderFatNecessario(){
@@ -1761,13 +1781,17 @@
       rows += fnRow(lbl, tot.n ? fnCalc(tot.fb, tot.mc, tot.cf) : null, 'fn-total');
     }
     document.querySelector('#fnTable tbody').innerHTML = rows;
-    document.getElementById('fnSub').textContent = periodName(m)+' · '+scopeName(s)+' · valores em reais (R$), sobre o faturamento bruto';
+    document.getElementById('fnSub').textContent = periodName(m)+' · '+scopeName(s)+' · valores em reais (R$), sobre o faturamento bruto · premissa de cenário: meta + '+fmt1.format(fnPremissa*100).replace(',0','')+' pp de margem';
   }
   document.getElementById('fnUnits').addEventListener('click', function(e){
     var b = e.target.closest('[data-u]'); if(!b) return;
     fnUnit = b.getAttribute('data-u');
     Array.prototype.forEach.call(this.querySelectorAll('[data-u]'), function(x){ x.classList.toggle('active', x===b); });
     renderFatNecessario();
+  });
+  document.getElementById('fnPrem').addEventListener('input', function(){
+    var v = parseFloat(String(this.value).replace(',', '.'));
+    if(isFinite(v) && v>0 && v<=60){ fnPremissa = v/100; renderFatNecessario(); }
   });
   // toque na célula mostra o valor completo (celular)
   document.getElementById('fnTable').addEventListener('click', function(e){

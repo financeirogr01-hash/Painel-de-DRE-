@@ -383,6 +383,25 @@
   [data-go]:hover .go-hint, [data-go]:focus-visible .go-hint{opacity:1;}
   @keyframes rowFlash{0%,55%{background:color-mix(in srgb, var(--row-cat, var(--accent)) 32%, transparent);} 100%{background:transparent;}}
   .voxel-row.row-flash td{animation:rowFlash 2.2s ease-out;}
+
+  /* ---------- barra: menu + botão resumo gerencial ---------- */
+  .navrow{display:flex; align-items:center; gap:10px;}
+  .navrow .tabnav{flex:1; min-width:0;}
+  .rg-btn{flex:none; font:inherit; font-size:13px; font-weight:800; color:#fff; background:var(--accent); border:none; border-radius:8px; padding:7px 12px; cursor:pointer; white-space:nowrap;}
+  .rg-btn:hover{filter:brightness(1.1);}
+  .rg-btn:focus-visible{outline:2px solid var(--accent); outline-offset:2px;}
+  /* ---------- modal do resumo gerencial ---------- */
+  .rg-overlay{position:fixed; inset:0; z-index:100; background:rgba(0,0,0,.55); display:flex; align-items:flex-start; justify-content:center; padding:32px 16px; overflow-y:auto;}
+  .rg-overlay[hidden]{display:none;}
+  .rg-modal{background:var(--surface); color:var(--ink); border:1px solid var(--border); border-radius:14px; width:100%; max-width:760px; padding:16px 18px 20px; box-shadow:0 20px 60px rgba(0,0,0,.35);}
+  .rg-head{display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap;}
+  .rg-head h3{font-size:17px; font-weight:800;}
+  .rg-actions{display:flex; gap:8px;}
+  .rg-actions button{font:inherit; font-size:13px; font-weight:700; border-radius:8px; padding:6px 12px; cursor:pointer; border:1px solid var(--border); background:var(--surface-2); color:var(--ink);}
+  .rg-actions button.primary{background:var(--accent); border-color:var(--accent); color:#fff;}
+  .rg-sub{font-size:12.5px; color:var(--ink-muted); margin:6px 0 10px;}
+  .rg-text{white-space:pre-wrap; word-break:break-word; font-family:inherit; font-size:13.5px; line-height:1.55; background:var(--page); border:1px solid var(--border); border-radius:10px; padding:14px 16px; margin:0; max-height:70vh; overflow-y:auto;}
+  @media (max-width:640px){ .rg-btn{padding:6px 9px; font-size:12px;} }
 </style>
 
 <div class="page">
@@ -408,6 +427,7 @@
     <p class="meta">Competência Agosto/2026 · 17 lojas: Biggs 01–13, Isaías 01–03, Robs e Mapoli (Biggs 01–12 + Isaías/Robs/Mapoli com DRE completo, base Voxel; Biggs 13 em DRE ajustado à parte) · dados enviados em 23/09/2026</p>
   </header>
   <div class="stickybar" id="stickyBar">
+    <div class="navrow">
     <nav class="tabnav">
       <a href="#resumo">Resumo da rede</a>
       <a href="#comparativo">Comparativo</a>
@@ -418,8 +438,11 @@
       <a href="#plano">Plano do mês</a>
       <a href="#setor">Setor</a>
     </nav>
+    <button type="button" class="rg-btn" id="rgOpen" title="Gerar o resumo gerencial do mês selecionado">📊 Resumo gerencial</button>
+    </div>
     <div class="filterbar" role="region" aria-label="Filtros de mês e loja">
       <div class="filter-group"><span class="filter-label">Mês</span><div class="voxel-tabs" id="fMonth"></div></div>
+      <div class="filter-group"><label class="filter-label" for="fBrand">Marca</label><select id="fBrand" class="fselect" style="min-width:130px;"></select></div>
       <div class="filter-group"><label class="filter-label" for="fStore">Loja</label><select id="fStore" class="fselect"></select></div>
     </div>
   </div>
@@ -509,6 +532,20 @@
     </div>
     <p class="chart-note" style="margin-top:8px;">Em verde, o melhor número de cada indicador — para custos e descontos, o menor percentual. O período segue o filtro de mês no topo. CMV, CMO e margem de contribuição são sobre o faturamento líquido (convenção do DRE Voxel); as demais linhas em %, sobre o faturamento bruto. Biggs 13 só tem dados de agosto e não discrimina descontos.</p>
   </section>
+
+  <div class="rg-overlay" id="rgOverlay" hidden>
+    <div class="rg-modal" role="dialog" aria-modal="true" aria-labelledby="rgTitle">
+      <div class="rg-head">
+        <h3 id="rgTitle">📊 Resumo gerencial</h3>
+        <div class="rg-actions">
+          <button type="button" class="primary" id="rgCopy">Copiar texto</button>
+          <button type="button" id="rgClose">Fechar</button>
+        </div>
+      </div>
+      <div class="rg-sub" id="rgSub"></div>
+      <pre class="rg-text" id="rgText"></pre>
+    </div>
+  </div>
 
   <section id="lojas">
     <div class="section-head">
@@ -902,6 +939,17 @@
     {l:'Ajuste de Caixa'}
   ];
 
+  // Marcas da rede. "Marca:X" é um escopo que soma as lojas da marca (Biggs inclui a Biggs 13 em agosto).
+  var BRANDS = [
+    {id:'Biggs', icon:'🏪'}, {id:'Isaías', icon:'🍽️'}, {id:'Robs', icon:'🥩'}, {id:'Mapoli', icon:'🍕'}
+  ];
+  function storeBrand(t){ return t.indexOf('Biggs')===0 ? 'Biggs' : (t.indexOf('Isaías')===0 ? 'Isaías' : t); }
+  function brandIcon(b){ var f = BRANDS.filter(function(x){ return x.id===b; })[0]; return f ? f.icon : '🏪'; }
+  function brandStores(b){ return voxelTabsList.filter(function(t){ return storeBrand(t)===b; }); }
+  function isBrandScope(s){ return s.indexOf('Marca:')===0; }
+  function isGroupScope(s){ return s==='Consolidado' || isBrandScope(s); }
+  function scopeStores(s){ return s==='Consolidado' ? voxelTabsList.slice() : (isBrandScope(s) ? brandStores(s.slice(6)) : [s]); }
+  function scopeBrand(s){ return s==='Consolidado' ? 'Todas' : (isBrandScope(s) ? s.slice(6) : storeBrand(s)); }
   var voxelTabsList = ['Biggs 01','Biggs 02','Biggs 03','Biggs 04','Biggs 05','Biggs 06','Biggs 07 e Açaí','Biggs 08 e 09','Biggs 10','Biggs 11','Biggs 12','Biggs 13','Isaías 01','Isaías 02','Isaías 03','Robs','Mapoli'];
   var voxelLineIndex = {};
   voxelData.lines.forEach(function(l,i){ voxelLineIndex[l]=i; });
@@ -922,6 +970,14 @@
       // reportou (formato "Ajustada") na coluna de agosto, para as linhas que ela discrimina.
       if(voxelBiggs13Data.hasOwnProperty(line)){ out[3] += voxelBiggs13Data[line]; }
       return out;
+    }
+    if(isBrandScope(scope)){
+      var outB=[0,0,0,0];
+      brandStores(scope.slice(6)).forEach(function(st){
+        if(st==='Biggs 13'){ if(voxelBiggs13Data.hasOwnProperty(line)){ outB[3] += voxelBiggs13Data[line]; } }
+        else { outB = voxelSum4(outB, voxelStoreVals(st, line)); }
+      });
+      return outB;
     }
     if(scope==='Biggs 13'){
       var v = voxelBiggs13Data.hasOwnProperty(line) ? voxelBiggs13Data[line] : null;
@@ -1327,7 +1383,7 @@
   var fmt2 = new Intl.NumberFormat('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2});
   var fmt0 = new Intl.NumberFormat('pt-BR', {maximumFractionDigits:0});
   function brl0(v){ return (v<0?'-R$ ':'R$ ') + fmt0.format(Math.abs(Math.round(v))); }
-  function scopeName(s){ return s==='Consolidado' ? 'Rede (consolidado)' : s; }
+  function scopeName(s){ return s==='Consolidado' ? 'Rede (consolidado)' : (isBrandScope(s) ? 'Marca '+s.slice(6) : s); }
   function periodName(m){ return m===-1 ? 'acumulado mai–ago/2026' : MONTH_FULL[m]+'/2026'; }
   function periodShort(m){ return m===-1 ? 'mai–ago/26' : VOXEL_MONTH_LABELS[m].toLowerCase()+'/26'; }
   function scopeHasData(s, m){ return s!=='Biggs 13' || m===3 || m===-1; }
@@ -1376,17 +1432,32 @@
 
   function fillStoreSelect(sel, withRede){
     if(sel.options.length) return;
-    var opts = (withRede ? ['Consolidado'] : []).concat(voxelTabsList);
-    opts.forEach(function(t){ var o = document.createElement('option'); o.value = t; o.textContent = scopeName(t); sel.appendChild(o); });
+    function add(parent, v, txt){ var o = document.createElement('option'); o.value = v; o.textContent = txt; parent.appendChild(o); }
+    if(withRede) add(sel, 'Consolidado', scopeName('Consolidado'));
+    var gM = document.createElement('optgroup'); gM.label = 'Marcas';
+    BRANDS.forEach(function(b){ add(gM, 'Marca:'+b.id, 'Marca '+b.id+' ('+brandStores(b.id).length+(brandStores(b.id).length>1?' lojas':' loja')+')'); });
+    sel.appendChild(gM);
+    var gL = document.createElement('optgroup'); gL.label = 'Lojas';
+    voxelTabsList.forEach(function(t){ add(gL, t, t); });
+    sel.appendChild(gL);
   }
 
   function renderFilterBar(){
-    var sel = document.getElementById('fStore');
-    if(!sel.options.length){
-      fillStoreSelect(sel, true);
+    var selB = document.getElementById('fBrand'), sel = document.getElementById('fStore');
+    if(!selB.options.length){
+      [['Todas','Todas as marcas']].concat(BRANDS.map(function(b){ return [b.id, b.id]; })).forEach(function(p){
+        var o = document.createElement('option'); o.value = p[0]; o.textContent = p[1]; selB.appendChild(o);
+      });
+      selB.addEventListener('change', function(){ setFilter(selB.value==='Todas' ? 'Consolidado' : 'Marca:'+selB.value, fState.month); });
       sel.addEventListener('change', function(){ setFilter(sel.value, fState.month); });
     }
+    var brand = scopeBrand(fState.scope);
+    selB.value = brand;
+    var opts = brand==='Todas' ? [['Consolidado','Rede (consolidado)']].concat(voxelTabsList.map(function(t){ return [t,t]; }))
+      : [['Marca:'+brand, brandStores(brand).length>1 ? 'Todas as lojas '+brand : brand+' (marca)']].concat(brandStores(brand).length>1 ? brandStores(brand).map(function(t){ return [t,t]; }) : []);
+    sel.innerHTML = opts.map(function(p){ return '<option value="'+p[0]+'">'+p[1]+'</option>'; }).join('');
     sel.value = fState.scope;
+    if(sel.value!==fState.scope && brandStores(brand).length===1){ sel.value = 'Marca:'+brand; }
     var wrap = document.getElementById('fMonth');
     var isB13 = fState.scope==='Biggs 13';
     var html = '';
@@ -1408,14 +1479,15 @@
   }
 
   function renderResumo(){
-    var s = fState.scope, m = fState.month, M = storeMetrics(s, m), isRede = s==='Consolidado';
-    document.getElementById('resumoTitle').textContent = (isRede ? 'Resumo da rede' : 'Resumo — '+s) + ' · ' + periodName(m);
+    var s = fState.scope, m = fState.month, M = storeMetrics(s, m), isRede = isGroupScope(s);
+    document.getElementById('resumoTitle').textContent = (s==='Consolidado' ? 'Resumo da rede' : 'Resumo — '+scopeName(s)) + ' · ' + periodName(m);
     var box = document.getElementById('resumoKpis');
     if(!M){ box.innerHTML = '<div class="card kpi" style="grid-column:1/-1;">Sem dados de '+scopeName(s)+' em '+periodName(m)+'.</div>'; return; }
-    var lojas = voxelTabsList.map(function(t){ return storeMetrics(t, m); }).filter(Boolean);
+    var grupo = scopeStores(s);
+    var lojas = grupo.map(function(t){ return storeMetrics(t, m); }).filter(Boolean);
     var html = '';
     html += kpiCard('Faturamento bruto', brl0(M.fb), null,
-      isRede ? 'soma das '+lojas.length+' lojas'+(lojas.length<voxelTabsList.length?' (Biggs 13 só a partir de agosto)':'') : 'faturamento líquido: '+brl0(M.fli));
+      isRede ? 'soma '+(lojas.length>1?'das '+lojas.length+' lojas':'da loja')+(lojas.length<grupo.length?' (Biggs 13 só a partir de agosto)':'') : 'faturamento líquido: '+brl0(M.fli));
     var chip = '';
     if(m>0){
       var P = storeMetrics(s, m-1);
@@ -1436,7 +1508,7 @@
         '<span class="chip '+(M.peOk?'good':'critical')+'">'+(M.peOk?'atingido':'não atingido')+'</span>');
     }
     var dc = M.pctCmv - 31;
-    html += kpiCard(isRede ? 'CMV da rede' : 'CMV', fmt1.format(M.pctCmv)+'%', null, 'Meta ≤31,0% (CMV ideal) · sobre faturamento líquido',
+    html += kpiCard(s==='Consolidado' ? 'CMV da rede' : (isBrandScope(s) ? 'CMV da marca' : 'CMV'), fmt1.format(M.pctCmv)+'%', null, 'Meta ≤31,0% (CMV ideal) · sobre faturamento líquido',
       '<span class="chip '+(dc>0.05?'critical':'good')+'">'+(dc>0.05 ? '+'+fmt1.format(dc)+'pp acima da meta' : 'dentro da meta')+'</span>');
     box.innerHTML = html;
   }
@@ -1454,8 +1526,8 @@
     document.getElementById('bnTitle').textContent = 'Para onde foi cada R$ 100 faturados ('+periodShort(m)+')';
     var grid = document.getElementById('bnGrid'), foot = document.getElementById('bnFoot'), note = document.getElementById('bnNote');
     if(!M){ grid.innerHTML = '<div class="bn">Sem dados neste período.</div>'; foot.textContent = ''; note.textContent = ''; return; }
-    var n = voxelTabsList.filter(function(t){ return storeMetrics(t, m); }).length;
-    note.textContent = (s==='Consolidado' ? 'Rede consolidada, '+n+' lojas' : s) + ' · sobre o faturamento bruto de '+brl0(M.fb);
+    var n = scopeStores(s).filter(function(t){ return storeMetrics(t, m); }).length;
+    note.textContent = (s==='Consolidado' ? 'Rede consolidada, '+n+' lojas' : (isBrandScope(s) ? scopeName(s)+(n>1?', '+n+' lojas':'') : s)) + ' · sobre o faturamento bruto de '+brl0(M.fb);
     var html = '';
     BN_CATS.forEach(function(c){
       var v = M[c.k] || 0, per = (v/M.fb*100) || 0;
@@ -1470,7 +1542,7 @@
       '<span class="sig-pill '+rc+'"><i class="sig-dot '+rc+'"></i><span class="tabular">'+pct(perRes)+'</span><span class="sig-meta">'+sigMeta('lop')+'</span></span></div>'+
       '<div class="bn-value tabular" style="color:'+(perRes<0?'var(--critical)':'var(--good)')+'">'+(perRes<0?'-':'+')+'R$ '+fmt2.format(Math.abs(perRes))+' <span class="bn-sub" style="font-weight:600;">a cada R$ 100</span></div></div>';
     grid.innerHTML = html;
-    var inclB13 = s==='Biggs 13' || (s==='Consolidado' && (m===3 || m===-1));
+    var inclB13 = s==='Biggs 13' || (isGroupScope(s) && scopeStores(s).indexOf('Biggs 13')>-1 && (m===3 || m===-1));
     foot.textContent = !inclB13 ? '' : (s==='Biggs 13' ? 'A planilha da Biggs 13 informa descontos de R$ 0 — vale confirmar se o faturamento já vem líquido de descontos.' :
       'A Biggs 13 entra com descontos de R$ 0, como informado na planilha dela.');
   }
@@ -1555,6 +1627,136 @@
     renderCompare();
   }
   renderFiltered();
+
+  // ---------------- resumo gerencial (texto pronto para copiar) ----------------
+  // Usa os mesmos números do painel: CMV, CMO e resultado % sobre o faturamento líquido (convenção Voxel,
+  // igual ao ranking de lojas); descontos sobre o faturamento bruto; comparação com o mês anterior.
+  var RG_SEP = '━━━━━';
+  function brl2(v){ return (v<0?'-R$ ':'R$ ') + fmt2.format(Math.abs(v)); }
+  function brl2s(v){ return (v>0?'+':'') + brl2(v); }
+  function pct2(v){ return fmt2.format(v)+'%'; }
+  function pct2s(v){ return (v>0?'+':'') + fmt2.format(v)+'%'; }
+  function mil(v){ return 'R$ '+fmt1.format(Math.abs(v)/1000)+' mil'; }
+  function rgPctRes(M){ return M.fli ? M.lop/M.fli*100 : M.pctLop; }
+  function rgDescPct(M){ return M.fb ? M.desc/M.fb*100 : 0; }
+  function rgDrivers(M){
+    var c = [
+      {n:'CMV', gap: M.pctCmv - SIG.cmv.g},
+      {n:'CMO (pessoal)', gap: M.pctCmo - SIG.cmo.g},
+      {n:'descontos', gap: rgDescPct(M) - SIG.desc.g},
+      {n:'custos fixos', gap: M.cf/M.fb*100 - SIG.cf.g},
+      {n:'cartão/apps', gap: M.cartao/M.fb*100 - SIG.cartao.g}
+    ].filter(function(x){ return x.gap>0.05; }).sort(function(a,b){ return b.gap-a.gap; }).slice(0,2);
+    return c.map(function(x){ return x.n; });
+  }
+  function joinE(a){ return a.length<=1 ? (a[0]||'') : a.slice(0,-1).join(', ')+' e '+a[a.length-1]; }
+  function rgStatus(M, P){
+    var rr = rgPctRes(M), dr = rgDrivers(M), dtxt = joinE(dr);
+    if(rr >= SIG.lop.g) return '✅ Status: operação saudável, dentro da meta de resultado (≥ '+fmt1.format(SIG.lop.g)+'%).';
+    if(rr >= 0){
+      var base = (P && P.lop<0) ? '✅ Status: recuperação relevante e retorno ao positivo' : '✅ Status: resultado positivo, abaixo da meta de '+fmt1.format(SIG.lop.g)+'%';
+      return base + (dtxt ? '. Reduzir '+dtxt+' pode ampliar a margem.' : '.');
+    }
+    if(rr >= -7) return '🟠 Status: '+((P && M.lop>P.lop) ? 'apresentou evolução, mas ' : '')+'ainda no prejuízo'+(dtxt ? ' — precisa reduzir '+dtxt+'.' : '.');
+    if(rr >= -12) return '🔴 Status: unidade prioritária para plano de ação'+(dtxt ? ' — '+dtxt+' acima da meta.' : '.');
+    return '🔴 Status: prioridade máxima. Revisar '+(dtxt ? dtxt+', ' : '')+'quadro e operação por turno.';
+  }
+  function rgBlock(title, M, P, m, extras){
+    var L = [title, ''];
+    L.push('* Faturamento bruto: '+brl2(M.fb));
+    L.push('* CMV: '+pct2(M.pctCmv));
+    L.push('* CMO: '+pct2(M.pctCmo));
+    L.push('* Resultado operacional: '+brl2s(M.lop)+' | '+pct2s(rgPctRes(M)));
+    var obs = [];
+    if(P){
+      var prevName = MONTH_FULL[m-1].toLowerCase();
+      var vf = (M.fb/P.fb - 1)*100;
+      obs.push(Math.abs(vf)<1 ? 'O faturamento ficou praticamente estável em relação a '+prevName : 'O faturamento '+(vf>0?'cresceu ':'caiu ')+fmt2.format(Math.abs(vf))+'% sobre '+prevName);
+      if(P.lop<0 && M.lop>=0) obs.push('A unidade saiu de '+(P.lop<0?'-':'+')+mil(P.lop)+' para resultado positivo');
+      else if(P.lop>=0 && M.lop<0) obs.push('A unidade saiu de +'+mil(P.lop)+' em '+prevName+' para resultado negativo');
+      else if(P.lop<0 && M.lop<0) obs.push('O prejuízo '+(M.lop>P.lop?'diminuiu':'aumentou')+' aproximadamente '+mil(M.lop-P.lop)+' em relação a '+prevName);
+      else obs.push('O resultado '+(M.lop>=P.lop?'subiu':'caiu')+' aproximadamente '+mil(M.lop-P.lop)+' em relação a '+prevName);
+    }
+    (extras||[]).forEach(function(x){ obs.push(x); });
+    obs.forEach(function(o, i){ L.push('* '+o+(i===obs.length-1?'.':';')); });
+    L.push('');
+    L.push(rgStatus(M, P));
+    return L;
+  }
+  function buildResumoGerencial(){
+    var s = fState.scope, m = fState.month;
+    var perUp = m===-1 ? 'ACUMULADO MAI–AGO/2026' : MONTH_FULL[m].toUpperCase()+'/2026';
+    var L = [];
+    L.push('📊 RESUMO GERENCIAL — DRE DE '+perUp+' POR UNIDADE (VOXEL)');
+    L.push('');
+    L.push('Resumo analítico das DREs de '+periodName(m)+(s==='Consolidado' ? '' : ' — '+scopeName(s))+', organizado por unidade com base nos dados do Painel de DRE (estrutura Voxel).');
+    L.push('Bases: CMV, CMO e resultado % sobre o faturamento líquido; descontos sobre o faturamento bruto.'+(m>0?' Comparações com '+MONTH_FULL[m-1].toLowerCase()+'/2026.':''));
+    L.push('');
+    L.push(RG_SEP);
+
+    // universo para rankings: todas as lojas com dados no período
+    var all = voxelTabsList.map(function(t){ return {t:t, M:storeMetrics(t, m)}; }).filter(function(x){ return x.M; });
+    function argBest(f, dir){ var b = null; all.forEach(function(x){ var v = f(x.M); if(b===null || (dir>0 ? v>b.v : v<b.v)) b = {t:x.t, v:v}; }); return b ? b.t : null; }
+    var best = argBest(rgPctRes, 1), worst = argBest(rgPctRes, -1), maxCmo = argBest(function(M){ return M.pctCmo; }, 1),
+        bestCombo = argBest(function(M){ return M.pctCmv + M.pctCmo; }, -1), maxDesc = argBest(rgDescPct, 1);
+
+    // bloco do grupo (rede ou marca)
+    if(isGroupScope(s) && scopeStores(s).length>1){
+      var G = storeMetrics(s, m), GP = m>0 ? storeMetrics(s, m-1) : null;
+      if(G){
+        var gl = scopeStores(s).map(function(t){ return storeMetrics(t, m); }).filter(Boolean);
+        var neg = gl.filter(function(x){ return x.lop<0; }).length;
+        var ttl = s==='Consolidado' ? '🌐 REDE CONSOLIDADA ('+gl.length+' lojas)' : brandIcon(s.slice(6))+' MARCA '+s.slice(6).toUpperCase()+' ('+gl.length+' lojas)';
+        L = L.concat(rgBlock(ttl, G, GP, m, [neg+' de '+gl.length+' lojas fecharam no prejuízo']));
+        L.push(RG_SEP);
+      }
+    }
+
+    scopeStores(s).forEach(function(t){
+      var M = storeMetrics(t, m), P = (m>0 && M) ? storeMetrics(t, m-1) : null;
+      var title = brandIcon(storeBrand(t))+' '+t.toUpperCase()+(t==='Biggs 08 e 09' ? ' — RESULTADO CONSOLIDADO' : '');
+      if(!M){
+        L.push(title); L.push('');
+        L.push(t==='Biggs 13' ? '⚠️ A Biggs 13 só tem DRE a partir de agosto/2026 — sem dados em '+periodName(m)+'.' : '⚠️ Sem DRE da unidade em '+periodName(m)+'.');
+        L.push(RG_SEP); return;
+      }
+      var ex = [];
+      var dp = rgDescPct(M);
+      if(dp > SIG.desc.y) ex.push('Descontos representaram '+pct2(dp)+' do faturamento bruto'+(t===maxDesc?', o maior percentual entre as unidades analisadas':''));
+      if(M.pctCmv > 45) ex.push('O CMV está em nível crítico');
+      if(t===best) ex.push('Apresentou o melhor resultado entre as unidades analisadas');
+      if(t===worst) ex.push('Apresentou o pior percentual de resultado operacional');
+      if(t===maxCmo) ex.push('Apresenta o maior CMO entre as unidades analisadas');
+      if(t===bestCombo && t!==best) ex.push('Apresentou a melhor combinação entre CMV e CMO');
+      L = L.concat(rgBlock(title, M, P, m, ex));
+      if(t==='Biggs 08 e 09'){ L.push(''); L.push('⚠️ O arquivo Voxel apresenta Biggs 08 e 09 juntas, sem separação dos resultados.'); }
+      if(t==='Biggs 13'){ L.push(''); L.push('⚠️ DRE da Biggs 13 enviada à parte (planilha): cartão/apps e devoluções informados separadamente e descontos de R$ 0 — sem histórico antes de agosto.'); }
+      L.push(RG_SEP);
+    });
+    if(L[L.length-1]===RG_SEP) L.pop();
+    return L.join('\n');
+  }
+  function openResumoGerencial(){
+    document.getElementById('rgText').textContent = buildResumoGerencial();
+    document.getElementById('rgSub').textContent = 'Gerado a partir dos filtros atuais: '+scopeName(fState.scope)+' · '+periodName(fState.month)+'. Mude mês/marca/loja no topo para gerar outro recorte.';
+    var ov = document.getElementById('rgOverlay'); ov.hidden = false;
+    document.getElementById('rgCopy').textContent = 'Copiar texto';
+    document.getElementById('rgClose').focus();
+  }
+  function closeResumoGerencial(){ document.getElementById('rgOverlay').hidden = true; document.getElementById('rgOpen').focus(); }
+  document.getElementById('rgOpen').addEventListener('click', openResumoGerencial);
+  document.getElementById('rgClose').addEventListener('click', closeResumoGerencial);
+  document.getElementById('rgOverlay').addEventListener('click', function(e){ if(e.target.id==='rgOverlay') closeResumoGerencial(); });
+  document.addEventListener('keydown', function(e){ if(e.key==='Escape' && !document.getElementById('rgOverlay').hidden) closeResumoGerencial(); });
+  document.getElementById('rgCopy').addEventListener('click', function(){
+    var txt = document.getElementById('rgText').textContent, btn = this;
+    function done(){ btn.textContent = 'Copiado ✓'; setTimeout(function(){ btn.textContent = 'Copiar texto'; }, 1800); }
+    function fallback(){
+      var ta = document.createElement('textarea'); ta.value = txt; ta.style.position='fixed'; ta.style.opacity='0';
+      document.body.appendChild(ta); ta.select(); try{ document.execCommand('copy'); done(); }catch(e){} document.body.removeChild(ta);
+    }
+    try{ if(navigator.clipboard && navigator.clipboard.writeText){ navigator.clipboard.writeText(txt).then(done, fallback); } else { fallback(); } }catch(e){ fallback(); }
+  });
 
   // Clique num card do sinaleiro / big number -> rola até a linha correspondente da DRE Voxel,
   // abrindo os grupos necessários e destacando a linha.

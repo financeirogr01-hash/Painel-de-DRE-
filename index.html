@@ -413,6 +413,29 @@
   @media (max-width:820px){ .kpi3{grid-template-columns:1fr;} }
   #storeTable tfoot td{font-weight:800; background:var(--surface-2); border-top:2px solid var(--border);}
   #storeTable tfoot tr.sub td{font-weight:700; color:var(--ink-2);}
+
+  /* ---------- faturamento necessário por unidade ---------- */
+  .fn-head{display:flex; align-items:flex-end; justify-content:space-between; gap:10px; flex-wrap:wrap; margin-top:32px; margin-bottom:8px;}
+  .fn-head h3{font-size:17px; font-weight:800;}
+  .fn-units{display:flex; gap:6px;}
+  .fn-units .voxel-tab{padding:5px 11px; font-size:12px;}
+  .fn-note{font-size:12.5px; color:var(--ink-2); background:var(--surface-2); border:1px solid var(--border); border-left:3px solid var(--accent); border-radius:10px; padding:9px 12px; margin:6px 0 10px; line-height:1.5;}
+  table.fn-table{min-width:980px;}
+  .fn-table td, .fn-table th{white-space:nowrap;}
+  .fn-table td:first-child{font-weight:700;}
+  .fn-table th:first-child, .fn-table td:first-child{position:sticky; left:0; z-index:1; background:var(--surface);}
+  .fn-table tr.fn-total td:first-child{background:color-mix(in srgb, var(--accent) 22%, var(--surface));}
+  .fn-table tr.fn-below td:first-child{box-shadow:inset 3px 0 0 var(--critical);}
+  .fn-table tr.fn-above td:first-child{box-shadow:inset 3px 0 0 var(--good);}
+  .fn-table tr.fn-total td{font-weight:800; background:var(--accent-wash); border-top:2px solid var(--accent);}
+  :root:not([data-theme="light"]) .fn-table tr.fn-total td{background:color-mix(in srgb, var(--accent) 22%, var(--surface));}
+  .fn-table td.fn-val{cursor:help;}
+  .fn-table td.fn-val.show-full .fn-abbr{display:none;} .fn-table td.fn-val .fn-full{display:none;} .fn-table td.fn-val.show-full .fn-full{display:inline;}
+  .fn-flag{color:var(--warning); font-weight:800; margin-left:4px;}
+  .fn-msg{color:var(--ink-muted); font-style:italic; font-weight:600;}
+  .fn-gap{font-weight:800;}
+  .fn-gap.below{color:var(--critical);} .fn-gap.above{color:var(--good);}
+  .fn-legend{display:flex; flex-wrap:wrap; gap:6px 16px; font-size:12px; color:var(--ink-muted); margin-top:8px;}
 </style>
 
 <div class="page">
@@ -488,6 +511,41 @@
         <div class="bn-grid" id="bnGrid"></div>
         <p class="chart-note" id="bnFoot" style="margin:10px 0 0;"></p>
       </div>
+    </div>
+
+    <div class="fn-head">
+      <div>
+        <h3>Faturamento necessário por unidade</h3>
+        <div class="chart-note" id="fnSub" style="margin:2px 0 0;"></div>
+      </div>
+      <div class="fn-units" role="group" aria-label="Formato dos valores" id="fnUnits">
+        <button type="button" class="voxel-tab active" data-u="full">R$</button>
+        <button type="button" class="voxel-tab" data-u="mil">R$ mil</button>
+        <button type="button" class="voxel-tab" data-u="mi">R$ milhões</button>
+      </div>
+    </div>
+    <div class="fn-note">Simulação baseada na margem de contribuição e nos custos fixos do período selecionado. Pressupõe que os custos fixos permaneçam no mesmo valor e que os custos variáveis mantenham a mesma proporção do faturamento. Resultado operacional não equivale à geração de caixa.</div>
+    <div class="table-scroll">
+      <table class="fn-table" id="fnTable">
+        <thead><tr>
+          <th>Unidade</th>
+          <th class="num">Bruto realizado</th>
+          <th class="num" title="Equilíbrio bruto — meta de vendas: Custos fixos ÷ (margem de contribuição ÷ faturamento bruto)">Equilíbrio bruto</th>
+          <th class="num">Falta p/ equilíbrio</th>
+          <th class="num">Meta 5%</th>
+          <th class="num">Meta 10%</th>
+          <th class="num">Meta 20%</th>
+          <th class="num">Meta 30%</th>
+        </tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+    <div class="fn-legend">
+      <span>Faturamento bruto necessário = custos fixos ÷ (margem de contribuição sobre o bruto − meta de resultado)</span>
+      <span><b class="fn-gap below">■</b> abaixo do equilíbrio bruto</span>
+      <span><b class="fn-gap above">■</b> no equilíbrio ou acima</span>
+      <span><span class="fn-flag">⚠</span> Meta depende de revisão de margem e capacidade de vendas (mais que 2× o bruto realizado)</span>
+      <span>Toque ou passe o cursor na célula para ver o valor completo.</span>
     </div>
 
     <div class="section-head" style="margin-top:32px;">
@@ -598,7 +656,7 @@
             <th class="num" title="Quanto o CMV acima do ideal custou em R$ no mês (desvio × faturamento líquido)">Desvio financeiro (R$)</th>
             <th class="num">Marg. contrib.</th>
             <th class="num">Resultado</th>
-            <th>P. equilíbrio</th>
+            <th title="Equilíbrio líquido — DRE atual: faturamento líquido x ponto de equilíbrio Voxel">Equilíbrio líquido</th>
           </tr>
         </thead>
         <tbody></tbody>
@@ -626,7 +684,7 @@
             <tr><td>Margem de contribuição</td><td class="num tabular">R$ 169.611 · 39,1%</td></tr>
             <tr><td>Custos fixos (pessoal R$ 108.027, marketing R$ 9.109, administrativas R$ 37.502)</td><td class="num tabular">R$ 154.638 · 35,7%</td></tr>
             <tr><td style="font-weight:800;">Resultado operacional</td><td class="num tabular" style="font-weight:800; color:var(--good);">R$ 14.973 · +3,5%</td></tr>
-            <tr><td>Ponto de equilíbrio</td><td class="num tabular">R$ 395.471</td></tr>
+            <tr><td>Equilíbrio líquido — DRE atual</td><td class="num tabular">R$ 395.471</td></tr>
           </tbody>
         </table>
       </div>
@@ -847,6 +905,10 @@
     {"label":"Robs","legal":"Luama Foods","fat_bruto":171917,"fat_liquido":143064,"pct_cmv":40.8,"pct_margem_contrib":22.9,"lucro_operacional":-22024,"pct_lucro_operacional":-15.4,"ponto_equilibrio":239247,"abaixo_equilibrio":true},
     {"label":"Mapoli","legal":"Nemaom Foods","fat_bruto":89954,"fat_liquido":89954,"pct_cmv":31.6,"pct_margem_contrib":59.3,"lucro_operacional":-5909,"pct_lucro_operacional":-6.6,"ponto_equilibrio":99921,"abaixo_equilibrio":true}
   ];
+  // Status de equilíbrio pela mesma base do ponto de equilíbrio Voxel (faturamento líquido):
+  // antes a Biggs 07 e Açaí aparecia como "atingido" porque o faturamento BRUTO (R$ 883.842) passava do
+  // equilíbrio (R$ 866.732), mas o líquido (R$ 776.380) não passa e o resultado de agosto é negativo.
+  stores.forEach(function(st){ if(st.ponto_equilibrio!==null){ st.abaixo_equilibrio = st.lucro_operacional < 0; } });
 
   // CMV Real x Ideal por loja (ago/26) — fonte: Analise_CMV_Alimentar (Biggs) + Analise_CMV_Rede_Isaias.
   // "fat" = Faturamento Líquido de Itens (base do % CMV de cada DRE); para Biggs 13 é Faturamento Bruto,
@@ -1329,7 +1391,8 @@
       var map = SIG_LINES[node.l];
       var catDot = map ? '<span class="cat-dot" style="background:'+SIG[map.k].color+'" title="'+SIG[map.k].label+'"></span>' : '';
       if(map){ tr.className += ' has-cat'; tr.style.setProperty('--row-cat', SIG[map.k].color); }
-      var labelCell = '<td><div class="voxel-cell">'+expandHtml+catDot+'<span class="voxel-label-text">'+node.l+'</span></div></td>';
+      var shownLabel = node.l==='Ponto de Equilíbrio (Receita Bruta Necessária)' ? 'Equilíbrio líquido — DRE atual' : node.l;
+      var labelCell = '<td><div class="voxel-cell"'+(shownLabel!==node.l?' title="No Voxel: '+node.l+' (calculado sobre o faturamento líquido)"':'')+'>'+expandHtml+catDot+'<span class="voxel-label-text" data-line="'+node.l+'">'+shownLabel+'</span></div></td>';
 
       var cells = '';
       if(node.ratio){
@@ -1432,7 +1495,9 @@
       ll: g('Lucro/Prejuízo Líquido')
     };
     o.pe = (o.mc>0 && o.flt) ? o.cf/(o.mc/o.flt) : null;
-    o.peOk = o.pe!==null && o.fb>=o.pe;
+    o.peOk = o.pe!==null && o.flt>=o.pe;                 // mesma base: líquido x equilíbrio líquido (Voxel)
+    o.mcB = o.fb ? o.mc/o.fb : null;                    // margem de contribuição sobre o bruto
+    o.peBruto = (o.mcB!==null && o.mcB>0) ? o.cf/o.mcB : null; // equilíbrio bruto — meta de vendas
     o.pctLop = o.lop/fb*100;
     o.pctCmv = o.fli ? o.cmv/o.fli*100 : null;
     o.pctCmo = o.fli ? o.cmo/o.fli*100 : null;
@@ -1518,11 +1583,11 @@
     if(isRede){
       var neg = lojas.filter(function(x){ return x.lop<0; }).length;
       var abaixo = lojas.filter(function(x){ return !x.peOk; }).length;
-      html += kpiCard('Lojas no prejuízo', neg+' <span class="kpi-of">/ '+lojas.length+'</span>', null, abaixo+' abaixo do próprio ponto de equilíbrio');
+      html += kpiCard('Lojas no prejuízo', neg+' <span class="kpi-of">/ '+lojas.length+'</span>', null, abaixo+' abaixo do equilíbrio líquido (DRE atual)');
     } else {
       var peSub = M.pe===null ? 'margem de contribuição negativa — a loja não se paga' :
-        (M.peOk ? 'folga de '+brl0(M.fb-M.pe)+' sobre o faturamento' : 'faltam '+brl0(M.pe-M.fb)+' de faturamento');
-      html += kpiCard('Ponto de equilíbrio', M.pe===null ? '—' : brl0(M.pe), null, peSub,
+        (M.peOk ? 'folga de '+brl0(M.flt-M.pe)+' sobre o faturamento líquido' : 'faltam '+brl0(M.pe-M.flt)+' de faturamento líquido');
+      html += kpiCard('Equilíbrio líquido — DRE atual', M.pe===null ? '—' : brl0(M.pe), null, peSub,
         '<span class="chip '+(M.peOk?'good':'critical')+'">'+(M.peOk?'atingido':'não atingido')+'</span>');
     }
     var dc = M.pctCmv - 31;
@@ -1580,8 +1645,9 @@
     {l:'Markup (fat. líquido ÷ CMV)', f:function(M){ return M.markup; }, t:'x', better:'high'},
     {l:'Resultado operacional', f:function(M){ return M.lop; }, t:'brl', better:'high', strong:true},
     {l:'Resultado operacional (% fat. bruto)', f:function(M){ return M.pctLop; }, t:'pct', better:'high', strong:true},
-    {l:'Ponto de equilíbrio', f:function(M){ return M.pe; }, t:'brl', better:null},
-    {l:'Folga sobre o ponto de equilíbrio', f:function(M){ return M.pe===null ? null : (M.fb-M.pe)/M.pe*100; }, t:'pct', better:'high'},
+    {l:'Equilíbrio líquido — DRE atual', f:function(M){ return M.pe; }, t:'brl', better:null},
+    {l:'Folga sobre o equilíbrio líquido', f:function(M){ return M.pe===null ? null : (M.flt-M.pe)/M.pe*100; }, t:'pct', better:'high'},
+    {l:'Equilíbrio bruto — meta de vendas', f:function(M){ return M.peBruto; }, t:'brl', better:null},
     {l:'Lucro líquido', f:function(M){ return M.ll; }, t:'brl', better:'high'}
   ];
   function cmpOk(v){ return v!==null && v!==undefined && !isNaN(v); }
@@ -1618,7 +1684,7 @@
       return '<div class="card kpi">'+lbl+
         '<div class="kpi-value tabular" style="color:'+(M.lop<0?'var(--critical)':'var(--good)')+'">'+brl0(M.lop)+'</div>'+
         '<div class="kpi-sub">resultado operacional · '+pct(M.pctLop)+' de '+brl0(M.fb)+'</div>'+
-        '<span class="chip '+(M.peOk?'good':'critical')+'">ponto de equilíbrio '+(M.peOk?'atingido':'não atingido')+'</span></div>';
+        '<span class="chip '+(M.peOk?'good':'critical')+'">equilíbrio líquido '+(M.peOk?'atingido':'não atingido')+'</span></div>';
     }
     document.getElementById('cmpHead').innerHTML = head(cmpState.a, A, 'A') + head(cmpState.b, B, 'B');
     var html = '';
@@ -1637,12 +1703,84 @@
     document.querySelector('#cmpTable tbody').innerHTML = html;
   }
 
+  // ---------------- faturamento necessário por unidade ----------------
+  // Faturamento bruto necessário p/ resultado operacional p (sobre o bruto) = CF / (MC/FB − p).
+  // Consolidado: aplica a fórmula aos TOTAIS (soma de FB, MC e CF das unidades do filtro), nunca soma de metas.
+  var FN_TARGETS = [0, 0.05, 0.10, 0.20, 0.30];
+  var fnUnit = 'full';
+  function fnFmt(v){
+    if(fnUnit==='mil') return 'R$ '+fmt1.format(v/1000)+' mil';
+    if(fnUnit==='mi') return 'R$ '+fmt2.format(v/1e6)+' mi';
+    return brl0(v);
+  }
+  function fnCell(v, extraTitle){
+    return '<td class="num tabular fn-val" title="'+brl2(v)+(extraTitle?' — '+extraTitle:'')+'"><span class="fn-abbr">'+fnFmt(v)+'</span><span class="fn-full">'+brl2(v)+'</span>';
+  }
+  function fnCalc(fb, mc, cf){
+    if(!(fb>0) || mc===null || mc===undefined || isNaN(mc) || cf===null || cf===undefined || isNaN(cf)) return null;
+    var mcB = mc/fb, cfa = Math.abs(cf);
+    return {fb:fb, mcB:mcB, cf:cfa, metas: FN_TARGETS.map(function(p){
+      var den = mcB - p;
+      if(den <= 0) return {p:p, rever:true};
+      var v = cfa/den;
+      if(!isFinite(v) || v<0) return {p:p, rever:true};
+      return {p:p, v:v, alto: v > 2*fb};
+    })};
+  }
+  function fnRow(label, C, cls){
+    if(!C) return '<tr><td>'+label+'</td><td class="num fn-msg" colspan="7">Dados insuficientes</td></tr>';
+    var eq = C.metas[0], below = eq.rever ? true : C.fb < eq.v;
+    var h = '<tr class="'+(cls||'')+' '+(below?'fn-below':'fn-above')+'"><td>'+label+'</td>';
+    h += fnCell(C.fb)+'</td>';
+    h += eq.rever ? '<td class="num fn-msg">Rever margem</td>' : fnCell(eq.v, 'margem de contribuição sobre o bruto '+fmt2.format(C.mcB*100)+'%')+(eq.alto?'<span class="fn-flag" title="Meta depende de revisão de margem e capacidade de vendas">⚠</span>':'')+'</td>';
+    if(eq.rever) h += '<td class="num fn-msg">Rever margem</td>';
+    else {
+      var falta = Math.max(0, eq.v - C.fb);
+      h += falta>0 ? '<td class="num tabular fn-val" title="'+brl2(falta)+'"><span class="fn-abbr fn-gap below">'+fnFmt(falta)+'</span><span class="fn-full fn-gap below">'+brl2(falta)+'</span></td>'
+                   : '<td class="num tabular"><span class="fn-gap above" title="Folga de '+brl2(C.fb-eq.v)+'">✓ acima</span></td>';
+    }
+    C.metas.slice(1).forEach(function(mt){
+      if(mt.rever){ h += '<td class="num fn-msg">Rever margem</td>'; return; }
+      h += fnCell(mt.v, mt.alto ? 'Meta depende de revisão de margem e capacidade de vendas' : '')+(mt.alto?'<span class="fn-flag" title="Meta depende de revisão de margem e capacidade de vendas">⚠</span>':'')+'</td>';
+    });
+    return h+'</tr>';
+  }
+  function renderFatNecessario(){
+    var s = fState.scope, m = fState.month;
+    var unidades = scopeStores(s);
+    var tot = {fb:0, mc:0, cf:0, n:0};
+    var rows = '';
+    unidades.forEach(function(t){
+      var M = storeMetrics(t, m);
+      var C = M ? fnCalc(M.fb, M.mc, M.cf) : null;
+      if(C){ tot.fb += M.fb; tot.mc += M.mc; tot.cf += M.cf; tot.n++; }
+      rows += fnRow(t, C);
+    });
+    if(unidades.length>1 || isGroupScope(s)){
+      var lbl = (s==='Consolidado' ? 'Consolidado — rede' : 'Consolidado — '+scopeName(s)) + ' ('+tot.n+(tot.n>1?' unidades':' unidade')+')';
+      rows += fnRow(lbl, tot.n ? fnCalc(tot.fb, tot.mc, tot.cf) : null, 'fn-total');
+    }
+    document.querySelector('#fnTable tbody').innerHTML = rows;
+    document.getElementById('fnSub').textContent = periodName(m)+' · '+scopeName(s)+' · valores em reais (R$), sobre o faturamento bruto';
+  }
+  document.getElementById('fnUnits').addEventListener('click', function(e){
+    var b = e.target.closest('[data-u]'); if(!b) return;
+    fnUnit = b.getAttribute('data-u');
+    Array.prototype.forEach.call(this.querySelectorAll('[data-u]'), function(x){ x.classList.toggle('active', x===b); });
+    renderFatNecessario();
+  });
+  // toque na célula mostra o valor completo (celular)
+  document.getElementById('fnTable').addEventListener('click', function(e){
+    var td = e.target.closest('td.fn-val'); if(td) td.classList.toggle('show-full');
+  });
+
   function renderFiltered(){
     voxelRenderAll();
     renderFilterBar();
     renderResumo();
     renderBigNumbers();
     renderCompare();
+    renderFatNecessario();
   }
   renderFiltered();
 
@@ -1785,7 +1923,7 @@
     var tbody = document.querySelector('#voxelTable tbody');
     var row = null;
     Array.prototype.forEach.call(tbody.querySelectorAll('tr'), function(tr){
-      var t = tr.querySelector('.voxel-label-text'); if(!row && t && t.textContent===line) row = tr;
+      var t = tr.querySelector('.voxel-label-text'); if(!row && t && (t.getAttribute('data-line')||t.textContent)===line) row = tr;
     });
     if(!row) return;
     var chain = [], p = row.getAttribute('data-parent');
@@ -1878,7 +2016,7 @@
     html += '<div class="card kpi"><div class="kpi-label">Lojas com resultado positivo</div>'+
       '<div class="kpi-value tabular" style="color:var(--good)">'+positivos.length+' <span style="font-size:15px;color:var(--ink-muted);font-weight:600;">/ '+stores.length+'</span></div>'+
       '<div class="kpi-sub">'+names(positivos)+'</div></div>';
-    html += '<div class="card kpi"><div class="kpi-label">Lojas com ponto de equilíbrio atingido</div>'+
+    html += '<div class="card kpi"><div class="kpi-label">Lojas com equilíbrio líquido atingido</div>'+
       '<div class="kpi-value tabular" style="color:var(--good)">'+comEquilibrio.length+' <span style="font-size:15px;color:var(--ink-muted);font-weight:600;">/ '+(stores.length-semCalculo)+'</span></div>'+
       '<div class="kpi-sub">'+names(comEquilibrio)+'</div></div>';
     document.getElementById('lojasHighlightKpis').innerHTML = html;

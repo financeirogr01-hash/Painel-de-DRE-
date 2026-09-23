@@ -278,7 +278,7 @@
 
   .voxel-note{font-size:12.5px; color:var(--ink-muted); background:var(--surface-2); border:1px solid var(--border); border-radius:10px; padding:9px 12px; margin-top:10px;}
 
-  table.voxel-table{table-layout:fixed;}
+  table.voxel-table{table-layout:fixed; min-width:960px;}
   table.voxel-table th:first-child, table.voxel-table td:first-child{width:38%; white-space:normal;}
   .voxel-cell{display:flex; align-items:baseline; gap:6px;}
   .voxel-row.level-0 td{font-weight:700;}
@@ -334,6 +334,24 @@
   .cmp-table td.better{color:var(--good); font-weight:800;}
   .cmp-table tr.strong td{font-weight:800;}
   .cmp-table td:first-child{white-space:normal; min-width:170px;}
+
+  /* ---------- sinaleiro ---------- */
+  .sig-dot{display:inline-block; width:10px; height:10px; border-radius:50%; flex:none; box-shadow:0 0 0 2px color-mix(in srgb, currentColor 22%, transparent);}
+  .sig-good{color:var(--good);} .sig-warn{color:var(--warning);} .sig-bad{color:var(--critical);} .sig-na{color:var(--ink-muted);}
+  .sig-dot.sig-good{background:var(--good);} .sig-dot.sig-warn{background:var(--warning);} .sig-dot.sig-bad{background:var(--critical);} .sig-dot.sig-na{background:var(--baseline);}
+  .sig-pill{display:inline-flex; align-items:center; gap:6px; font-size:12px; font-weight:800; padding:2px 9px 2px 7px; border-radius:999px; margin-top:6px;
+    background:color-mix(in srgb, currentColor 14%, transparent);}
+  .sig-pill .sig-meta{font-weight:600; opacity:.85;}
+  .cat-dot{display:inline-block; width:9px; height:9px; border-radius:50%; flex:none; margin-right:2px; align-self:center;}
+  .voxel-row.has-cat td:first-child{box-shadow: inset 3px 0 0 var(--row-cat);}
+  .sig-cell{text-align:center !important;}
+  .sig-panel{display:grid; grid-template-columns:repeat(auto-fit,minmax(170px,1fr)); gap:10px; margin-top:12px;}
+  .sig-card{border:1px solid var(--border); border-radius:12px; padding:10px 12px; background:var(--surface); border-left:4px solid var(--sig-c); min-width:0;}
+  .sig-card .sig-name{display:flex; align-items:center; gap:6px; font-size:12px; font-weight:700; color:var(--ink-2);}
+  .sig-card .sig-val{font-size:22px; font-weight:800; margin-top:4px; letter-spacing:-0.01em;}
+  .sig-card .sig-foot{display:flex; align-items:center; gap:6px; font-size:11.5px; color:var(--ink-muted); margin-top:2px;}
+  .sig-legend{display:flex; flex-wrap:wrap; gap:6px 16px; font-size:12px; color:var(--ink-muted); margin-top:8px;}
+  .sig-legend span{display:inline-flex; align-items:center; gap:6px;}
 </style>
 
 <div class="page">
@@ -409,6 +427,15 @@
 
     <div class="voxel-tabs" id="voxelTabs" style="margin-top:14px;"></div>
 
+    <div class="chart-title" style="margin-top:16px;" id="sigTitle">Sinaleiro da DRE</div>
+    <div class="sig-panel" id="sigPanel"></div>
+    <div class="sig-legend">
+      <span><i class="sig-dot sig-good"></i>Dentro da meta</span>
+      <span><i class="sig-dot sig-warn"></i>Atenção</span>
+      <span><i class="sig-dot sig-bad"></i>Fora da meta</span>
+      <span>A cor da borda e da bolinha em cada linha da DRE é a mesma do "cada R$ 100".</span>
+    </div>
+
     <div class="table-scroll" style="margin-top:14px;">
       <table class="voxel-table" id="voxelTable">
         <thead>
@@ -420,6 +447,7 @@
             <th class="num">Ago</th>
             <th class="num">Acumulado</th>
             <th class="num" id="voxelPctHeader">% Fat.Líq.</th>
+            <th class="num sig-cell" id="voxelSigHeader" style="width:70px;">Sinal</th>
           </tr>
         </thead>
         <tbody></tbody>
@@ -1067,8 +1095,68 @@
     return out;
   }
 
+  // ---------------- sinaleiro: metas e cores por indicador ----------------
+  // dir 'low' = quanto menor melhor; g = limite do verde, y = limite do amarelo (acima/abaixo disso, vermelho).
+  // base: 'fli' (fat. líquido, convenção Voxel p/ CMV e pessoal), 'flt' (margem) ou 'fb' (fat. bruto).
+  var SIG = {
+    cmv:      {label:'CMV', color:'var(--cat-1)', base:'fli', dir:'low',  g:31, y:35},
+    cf:       {label:'Custos fixos', color:'var(--cat-2)', base:'fb', dir:'low', g:30, y:35},
+    cartao:   {label:'Cartão + apps', color:'var(--cat-3)', base:'fb', dir:'low', g:10, y:13},
+    desc:     {label:'Descontos', color:'var(--cat-4)', base:'fb', dir:'low', g:3, y:6},
+    roy:      {label:'Royalties + marketing', color:'var(--cat-5)', base:'fb', dir:'low', g:9, y:12},
+    entregas: {label:'Entregas + devoluções', color:'var(--cat-6)', base:'fb', dir:'low', g:2, y:3},
+    cmo:      {label:'Pessoal (CMO)', color:'var(--ink-muted)', base:'fli', dir:'low', g:22, y:25},
+    mc:       {label:'Margem de contribuição', color:'var(--accent)', base:'flt', dir:'high', g:50, y:40},
+    lop:      {label:'Resultado operacional', color:'var(--accent)', base:'fb', dir:'high', g:8, y:0}
+  };
+  var SIG_ORDER = ['cmv','cf','cartao','desc','roy','entregas','cmo','mc','lop'];
+  // linha da DRE Voxel -> indicador (a 1ª linha de cada indicador recebe o sinal; as demais, só a cor)
+  var SIG_LINES = {
+    'CMV - Custo da Mercadoria Vendida':{k:'cmv', sig:true}, 'Insumos':{k:'cmv'}, 'Embalagens':{k:'cmv'}, 'Produtos para Comercialização':{k:'cmv'},
+    'Custos Fixos':{k:'cf', sig:true},
+    'Taxas de Cartão e Apps de Delivery':{k:'cartao', sig:true},
+    'Descontos':{k:'desc', sig:true},
+    'Royalties':{k:'roy', sig:true}, 'Taxa de Marketing':{k:'roy'}, 'Taxa Administrativa':{k:'roy'},
+    'Despesas com entregas':{k:'entregas', sig:true}, 'Combustível e Entregas':{k:'entregas'}, 'Serviços Logísticos':{k:'entregas'}, 'Devoluções de Vendas':{k:'entregas'},
+    'Despesas com Pessoal':{k:'cmo', sig:true},
+    'Margem de Contribuição':{k:'mc', sig:true},
+    'Lucro/Prejuízo Operacional':{k:'lop', sig:true}
+  };
+  function sigPct(k, M){
+    if(!M) return null;
+    var def = SIG[k], base = M[def.base];
+    var v = k==='mc' ? M.mc : (k==='lop' ? M.lop : (k==='cmo' ? M.cmo : M[k]));
+    if(!base) return null;
+    return (v/base*100) || 0;
+  }
+  function sigClass(k, p){
+    if(p===null || p===undefined || isNaN(p)) return 'sig-na';
+    var d = SIG[k];
+    if(d.dir==='low') return p<=d.g ? 'sig-good' : (p<=d.y ? 'sig-warn' : 'sig-bad');
+    return p>=d.g ? 'sig-good' : (p>=d.y ? 'sig-warn' : 'sig-bad');
+  }
+  function sigMeta(k){ var d = SIG[k]; return d.dir==='low' ? 'meta ≤'+fmt1.format(d.g)+'%' : 'meta ≥'+fmt1.format(d.g)+'%'; }
+  function sigBaseName(k){ var b = SIG[k].base; return b==='fli' ? 'fat. líquido' : (b==='flt' ? 'fat. líquido total' : 'fat. bruto'); }
+
+  function renderSigPanel(){
+    var s = voxelActiveScope, m = voxelActiveMonth, M = storeMetrics(s, m);
+    document.getElementById('sigTitle').textContent = 'Sinaleiro da DRE · '+scopeName(s)+' · '+periodName(m);
+    var html = '';
+    SIG_ORDER.forEach(function(k){
+      var p = sigPct(k, M), cls = sigClass(k, p);
+      html += '<div class="sig-card" style="--sig-c:'+SIG[k].color+'">'+
+        '<div class="sig-name"><span class="cat-dot" style="background:'+SIG[k].color+'"></span>'+SIG[k].label+'</div>'+
+        '<div class="sig-val tabular">'+(p===null?'—':fmt1.format(p)+'%')+'</div>'+
+        '<div class="sig-foot"><i class="sig-dot '+cls+'"></i>'+sigMeta(k)+' · '+sigBaseName(k)+'</div></div>';
+    });
+    document.getElementById('sigPanel').innerHTML = html;
+  }
+
   function voxelRenderTable(){
     var flat = voxelFlatten(voxelHierarchy, 0, null, []);
+    var sigM = storeMetrics(voxelActiveScope, voxelActiveMonth);
+    var sh = document.getElementById('voxelSigHeader');
+    if(sh) sh.textContent = 'Sinal '+periodShort(voxelActiveMonth).replace('/26','');
     var tbody = document.querySelector('#voxelTable tbody');
     tbody.innerHTML = '';
     var fliVals = voxelGetVals(voxelActiveScope,'Faturamento Líquido de Itens');
@@ -1099,7 +1187,10 @@
       if(entry.parent){ tr.setAttribute('data-parent', entry.parent); tr.hidden = true; }
 
       var expandHtml = node.c ? '<button class="voxel-expand" data-toggle="'+entry.id+'">▸</button>' : '<span class="voxel-expand spacer"></span>';
-      var labelCell = '<td><div class="voxel-cell">'+expandHtml+'<span class="voxel-label-text">'+node.l+'</span></div></td>';
+      var map = SIG_LINES[node.l];
+      var catDot = map ? '<span class="cat-dot" style="background:'+SIG[map.k].color+'" title="'+SIG[map.k].label+'"></span>' : '';
+      if(map){ tr.className += ' has-cat'; tr.style.setProperty('--row-cat', SIG[map.k].color); }
+      var labelCell = '<td><div class="voxel-cell">'+expandHtml+catDot+'<span class="voxel-label-text">'+node.l+'</span></div></td>';
 
       var cells = '';
       if(node.ratio){
@@ -1118,6 +1209,12 @@
         var pctV = (rowAcc!==null && baseAcc && baseAcc!==0) ? (rowAcc/baseAcc*100) : null;
         cells += '<td class="num tabular" style="color:var(--ink-muted);">'+(pctV===null?'—':voxelPct1(pctV))+'</td>';
       }
+      var sigHtml = '';
+      if(map && map.sig){
+        var sp = sigPct(map.k, sigM), sc = sigClass(map.k, sp);
+        sigHtml = '<i class="sig-dot '+sc+'" title="'+SIG[map.k].label+': '+(sp===null?'—':fmt1.format(sp)+'%')+' · '+sigMeta(map.k)+' ('+sigBaseName(map.k)+', '+periodShort(voxelActiveMonth)+')"></i>';
+      }
+      cells += '<td class="sig-cell">'+sigHtml+'</td>';
       tr.innerHTML = labelCell + cells;
       tbody.appendChild(tr);
     });
@@ -1142,6 +1239,12 @@
         });
       });
     });
+    Array.prototype.forEach.call(tbody.querySelectorAll('tr.level-0'), function(tr){
+      var t = tr.querySelector('.voxel-label-text');
+      if(t && (t.textContent==='Faturamento Bruto Total' || t.textContent==='Taxas e Impostos sobre Vendas')){
+        var b = tr.querySelector('.voxel-expand[data-toggle]'); if(b) b.click();
+      }
+    });
   }
 
   function voxelRenderAll(){
@@ -1149,6 +1252,7 @@
     voxelRenderTabs();
     voxelRenderMonthTabs();
     voxelRenderTable();
+    renderSigPanel();
   }
 
   // ---------------- filtros globais (mês + loja) ----------------
@@ -1292,10 +1396,13 @@
       var v = M[c.k] || 0, per = (v/M.fb*100) || 0;
       html += '<div class="bn"><div class="bn-label"><span class="swatch" style="background:'+c.color+'"></span>'+c.label+'</div>'+
         '<div class="bn-value tabular">R$ '+fmt2.format(per)+'</div>'+
+        '<span class="sig-pill '+sigClass(c.k, sigPct(c.k, M))+'"><i class="sig-dot '+sigClass(c.k, sigPct(c.k, M))+'"></i><span class="tabular">'+fmt1.format(per)+'%</span><span class="sig-meta">'+sigMeta(c.k)+'</span></span>'+
         '<div class="bn-sub tabular">'+brl0(-v)+' no período</div></div>';
     });
     var perRes = M.lop/M.fb*100;
-    html += '<div class="bn result"><div><div class="bn-label">Resultado operacional</div><div class="bn-sub tabular">'+brl0(M.lop)+' no período</div></div>'+
+    var rc = sigClass('lop', perRes);
+    html += '<div class="bn result"><div><div class="bn-label">Resultado operacional</div><div class="bn-sub tabular">'+brl0(M.lop)+' no período</div>'+
+      '<span class="sig-pill '+rc+'"><i class="sig-dot '+rc+'"></i><span class="tabular">'+pct(perRes)+'</span><span class="sig-meta">'+sigMeta('lop')+'</span></span></div>'+
       '<div class="bn-value tabular" style="color:'+(perRes<0?'var(--critical)':'var(--good)')+'">'+(perRes<0?'-':'+')+'R$ '+fmt2.format(Math.abs(perRes))+' <span class="bn-sub" style="font-weight:600;">a cada R$ 100</span></div></div>';
     grid.innerHTML = html;
     var inclB13 = s==='Biggs 13' || (s==='Consolidado' && (m===3 || m===-1));

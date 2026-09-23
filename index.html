@@ -878,7 +878,29 @@
     'Despesas Operacionais e Administrativas': -37502,
     'Custos Fixos': -154638,
     'Lucro/Prejuízo Operacional': 14973.23,
-    'Ponto de Equilíbrio (Receita Bruta Necessária)': 395471
+    'Ponto de Equilíbrio (Receita Bruta Necessária)': 395471,
+    'Impostos sobre Vendas': 0,
+    // Abaixo do operacional: DRE da loja não informa investimentos, empréstimos, reembolsos nem
+    // transferências — entram zerados. Mesmas fórmulas do Voxel:
+    // Lucro Líquido = Operacional + Investimentos; Resultado Líquido = Lucro Líquido + Empréstimos/Aportes/Retiradas
+    'Investimentos': 0,
+    'Investimento em Equipamentos e Estrutura': 0,
+    'Impostos sobre Aplicações': 0,
+    'Lucro/Prejuízo Líquido': 14973.23,
+    'Empréstimos, Aportes e Retiradas': 0,
+    'Empréstimos - Entrada': 0,
+    'Empréstimos - Saída': 0,
+    'Retiradas de Lucro': 0,
+    'Reembolso': 0,
+    'Reembolso taxa de transação iFood benefícios': 0,
+    'Reembolso taxa de serviço iFood': 0,
+    'Ressarcimento de Pedido Cancelado': 0,
+    'Resultado Líquido de Empréstimos, Aportes e Retiradas': 14973.23,
+    'Outras Entradas e Saídas': 0,
+    'Transferências de Saída': 0,
+    'Transferências de Entrada': 0,
+    'Saldo Inicial': 0,
+    'Ajuste de Caixa': 0
   };
 
   function voxelRenderKpis(scope){

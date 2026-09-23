@@ -2173,9 +2173,10 @@
         '<td class="num tabular" style="color:'+DV_COLOR[dc]+';">+'+brl(t.imp)+'</td>'+
         '<td colspan="3" style="color:var(--ink-muted); font-weight:600;">'+t.n+' lojas · média ponderada</td></tr>';
     }
-    var b12 = cmvPerf.filter(function(d){ return d.label.indexOf('Biggs')===0 && d.label!=='Biggs 13'; });
+    var bgs = cmvPerf.filter(function(d){ return d.label.indexOf('Biggs')===0; });
+    var isa = cmvPerf.filter(function(d){ return d.label.indexOf('Isaías')===0; });
     var tfoot = document.createElement('tfoot');
-    tfoot.innerHTML = totRow('Total Biggs 01–12', tot(b12), 'sub') + totRow('Total geral com CMV ideal (sem Robs e Mapoli)', tot(cmvPerf));
+    tfoot.innerHTML = totRow('Total Biggs (01–13)', tot(bgs), 'sub') + totRow('Total Isaías (01–03)', tot(isa), 'sub') + totRow('Total geral com CMV ideal (sem Robs e Mapoli)', tot(cmvPerf));
     document.getElementById('storeTable').appendChild(tfoot);
 
     // card de destaque acima do gráfico de lojas

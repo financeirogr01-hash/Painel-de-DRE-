@@ -1289,7 +1289,7 @@
     note.textContent = (s==='Consolidado' ? 'Rede consolidada, '+n+' lojas' : s) + ' · sobre o faturamento bruto de '+brl0(M.fb);
     var html = '';
     BN_CATS.forEach(function(c){
-      var v = M[c.k], per = v/M.fb*100;
+      var v = M[c.k] || 0, per = (v/M.fb*100) || 0;
       html += '<div class="bn"><div class="bn-label"><span class="swatch" style="background:'+c.color+'"></span>'+c.label+'</div>'+
         '<div class="bn-value tabular">R$ '+fmt2.format(per)+'</div>'+
         '<div class="bn-sub tabular">'+brl0(-v)+' no período</div></div>';
@@ -1325,6 +1325,7 @@
   function cmpOk(v){ return v!==null && v!==undefined && !isNaN(v); }
   function cmpFmt(v, t){
     if(!cmpOk(v)) return '—';
+    v = v || 0; // evita "-0,0%"
     if(t==='brl') return brl0(v);
     if(t==='x') return fmt2.format(v)+'x';
     return fmt1.format(v)+'%';

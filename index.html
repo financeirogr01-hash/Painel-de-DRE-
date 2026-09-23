@@ -374,6 +374,15 @@
   .sig-bar .zero{position:absolute; top:-2px; bottom:-2px; width:1px; background:var(--baseline);}
   .sig-gap{display:inline-flex; white-space:nowrap; align-items:center; gap:5px; font-size:11.5px; font-weight:800; margin-top:8px; padding:2px 8px; border-radius:999px; background:color-mix(in srgb, currentColor 14%, transparent);}
   .sig-gap .rs{font-weight:600; opacity:.9;}
+
+  /* ---------- clique no card -> linha da DRE ---------- */
+  [data-go]{cursor:pointer; transition:transform .12s ease, border-color .12s ease;}
+  [data-go]:hover{transform:translateY(-2px); border-color:color-mix(in srgb, var(--ink) 30%, transparent);}
+  [data-go]:focus-visible{outline:2px solid var(--accent); outline-offset:2px;}
+  .go-hint{font-size:10.5px; color:var(--ink-muted); margin-top:6px; opacity:0; transition:opacity .12s ease;}
+  [data-go]:hover .go-hint, [data-go]:focus-visible .go-hint{opacity:1;}
+  @keyframes rowFlash{0%,55%{background:color-mix(in srgb, var(--row-cat, var(--accent)) 32%, transparent);} 100%{background:transparent;}}
+  .voxel-row.row-flash td{animation:rowFlash 2.2s ease-out;}
 </style>
 
 <div class="page">
@@ -1201,9 +1210,9 @@
       } else {
         body = '<div class="sig-foot"><i class="sig-dot sig-na"></i>sem dados · '+sigMeta(k)+'</div>';
       }
-      html += '<div class="sig-card" style="--sig-c:'+d.color+'">'+
+      html += '<div class="sig-card" style="--sig-c:'+d.color+'" data-go="'+k+'" role="button" tabindex="0" title="Ver '+d.label+' na DRE">'+
         '<div class="sig-name"><span class="cat-dot" style="background:'+d.color+'"></span>'+d.label+'</div>'+
-        '<div class="sig-val tabular">'+(p===null?'—':fmt1.format(p)+'%')+' <span style="font-size:11.5px;font-weight:600;color:var(--ink-muted);">realizado</span></div>'+body+'</div>';
+        '<div class="sig-val tabular">'+(p===null?'—':fmt1.format(p)+'%')+' <span style="font-size:11.5px;font-weight:600;color:var(--ink-muted);">realizado</span></div>'+body+'<div class="go-hint">Ver na DRE ↓</div></div>';
     });
     document.getElementById('sigPanel').innerHTML = html;
   }
@@ -1450,14 +1459,14 @@
     var html = '';
     BN_CATS.forEach(function(c){
       var v = M[c.k] || 0, per = (v/M.fb*100) || 0;
-      html += '<div class="bn"><div class="bn-label"><span class="swatch" style="background:'+c.color+'"></span>'+c.label+'</div>'+
+      html += '<div class="bn" data-go="'+c.k+'" role="button" tabindex="0" title="Ver '+c.label+' na DRE"><div class="bn-label"><span class="swatch" style="background:'+c.color+'"></span>'+c.label+'</div>'+
         '<div class="bn-value tabular">R$ '+fmt2.format(per)+'</div>'+
         '<span class="sig-pill '+sigClass(c.k, sigPct(c.k, M))+'"><i class="sig-dot '+sigClass(c.k, sigPct(c.k, M))+'"></i><span class="tabular">'+fmt1.format(per)+'%</span><span class="sig-meta">'+sigMeta(c.k)+'</span></span>'+
         '<div class="bn-sub tabular">'+brl0(-v)+' no período</div></div>';
     });
     var perRes = M.lop/M.fb*100;
     var rc = sigClass('lop', perRes);
-    html += '<div class="bn result"><div><div class="bn-label">Resultado operacional</div><div class="bn-sub tabular">'+brl0(M.lop)+' no período</div>'+
+    html += '<div class="bn result" data-go="lop" role="button" tabindex="0" title="Ver resultado operacional na DRE"><div><div class="bn-label">Resultado operacional</div><div class="bn-sub tabular">'+brl0(M.lop)+' no período</div>'+
       '<span class="sig-pill '+rc+'"><i class="sig-dot '+rc+'"></i><span class="tabular">'+pct(perRes)+'</span><span class="sig-meta">'+sigMeta('lop')+'</span></span></div>'+
       '<div class="bn-value tabular" style="color:'+(perRes<0?'var(--critical)':'var(--good)')+'">'+(perRes<0?'-':'+')+'R$ '+fmt2.format(Math.abs(perRes))+' <span class="bn-sub" style="font-weight:600;">a cada R$ 100</span></div></div>';
     grid.innerHTML = html;
@@ -1546,6 +1555,39 @@
     renderCompare();
   }
   renderFiltered();
+
+  // Clique num card do sinaleiro / big number -> rola até a linha correspondente da DRE Voxel,
+  // abrindo os grupos necessários e destacando a linha.
+  function goToDreLine(k){
+    var line = null;
+    Object.keys(SIG_LINES).forEach(function(l){ if(!line && SIG_LINES[l].k===k && SIG_LINES[l].sig) line = l; });
+    if(!line) return;
+    var tbody = document.querySelector('#voxelTable tbody');
+    var row = null;
+    Array.prototype.forEach.call(tbody.querySelectorAll('tr'), function(tr){
+      var t = tr.querySelector('.voxel-label-text'); if(!row && t && t.textContent===line) row = tr;
+    });
+    if(!row) return;
+    var chain = [], p = row.getAttribute('data-parent');
+    while(p){ var pr = tbody.querySelector('tr[data-id="'+p+'"]'); if(!pr) break; chain.unshift(pr); p = pr.getAttribute('data-parent'); }
+    chain.forEach(function(pr){ var b = pr.querySelector('.voxel-expand[data-toggle]'); if(b && b.textContent!=='▾') b.click(); });
+    Array.prototype.forEach.call(tbody.querySelectorAll('tr.row-flash'), function(tr){ tr.classList.remove('row-flash'); });
+    void row.offsetWidth; row.classList.add('row-flash');
+    clearTimeout(goToDreLine._t); goToDreLine._t = setTimeout(function(){ row.classList.remove('row-flash'); }, 2400);
+    // centraliza a linha descontando a barra fixa (menu + filtros)
+    var bar = document.getElementById('stickyBar'), barH = bar ? bar.getBoundingClientRect().height : 0;
+    var y = row.getBoundingClientRect().top + window.scrollY - barH - Math.max(0, (window.innerHeight - barH)/2 - row.offsetHeight);
+    window.scrollTo({top: Math.max(0, y), behavior: 'smooth'});
+  }
+  document.addEventListener('click', function(e){
+    var el = e.target.closest && e.target.closest('[data-go]');
+    if(el) goToDreLine(el.getAttribute('data-go'));
+  });
+  document.addEventListener('keydown', function(e){
+    if(e.key!=='Enter' && e.key!==' ') return;
+    var el = e.target.closest && e.target.closest('[data-go]');
+    if(el){ e.preventDefault(); goToDreLine(el.getAttribute('data-go')); }
+  });
 
 
   // ---------------- line chart ----------------

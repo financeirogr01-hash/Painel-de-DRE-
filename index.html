@@ -402,6 +402,17 @@
   .rg-sub{font-size:12.5px; color:var(--ink-muted); margin:6px 0 10px;}
   .rg-text{white-space:pre-wrap; word-break:break-word; font-family:inherit; font-size:13.5px; line-height:1.55; background:var(--page); border:1px solid var(--border); border-radius:10px; padding:14px 16px; margin:0; max-height:70vh; overflow-y:auto;}
   @media (max-width:640px){ .rg-btn{padding:6px 9px; font-size:12px;} }
+
+  /* ---------- desvio financeiro do CMV (R$) ---------- */
+  .dv-cell{min-width:150px;}
+  .dv-val{font-weight:800; font-size:13.5px;}
+  .dv-bar{height:5px; border-radius:3px; background:var(--surface-2); margin-top:4px; overflow:hidden;}
+  .dv-bar span{display:block; height:100%; border-radius:3px;}
+  .dv-bar span.sig-good{background:var(--good);} .dv-bar span.sig-warn{background:var(--warning);} .dv-bar span.sig-bad{background:var(--critical);}
+  .kpi3{grid-template-columns:repeat(3,1fr);}
+  @media (max-width:820px){ .kpi3{grid-template-columns:1fr;} }
+  #storeTable tfoot td{font-weight:800; background:var(--surface-2); border-top:2px solid var(--border);}
+  #storeTable tfoot tr.sub td{font-weight:700; color:var(--ink-2);}
 </style>
 
 <div class="page">
@@ -571,13 +582,20 @@
 
     <div class="table-scroll" style="margin-top:14px;">
       <table id="storeTable" class="table-compact">
+        <caption style="caption-side:bottom; text-align:left; font-size:12px; color:var(--ink-muted); padding:8px 10px;">
+          <span><i class="sig-dot sig-good"></i> no ideal ou abaixo</span> &nbsp;·&nbsp;
+          <span><i class="sig-dot sig-warn"></i> até 4 pp acima do ideal</span> &nbsp;·&nbsp;
+          <span><i class="sig-dot sig-bad"></i> mais de 4 pp acima do ideal</span> &nbsp;·&nbsp;
+          Desvio financeiro = (CMV real − CMV ideal) × faturamento líquido do mês.
+        </caption>
         <thead>
           <tr>
             <th>Loja</th><th>Razão social</th>
             <th class="num">Fat. líquido*</th>
             <th class="num">CMV %</th>
             <th class="num">CMV Ideal</th>
-            <th class="num">Desvio / Impacto</th>
+            <th class="num">Desvio CMV (pp)</th>
+            <th class="num" title="Quanto o CMV acima do ideal custou em R$ no mês (desvio × faturamento líquido)">Desvio financeiro (R$)</th>
             <th class="num">Marg. contrib.</th>
             <th class="num">Resultado</th>
             <th>P. equilíbrio</th>
@@ -1963,6 +1981,9 @@
     var cmvByLabel = {};
     cmvPerf.forEach(function(d){ cmvByLabel[d.label] = d; });
     var tbody = document.querySelector('#storeTable tbody');
+    var maxImp = Math.max.apply(null, cmvPerf.map(function(d){ return Math.abs(d.impacto); }));
+    function dvClass(pp){ return pp<=0 ? 'sig-good' : (pp<=4 ? 'sig-warn' : 'sig-bad'); }
+    var DV_COLOR = {'sig-good':'var(--good)','sig-warn':'var(--warning)','sig-bad':'var(--critical)'};
     stores.forEach(function(s){
       var tr = document.createElement('tr');
       var incomplete = !!s.dadosIncompletos;
@@ -1974,14 +1995,15 @@
       var cmv = cmvByLabel[s.label];
       var cmvIdealCell, desvioImpactoCell;
       if(cmv){
-        var desvioColor = cmv.desvio>0 ? 'var(--critical)' : 'var(--good)';
+        var dc = dvClass(cmv.desvio), desvioColor = DV_COLOR[dc];
         cmvIdealCell = '<td class="num tabular">'+fmt1.format(cmv.ideal)+(incomplete?'*':'')+'%</td>';
-        desvioImpactoCell = '<td class="num tabular" style="color:'+desvioColor+';">'+
-          '<div style="font-weight:700;">'+(cmv.desvio>0?'+':'')+fmt1.format(cmv.desvio)+'pp</div>'+
-          '<div style="font-size:11px; opacity:.85;">'+brl(cmv.impacto)+'</div></td>';
+        desvioImpactoCell = '<td class="num tabular" style="color:'+desvioColor+'; font-weight:700;">'+(cmv.desvio>0?'+':'')+fmt1.format(cmv.desvio)+' pp</td>'+
+          '<td class="num tabular dv-cell" title="'+s.label+': CMV '+fmt1.format(cmv.real)+'% x ideal '+fmt1.format(cmv.ideal)+'% sobre '+brl(cmv.fat)+'">'+
+            '<div class="dv-val" style="color:'+desvioColor+';"><i class="sig-dot '+dc+'" style="margin-right:6px;"></i>'+(cmv.impacto>0?'+':'')+brl(cmv.impacto)+'</div>'+
+            '<div class="dv-bar"><span class="'+dc+'" style="width:'+(Math.abs(cmv.impacto)/maxImp*100).toFixed(1)+'%"></span></div></td>';
       } else {
         cmvIdealCell = '<td class="num tabular" style="color:var(--ink-muted);">—</td>';
-        desvioImpactoCell = '<td class="num tabular" style="color:var(--ink-muted);">—</td>';
+        desvioImpactoCell = '<td class="num tabular" style="color:var(--ink-muted);">—</td><td class="num tabular" style="color:var(--ink-muted);">sem CMV ideal</td>';
       }
       var resultadoCell = '<td class="num tabular res">'+
         '<div>'+brl(s.lucro_operacional)+'</div>'+
@@ -1996,6 +2018,40 @@
         '<td>'+peCell+flag+'</td>';
       tbody.appendChild(tr);
     });
+
+    // totais do desvio financeiro (média ponderada pelo faturamento líquido)
+    function tot(list){
+      var fat=0, imp=0, real=0, ideal=0;
+      list.forEach(function(d){ fat+=d.fat; imp+=d.impacto; real+=d.fat*d.real/100; ideal+=d.fat*d.ideal/100; });
+      return {n:list.length, fat:fat, imp:imp, real:real/fat*100, ideal:ideal/fat*100, pp:(real-ideal)/fat*100};
+    }
+    function totRow(label, t, cls){
+      var dc = dvClass(t.pp);
+      return '<tr class="'+(cls||'')+'"><td colspan="2">'+label+'</td>'+
+        '<td class="num tabular">'+brl(t.fat)+'</td>'+
+        '<td class="num tabular">'+fmt2.format(t.real)+'%</td>'+
+        '<td class="num tabular">'+fmt2.format(t.ideal)+'%</td>'+
+        '<td class="num tabular" style="color:'+DV_COLOR[dc]+';">+'+fmt2.format(t.pp)+' pp</td>'+
+        '<td class="num tabular" style="color:'+DV_COLOR[dc]+';">+'+brl(t.imp)+'</td>'+
+        '<td colspan="3" style="color:var(--ink-muted); font-weight:600;">'+t.n+' lojas · média ponderada</td></tr>';
+    }
+    var b12 = cmvPerf.filter(function(d){ return d.label.indexOf('Biggs')===0 && d.label!=='Biggs 13'; });
+    var tfoot = document.createElement('tfoot');
+    tfoot.innerHTML = totRow('Total Biggs 01–12', tot(b12), 'sub') + totRow('Total geral com CMV ideal (sem Robs e Mapoli)', tot(cmvPerf));
+    document.getElementById('storeTable').appendChild(tfoot);
+
+    // card de destaque acima do gráfico de lojas
+    var T = tot(cmvPerf), top = cmvPerf.slice().sort(function(a,b){ return b.impacto-a.impacto; });
+    var acima = cmvPerf.filter(function(d){ return d.desvio>0; }).length;
+    var box = document.getElementById('lojasHighlightKpis');
+    if(box){
+      box.style.gridTemplateColumns = ''; box.classList.add('kpi3');
+      box.insertAdjacentHTML('beforeend',
+        '<div class="card kpi"><div class="kpi-label">Desvio financeiro do CMV (ago)</div>'+
+        '<div class="kpi-value tabular" style="color:var(--critical)">+'+brl(T.imp)+'</div>'+
+        '<div class="kpi-sub">'+acima+' de '+T.n+' lojas acima do CMV ideal · +'+fmt2.format(T.pp)+' pp na média · maiores: '+
+          top.slice(0,3).map(function(d){ return d.label+' '+brl(d.impacto); }).join(', ')+'</div></div>');
+    }
   })();
 
   // ---------------- CMV Real x Ideal chart ----------------

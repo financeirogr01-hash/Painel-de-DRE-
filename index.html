@@ -345,7 +345,10 @@
   .cat-dot{display:inline-block; width:9px; height:9px; border-radius:50%; flex:none; margin-right:2px; align-self:center;}
   .voxel-row.has-cat td:first-child{box-shadow: inset 3px 0 0 var(--row-cat);}
   .sig-cell{text-align:center !important;}
-  .sig-panel{display:grid; grid-template-columns:repeat(auto-fit,minmax(170px,1fr)); gap:10px; margin-top:12px;}
+  .sig-panel{display:flex; flex-wrap:wrap; justify-content:center; gap:10px; margin-top:12px;}
+  .sig-panel .sig-card{flex:0 0 calc((100% - 50px)/6);}
+  @media (max-width:1000px){ .sig-panel .sig-card{flex-basis:calc((100% - 20px)/3);} }
+  @media (max-width:560px){ .sig-panel .sig-card{flex-basis:calc((100% - 10px)/2);} }
   .sig-card{border:1px solid var(--border); border-radius:12px; padding:10px 12px; background:var(--surface); border-left:4px solid var(--sig-c); min-width:0;}
   .sig-card .sig-name{display:flex; align-items:center; gap:6px; font-size:12px; font-weight:700; color:var(--ink-2);}
   .sig-card .sig-val{font-size:22px; font-weight:800; margin-top:4px; letter-spacing:-0.01em;}
@@ -403,7 +406,7 @@
 
     <div class="chart-title" style="margin-top:18px;" id="sigTitle">Sinaleiro da DRE</div>
     <div class="sig-panel" id="sigPanel"></div>
-    <div class="sig-legend">
+    <div class="sig-legend" style="justify-content:center;">
       <span><i class="sig-dot sig-good"></i>Dentro da meta</span>
       <span><i class="sig-dot sig-warn"></i>Atenção</span>
       <span><i class="sig-dot sig-bad"></i>Fora da meta</span>

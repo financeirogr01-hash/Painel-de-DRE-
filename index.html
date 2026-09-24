@@ -1,7 +1,8 @@
 <!DOCTYPE html>
-<html lang="pt-BR" translate="no">
+<html lang="pt-BR" translate="no" data-theme="dark">
 <meta charset="utf-8">
 <meta name="google" content="notranslate">
+<meta name="color-scheme" content="dark">
 <title>Painel Controladoria · SAL Restaurantes</title>
 <style>
   :root{
@@ -654,8 +655,8 @@
     </div>
     <div class="filterbar" role="region" aria-label="Filtros de mês e loja">
       <div class="filter-group"><span class="filter-label">Mês</span><div class="voxel-tabs" id="fMonth"></div></div>
-      <div class="filter-group"><label class="filter-label" for="fBrand">Marca</label><select id="fBrand" class="fselect" style="min-width:130px;"></select></div>
-      <div class="filter-group"><label class="filter-label" for="fStore">Loja</label><select id="fStore" class="fselect"></select></div>
+      <div class="filter-group"><label class="filter-label" for="fBrand">Marca</label><select id="fBrand" autocomplete="off" class="fselect" style="min-width:130px;"></select></div>
+      <div class="filter-group"><label class="filter-label" for="fStore">Loja</label><select id="fStore" autocomplete="off" class="fselect"></select></div>
     </div>
   </div>
 
@@ -777,10 +778,10 @@
     </div>
     <div class="cmp-controls">
       <span class="cmp-tag">A</span>
-      <select id="cmpA" class="fselect" aria-label="Loja A"></select>
+      <select id="cmpA" autocomplete="off" class="fselect" aria-label="Loja A"></select>
       <button type="button" class="cmp-swap" id="cmpSwap" title="Inverter A e B" aria-label="Inverter A e B">⇄</button>
       <span class="cmp-tag b">B</span>
-      <select id="cmpB" class="fselect" aria-label="Loja B"></select>
+      <select id="cmpB" autocomplete="off" class="fselect" aria-label="Loja B"></select>
     </div>
     <div class="cmp-head" id="cmpHead"></div>
     <div class="table-scroll">

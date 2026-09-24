@@ -826,7 +826,7 @@
       <div class="table-scroll" style="margin-top:12px;">
         <table class="pc-table" id="pcTable">
           <thead><tr>
-            <th data-pc-sort="label">Unidade</th>
+            <th data-pc-sort="ordem">Unidade</th>
             <th class="num" data-pc-sort="base">Receita-base</th>
             <th class="num" data-pc-sort="cmv">CMV R$ e %</th>
             <th class="num" data-pc-sort="cmo">CMO R$ e %</th>
@@ -2520,7 +2520,7 @@
   var PC_META = 53, PC_ALERTA = 60;
   var PC_CMV_LINES = ['Insumos','Embalagens','Produtos para Comercialização'];
   var PC_CMO_LINES = ['Salários','Bonificações','Impostos Sobre Salários','Vale Alimentação','Vale Transporte','Rescisões','Freelancers e Terceirizados','Outros Encargos com Funcionários','Férias','13º Salário'];
-  var pcSort = {k:'pc', dir:-1}, pcOpen = {};
+  var pcSort = {k:'ordem', dir:1}, pcOpen = {};   // padrão: ordem fixa das lojas
   function pcLine(t, line, m){ var v = voxelGetVals(t, line); var x = m===-1 ? voxelAcc(v) : v[m]; return (x===null||x===undefined) ? null : -x; }
   function pcData(t, m){
     var M = storeMetrics(t, m);
@@ -2532,7 +2532,7 @@
     if(Math.abs(sc - cmv) > 1) issues.push('CMV: contas somam '+brl2(sc)+' e a linha da DRE é '+brl2(cmv));
     if(Math.abs(so - cmo) > 1) issues.push('Pessoal: contas somam '+brl2(so)+' e a linha da DRE é '+brl2(cmo));
     var pc = tot/base*100;
-    return {t:t, label:t, base:base, cmv:cmv, cmo:cmo, cmvP:cmv/base*100, cmoP:cmo/base*100, pc:pc, dev:pc-PC_META, exc:Math.max(0, tot - PC_META/100*base), issues:issues};
+    return {t:t, label:t, ordem:voxelTabsList.indexOf(t), base:base, cmv:cmv, cmo:cmo, cmvP:cmv/base*100, cmoP:cmo/base*100, pc:pc, dev:pc-PC_META, exc:Math.max(0, tot - PC_META/100*base), issues:issues};
   }
   function pcAgg(list){
     var b=0, c=0, o=0; list.forEach(function(d){ b+=d.base; c+=d.cmv; o+=d.cmo; });
@@ -2635,7 +2635,7 @@
   }
   document.getElementById('pcTable').addEventListener('click', function(e){
     var th = e.target.closest('th[data-pc-sort]');
-    if(th){ var k = th.getAttribute('data-pc-sort'); pcSort = {k:k, dir: pcSort.k===k ? -pcSort.dir : (k==='label' ? 1 : -1)}; renderPrimeCost(); return; }
+    if(th){ var k = th.getAttribute('data-pc-sort'); pcSort = {k:k, dir: pcSort.k===k ? -pcSort.dir : (k==='ordem' ? 1 : -1)}; renderPrimeCost(); return; }
     var tr = e.target.closest('tr[data-pc-open]');
     if(tr){ var key = tr.getAttribute('data-pc-open')+'|'+fState.month; pcOpen[key] = !pcOpen[key]; renderPrimeCost(); }
   });
@@ -3192,7 +3192,7 @@
   // ---------------- CMV Real x Ideal table ----------------
   (function(){
     var tbody = document.querySelector('#cmvTable tbody');
-    cmvPerf.forEach(function(d){
+    cmvPerf.slice().sort(function(a, b){ return voxelTabsList.indexOf(a.label) - voxelTabsList.indexOf(b.label); }).forEach(function(d){
       var tr = document.createElement('tr');
       tr.className = d.desvio > 0 ? 'neg' : 'pos';
       tr.innerHTML = '<td><b>'+d.label+'</b>'+(d.biggs13?' <span class="flag" style="background:color-mix(in srgb, var(--warning) 20%, transparent); color:#8a5a00;">proxy*</span>':'')+'</td>'+

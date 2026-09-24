@@ -528,6 +528,22 @@
   #resumoKpis .kpi-value{font-size:23px; margin-top:4px;}
   #resumoKpis .kpi-sub{font-size:12px; margin-top:3px;}
   #resumoKpis .chip{margin-top:6px;}
+  /* gráfico da rede ocupa a altura do quadro; quadros lado a lado harmônicos */
+  .lc-card{display:flex; flex-direction:column;}
+  .lc-wrap{position:relative; flex:1; min-height:230px; margin-top:4px;}
+  .lc-wrap .linechart{position:absolute; inset:0; width:100%; height:100%;}
+  .lc-card:has(.lc-wrap){min-width:0;}
+  .grid.two-col:has(.lc-card){grid-template-columns:1fr 1fr;}
+  @media (max-width:900px){ .grid.two-col:has(.lc-card){grid-template-columns:1fr;} }
+  #bnGrid{grid-template-columns:repeat(3, minmax(0,1fr)); gap:8px;}
+  @media (max-width:560px){ #bnGrid{grid-template-columns:repeat(2, minmax(0,1fr));} }
+  #bnGrid .bn{padding:8px 10px;}
+  #bnGrid .bn-label{font-size:11px; line-height:1.25; min-height:2.5em; align-items:flex-start;}
+  #bnGrid .bn-label .swatch{margin-top:2px;}
+  #bnGrid .bn-value{font-size:22px; margin-top:2px;}
+  #bnGrid .sig-pill{font-size:11px; margin-top:4px; padding:1px 7px;}
+  #bnGrid .bn-sub{font-size:11px;}
+  #bnGrid .bn.result{padding:8px 12px;}
 </style>
 
 <div class="page">
@@ -591,10 +607,10 @@
     </div>
 
     <div class="grid two-col" style="margin-top:14px;">
-      <div class="card">
+      <div class="card lc-card">
         <div class="chart-title">Resultado operacional da rede (% do faturamento bruto)</div>
         <div class="chart-note">Maio a agosto de 2026, 16 lojas com histórico completo (Biggs 13 só entrou em agosto) · rótulo mostra quantas fecharam o mês no prejuízo</div>
-        <svg id="lineChart" class="linechart" viewBox="0 0 640 260" preserveAspectRatio="xMidYMid meet"></svg>
+        <div class="lc-wrap"><svg id="lineChart" class="linechart"></svg></div>
       </div>
       <div class="card">
         <div class="chart-title" id="bnTitle">Para onde foi cada R$ 100 faturados</div>
@@ -2477,8 +2493,13 @@
 
   // ---------------- line chart ----------------
   (function(){
-    var svg = document.getElementById('lineChart');
-    var W=640,H=260, padL=42, padR=16, padT=18, padB=34;
+    var svg = document.getElementById('lineChart'), wrapLC = svg.parentNode, lastWH = '';
+    function drawLine(){
+    var bx = wrapLC.getBoundingClientRect();
+    var W = Math.max(300, Math.round(bx.width)), H = Math.max(200, Math.round(bx.height));
+    if(W+'x'+H === lastWH) return; lastWH = W+'x'+H;
+    svg.innerHTML = ''; svg.setAttribute('viewBox', '0 0 '+W+' '+H);
+    var padL=42, padR=16, padT=22, padB=30;
     var plotW = W-padL-padR, plotH = H-padT-padB;
     var minV = Math.min.apply(null, trend.map(function(d){return d.pct_lucro_operacional;})) - 3;
     var maxV = Math.max.apply(null, trend.map(function(d){return d.pct_lucro_operacional;})) + 3;
@@ -2531,6 +2552,9 @@
       hit.addEventListener('mouseleave', hideTip);
       svg.appendChild(hit);
     });
+    }
+    drawLine();
+    if(window.ResizeObserver){ new ResizeObserver(function(){ drawLine(); }).observe(wrapLC); } else { window.addEventListener('resize', drawLine); }
   })();
 
   // ---------------- lojas highlight kpis ----------------

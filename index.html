@@ -492,6 +492,22 @@
   .rd-tools select, .rd-tools button{font:inherit; font-size:12.5px; border-radius:8px; padding:5px 10px; border:1px solid var(--border); background:var(--surface); color:var(--ink); cursor:pointer;}
   .rd-tools button.primary{background:var(--accent); border-color:var(--accent); color:#fff; font-weight:800;}
   .rd-tools .rd-hint{margin:0;}
+
+  /* ---------- plano de redução mensal ---------- */
+  .rd-badge{display:inline-block; font-size:10.5px; font-weight:800; letter-spacing:.03em; text-transform:uppercase; border-radius:6px; padding:2px 7px; margin-left:6px; vertical-align:middle;}
+  .rd-badge.prop{background:var(--surface-2); color:var(--ink-2); border:1px solid var(--border);}
+  .rd-badge.fix{background:var(--good); color:#fff;}
+  .rd-kpis{display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:8px; margin:10px 0;}
+  .rd-kpi{border:1px solid var(--border); border-radius:10px; padding:8px 10px; background:var(--surface-2);}
+  .rd-kpi span{display:block; font-size:11px; font-weight:700; color:var(--ink-muted); text-transform:uppercase; letter-spacing:.03em;}
+  .rd-kpi b{display:block; font-size:16px; margin-top:2px; font-variant-numeric:tabular-nums;}
+  .rd-kpi.alert{border-color:var(--warning); background:color-mix(in srgb, var(--warning) 12%, var(--surface));}
+  .rd-metaline{margin:8px 0 0; font-size:12.5px; padding:8px 10px; border-radius:8px; background:var(--surface-2); border:1px solid var(--border);}
+  .rd-metaline.alert{border-color:var(--warning); background:color-mix(in srgb, var(--warning) 14%, var(--surface));}
+  .rd-chk{display:inline-flex; align-items:center; gap:5px; font-size:11px; color:var(--ink-muted); font-weight:700;}
+  .rd-chk input{width:16px; height:16px; accent-color:var(--accent);}
+  .rd-diff{margin:10px 0; padding:10px 12px; border:1px solid var(--warning); border-radius:10px; background:color-mix(in srgb, var(--warning) 10%, var(--surface)); font-size:12.5px;}
+  .rd-msg{font-size:12px; font-weight:700; margin-left:4px;}
 </style>
 
 <div class="page">
@@ -644,6 +660,7 @@
     </div>
     <p class="fn-note" style="margin-top:10px;">Valores de cenário dependem de reduzir custos variáveis ou descontos para alcançar a margem indicada. Resultado operacional projetado não equivale a reserva de caixa.</p>
     <div id="rdSummary"></div>
+    <input type="file" id="rdImportFile" accept="application/json,.json" hidden>
   </section>
 
   <section id="comparativo">
@@ -1553,6 +1570,8 @@
       cartao: -g('Taxas de Cartão e Apps de Delivery'),
       roy: -(g('Royalties') + g('Taxa de Marketing') + g('Taxa Administrativa')),
       entregas: -(g('Despesas com entregas') + g('Devoluções de Vendas') + g('Impostos sobre Vendas')),
+      entDev: -(g('Despesas com entregas') + g('Devoluções de Vendas')),
+      impostos: -g('Impostos sobre Vendas'),
       cmv: -g('CMV - Custo da Mercadoria Vendida'),
       cmo: -g('Despesas com Pessoal'),
       mkt: -g('Despesas com Vendas e Marketing'),
@@ -1819,16 +1838,18 @@
   // Premissa: faturamento bruto do mês mantido. Economia p/ meta p = máx(0; p × FB − resultado atual).
   // Reduções simuladas por conta: grupos "var" aumentam a margem de contribuição; grupos "fix" reduzem custos fixos.
   var RD_METAS = [0, 0.05, 0.10, 0.20];
+  // elig = entra na proposta automática (gerenciável pela loja); lock = obrigação/contrato, nunca recebe corte
   var RD_GROUPS = [
-    {k:'cmv', label:'CMV (insumos, embalagens)', type:'var'},
-    {k:'desc', label:'Descontos concedidos', type:'var'},
-    {k:'cartao', label:'Taxas de cartão + apps', type:'var'},
-    {k:'roy', label:'Royalties + marketing + tx. adm.', type:'var'},
-    {k:'entregas', label:'Entregas, devoluções e impostos', type:'var'},
-    {k:'cmo', label:'Pessoal (CMO)', type:'fix'},
-    {k:'mkt', label:'Vendas e marketing', type:'fix'},
-    {k:'admin', label:'Administrativas', type:'fix'},
-    {k:'ident', label:'Despesas a identificar', type:'fix'}
+    {k:'cmv', label:'CMV (insumos, embalagens)', type:'var', elig:true},
+    {k:'desc', label:'Descontos concedidos', type:'var', elig:true},
+    {k:'cartao', label:'Taxas de cartão + apps', type:'var', elig:false, note:'taxa contratada — incluir só se houver renegociação'},
+    {k:'roy', label:'Royalties + marketing + tx. adm.', type:'var', lock:true, note:'contratual'},
+    {k:'entDev', label:'Entregas e devoluções', type:'var', elig:true},
+    {k:'impostos', label:'Impostos sobre vendas', type:'var', lock:true, note:'obrigação legal'},
+    {k:'cmo', label:'Pessoal (CMO)', type:'fix', elig:false, note:'incluir só com plano de quadro/escala'},
+    {k:'mkt', label:'Vendas e marketing', type:'fix', elig:true},
+    {k:'admin', label:'Administrativas', type:'fix', elig:true},
+    {k:'ident', label:'Despesas a identificar', type:'fix', elig:true}
   ];
   var rdOpen = {};   // lojas com o card aberto
   var rdState = {};  // reduções digitadas: rdState['loja|mês'][grupo] = {v, u}
@@ -1844,7 +1865,7 @@
   // confere se os grupos fecham com a DRE (margem, custos fixos e resultado)
   function rdCheckDre(M){
     var issues = [];
-    var mcCalc = M.fb - M.desc - M.cartao - M.roy - M.entregas - M.cmv;
+    var mcCalc = M.fb - M.desc - M.cartao - M.roy - M.entDev - M.impostos - M.cmv;
     var cfCalc = M.cmo + M.mkt + M.admin + M.ident;
     if(Math.abs(mcCalc - M.mc) > 1) issues.push('grupos variáveis somam '+brl2(M.fb-mcCalc)+' e a margem da DRE implica '+brl2(M.fb-M.mc));
     if(Math.abs(cfCalc - M.cf) > 1) issues.push('grupos fixos somam '+brl2(cfCalc)+' e os custos fixos da DRE são '+brl2(M.cf));
@@ -1899,15 +1920,58 @@
     h += '</tbody></table><p class="rd-hint">Economia que falta = meta × faturamento atual − resultado projetado. Reduções de CMV, descontos, taxas, royalties e entregas elevam a margem de contribuição e, por isso, também mudam o faturamento necessário (▲ = cenário com melhoria de margem pela premissa).</p></div>';
     return h;
   }
+  // ---------------- plano de redução mensal (metas fixadas por loja e conta) ----------------
+  var RD_MONTHS = ['Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+  var RD_PLAN_LS = 'painelDRE.planosReducao.v1';
+  var rdPlansServer = {};   // planos.json publicado junto do painel (planos oficiais, iguais para todos)
+  var rdPlansLocal = (function(){ try{ return JSON.parse(localStorage.getItem(RD_PLAN_LS) || '{}') || {}; }catch(e){ return {}; } })();
+  var rdRevising = {};      // plano em revisão explícita (ignora o fixado até fixar de novo)
+  var rdElig = {};          // contas incluídas na proposta: rdElig['loja|mês'][conta]
+  var rdMetaSel = {};       // meta escolhida (índice em RD_METAS); padrão 5%
+  var rdMsg = {};           // mensagem curta por loja (ex.: falha ao salvar)
+  function rdSaveLocal(){ try{ localStorage.setItem(RD_PLAN_LS, JSON.stringify(rdPlansLocal)); return true; }catch(e){ return false; } }
+  function rdPlan(t, m){ var k = t+'|'+m; if(rdRevising[k]) return null; return rdPlansLocal[k] || rdPlansServer[k] || null; }
+  function rdMonthName(m){ return (RD_MONTHS[m] || '?')+'/2026'; }
+  function rdEligOf(t){
+    var key = rdKey(t);
+    if(!rdElig[key]){ rdElig[key] = {}; RD_GROUPS.forEach(function(g){ rdElig[key][g.k] = !g.lock && !!g.elig; }); }
+    return rdElig[key];
+  }
+  function rdMetaIdx(t){ var k = rdKey(t); return rdMetaSel[k]===undefined ? 1 : rdMetaSel[k]; }
+  function rdEffOf(e, base){
+    if(!e) return 0;
+    var raw = e.last==='pct' ? (e.pct>0 ? base*Math.min(e.pct,100)/100 : 0) : (e.last==='rs' ? (e.rs>0 ? e.rs : 0) : 0);
+    return Math.min(raw, base);
+  }
+  // Proposta: distribui a redução necessária entre as contas marcadas, proporcional ao gasto de cada uma,
+  // em centavos (a soma fecha exatamente). O que não couber nas contas vira "meta sem ação definida".
+  function rdPropose(t, M){
+    var key = rdKey(t), p = RD_METAS[rdMetaIdx(t)], eco = Math.max(0, p*M.fb - M.lop), el = rdEligOf(t);
+    var list = RD_GROUPS.filter(function(g){ return !g.lock && el[g.k] && (M[g.k]||0) > 0; });
+    var B = list.reduce(function(a, g){ return a + M[g.k]; }, 0);
+    var cents = Math.round(Math.min(eco, B)*100), st = {}, acc = 0;
+    list.forEach(function(g){ var c = Math.floor(M[g.k]/B*cents); st[g.k] = {rs:c/100, last:'rs'}; acc += c; });
+    if(list.length && cents>acc){
+      var big = list.slice().sort(function(a, b){ return M[b.k]-M[a.k]; })[0];
+      st[big.k].rs = Math.round(st[big.k].rs*100 + (cents-acc))/100;
+    }
+    rdState[key] = st;
+  }
+  function rdPlanNumbers(t, M){
+    var S = rdSim(t, M), p = RD_METAS[rdMetaIdx(t)], eco = Math.max(0, p*M.fb - M.lop);
+    return {S:S, p:p, eco:eco, sem: Math.max(0, Math.round((eco - S.total)*100)/100)};
+  }
   function rdCardHtml(t, M){
-    var id = rdId(t), st = rdState[rdKey(t)] || {};
-    var issues = rdCheckDre(M);
+    var plan = rdPlan(t, fState.month);
+    if(plan) return rdPlanCardHtml(t, M, plan);
+    var key = rdKey(t);
+    if(!rdState[key]) rdPropose(t, M);
+    var id = rdId(t), st = rdState[key], el = rdEligOf(t), issues = rdCheckDre(M), mi = rdMetaIdx(t);
     var h = '<div class="rd-card" id="'+id+'">';
-    h += '<div class="rd-title">Simulação de resultado operacional (DRE) — '+t+'</div>';
-    h += '<div class="rd-sub">'+periodName(fState.month)+' · premissa: manter o faturamento bruto realizado ('+brl0(M.fb)+') · valores em R$</div>';
+    h += '<div class="rd-title">Plano de redução mensal — '+t+' <span class="rd-badge prop">proposta</span></div>';
+    h += '<div class="rd-sub">Simulação de resultado operacional (DRE) · base: '+periodName(fState.month)+' · premissa: manter o faturamento bruto realizado ('+brl0(M.fb)+') · valores em R$</div>';
     if(issues.length) h += '<p class="rd-hint rd-warn" style="margin:6px 0 0;">⚠ Divergência nos dados da DRE: '+issues.join('; ')+'.</p>';
     h += '<div class="rd-now"><span>Resultado operacional atual: <b class="'+(M.lop<0?'rd-bad':'rd-ok')+'">'+brl0(M.lop)+'</b> ('+pct(M.lop/M.fb*100)+' do bruto)</span></div>';
-    // os dois indicadores, visíveis e separados
     h += '<div class="rd-cols">';
     h += '<div class="rd-box"><h4>Economia necessária com faturamento atual</h4><table><thead><tr><th>Meta</th><th class="num">Economia</th><th class="num">% do fat.</th><th class="num">Resultado após</th></tr></thead><tbody>';
     RD_METAS.forEach(function(p){
@@ -1915,71 +1979,137 @@
       h += '<tr><td>'+rdPctLabel(p)+'</td><td class="num tabular '+(eco>0?'rd-bad':'rd-ok')+'">'+(eco>0 ? brl0(eco) : '✓ já atingida')+'</td>'+
         '<td class="num tabular">'+fmt2.format(eco/M.fb*100)+'%</td><td class="num tabular">'+brl0(M.lop + eco)+'</td></tr>';
     });
-    h += '</tbody></table><p class="rd-hint">Economia = máx(0; meta × faturamento bruto − resultado atual). O quanto cortar em cada conta é escolha da gestão — simule abaixo.</p></div>';
+    h += '</tbody></table><p class="rd-hint">Economia = máx(0; meta × faturamento bruto − resultado atual).</p></div>';
     var FA = rdFatAdic(M.fb, M.mc, M.cf);
     h += '<div class="rd-box"><h4>Faturamento adicional necessário</h4><table><thead><tr><th>Meta</th><th class="num">Faturamento a mais</th><th class="num">Faturamento total</th></tr></thead><tbody>';
     RD_METAS.forEach(function(p, i){
       var f = FA ? FA[i] : null, add = f ? Math.max(0, f.v - M.fb) : null;
       h += '<tr><td>'+rdPctLabel(p)+'</td><td class="num tabular">'+(f ? (add>0 ? brl0(add) : '✓ já atingida') : 'Dados insuficientes')+'</td><td class="num tabular">'+(f ? brl0(f.v)+(f.cenario?' ▲':'') : '—')+'</td></tr>';
     });
-    h += '</tbody></table><p class="rd-hint">Outro cálculo: quanto vender a mais mantendo custos fixos e margem. Não é valor de corte — por isso o "falta p/ equilíbrio" da tabela não é igual à economia ao lado.</p></div>';
+    h += '</tbody></table><p class="rd-hint">Outro cálculo: quanto vender a mais mantendo custos fixos e margem. Não é valor de corte.</p></div>';
     h += '</div>';
-    // simulador por conta: % e R$ ligados em cada conta, redução efetiva e total da loja
-    h += '<div class="rd-sim"><h4>Simule reduções por conta</h4>';
-    h += '<div class="rd-tools"><label for="'+id+'-meta">Preencher para atingir</label><select id="'+id+'-meta">'+
-      RD_METAS.map(function(p, i){ return '<option value="'+i+'">'+rdPctLabel(p)+' — '+brl0(Math.max(0, p*M.fb - M.lop))+'</option>'; }).join('')+'</select>'+
-      '<button type="button" class="primary" data-rd-fill="'+t+'">Mesmo % em todas as contas</button><button type="button" data-rd-clear="'+t+'">Limpar</button>'+
-      '<span class="rd-hint">Sugestão proporcional, só quando você clica — ajuste conta a conta depois.</span></div>';
-    h += '<div class="table-scroll"><table><thead><tr><th>Conta</th><th class="num">Gasto atual</th><th class="num">% do bruto</th><th class="num">Redução (% da conta)</th><th class="num">Redução (R$)</th><th class="num">Redução efetiva</th></tr></thead><tbody>';
+    // proposta editável
+    h += '<div class="rd-sim"><h4>Proposta de redução por conta — ajuste antes de fixar</h4>';
+    h += '<div class="rd-tools"><label for="'+id+'-meta">Meta do plano</label><select id="'+id+'-meta" data-rd-meta="'+t+'">'+
+      RD_METAS.map(function(p, i){ return '<option value="'+i+'"'+(i===mi?' selected':'')+'>'+rdPctLabel(p)+' — '+brl0(Math.max(0, p*M.fb - M.lop))+'</option>'; }).join('')+'</select>'+
+      '<button type="button" data-rd-propose="'+t+'">Gerar proposta</button><button type="button" data-rd-clear="'+t+'">Limpar</button>'+
+      '<button type="button" class="primary" data-rd-fixar="'+t+'">📌 Fixar plano</button>'+(rdMsg[key]?'<span class="rd-msg rd-warn">'+rdMsg[key]+'</span>':'')+'</div>';
+    h += '<p class="rd-hint" style="margin:0 0 8px;">A proposta divide a redução entre as contas marcadas, proporcional ao gasto. Royalties e impostos nunca recebem corte automático; cartão/apps e pessoal só entram se você marcar.</p>';
+    h += '<div class="table-scroll"><table><thead><tr><th>Conta</th><th>Incluir</th><th class="num">Gasto atual</th><th class="num">Redução (% da conta)</th><th class="num">Redução (R$)</th><th class="num">Novo limite mensal</th><th class="num">Redução efetiva</th></tr></thead><tbody>';
     var sumBase = 0;
     RD_GROUPS.forEach(function(g){
-      var base = Math.max(0, M[g.k] || 0), e = st[g.k] || {};
+      var base = Math.max(0, M[g.k] || 0), e = st[g.k] || {}, on = !g.lock && !!el[g.k];
       sumBase += base;
       var eff = rdEffOf(e, base);
       var pv = e.last==='rs' ? (base>0 && eff>0 ? eff/base*100 : '') : (e.pct>0 ? e.pct : '');
       var rv = e.last==='pct' ? (eff>0 ? eff : '') : (e.rs>0 ? e.rs : '');
-      var dis = base<=0 ? ' disabled' : '';
-      h += '<tr><td>'+g.label+' <span class="rd-type">'+(g.type==='var'?'variável':'fixo')+'</span></td>'+
-        '<td class="num tabular">'+brl0(base)+'</td><td class="num tabular">'+fmt2.format(base/M.fb*100)+'%</td>'+
+      var dis = (base<=0 || !on) ? ' disabled' : '';
+      h += '<tr><td>'+g.label+' <span class="rd-type">'+(g.type==='var'?'variável':'fixo')+'</span>'+(g.note?'<div class="rd-type" style="text-transform:none; font-weight:600;">'+g.note+'</div>':'')+'</td>'+
+        '<td><label class="rd-chk"><input type="checkbox" data-rd-elig="'+g.k+'" data-rd-store="'+t+'"'+(on?' checked':'')+(g.lock||base<=0?' disabled':'')+'>'+(g.lock?'não':'')+'</label></td>'+
+        '<td class="num tabular">'+brl0(base)+'</td>'+
         '<td class="num"><span class="rd-in"><input class="rd-pct" type="text" inputmode="decimal" aria-label="Redução em % de '+g.label+'" data-rd-store="'+t+'" data-rd-k="'+g.k+'" data-rd-f="pct" value="'+(pv===''?'':fmt2.format(pv))+'" placeholder="0"'+dis+'><span class="u">%</span></span></td>'+
         '<td class="num"><span class="rd-in"><span class="u">R$</span><input class="rd-rs" type="text" inputmode="decimal" aria-label="Redução em R$ de '+g.label+'" data-rd-store="'+t+'" data-rd-k="'+g.k+'" data-rd-f="rs" value="'+(rv===''?'':fmt2.format(rv))+'" placeholder="0"'+dis+'></span></td>'+
+        '<td class="num tabular" id="'+id+'-lim-'+g.k+'">'+brl0(base-eff)+'</td>'+
         '<td class="num tabular rd-eff" id="'+id+'-'+g.k+'">—</td></tr>';
     });
-    h += '</tbody><tfoot><tr><td>Total da loja</td><td class="num tabular">'+brl0(sumBase)+'</td><td class="num tabular">'+fmt2.format(sumBase/M.fb*100)+'%</td>'+
-      '<td class="num tabular" id="'+id+'-tpct">—</td><td class="num tabular" id="'+id+'-trs">—</td><td class="num tabular rd-eff" id="'+id+'-teff">—</td></tr></tfoot></table></div></div>';
+    h += '</tbody><tfoot><tr><td>Total da loja</td><td></td><td class="num tabular">'+brl0(sumBase)+'</td>'+
+      '<td class="num tabular" id="'+id+'-tpct">—</td><td class="num tabular" id="'+id+'-trs">—</td><td class="num tabular" id="'+id+'-tlim">—</td><td class="num tabular rd-eff" id="'+id+'-teff">—</td></tr></tfoot></table></div>';
+    h += '<div class="rd-metaline" id="'+id+'-metaline"></div></div>';
     h += '<div class="rd-res" id="'+id+'-res">'+rdResultHtml(t, M)+'</div>';
     h += '</div>';
     return h;
   }
-  function rdEffOf(e, base){
-    if(!e) return 0;
-    var raw = e.last==='pct' ? (e.pct>0 ? base*Math.min(e.pct,100)/100 : 0) : (e.last==='rs' ? (e.rs>0 ? e.rs : 0) : 0);
-    return Math.min(raw, base);
+  // realizado de uma conta no mês de execução (null se a DRE daquele mês ainda não está no painel)
+  function rdRealizado(t, em){ return em<=3 ? storeMetrics(t, em) : null; }
+  function rdPlanCardHtml(t, M, plan){
+    var id = rdId(t), m = plan.baseMonth, em = m+1, R = rdRealizado(t, em);
+    var fixada = 0, alc = 0, rowsH = '', sumBase = 0, sumLim = 0, sumReal = 0;
+    RD_GROUPS.forEach(function(g){
+      var base = plan.base.contas[g.k] || 0, red = plan.reducoes[g.k] || 0, lim = base - red;
+      if(base<=0 && red<=0) return;
+      fixada += red; sumBase += base; sumLim += lim;
+      var real = R ? Math.max(0, R[g.k] || 0) : null;
+      var eco = real===null ? null : base - real, desv = real===null ? null : real - lim;
+      if(real!==null){ sumReal += real; if(red>0) alc += eco; }
+      rowsH += '<tr><td>'+g.label+'</td><td class="num tabular">'+brl0(base)+'</td><td class="num tabular">'+(red>0 ? brl0(red) : '—')+'</td>'+
+        '<td class="num tabular">'+brl0(lim)+'</td><td class="num tabular">'+(real===null ? '<span style="color:var(--ink-muted)">aguardando</span>' : brl0(real))+'</td>'+
+        '<td class="num tabular">'+(eco===null ? '—' : '<span class="'+(eco>=red?'rd-ok':'rd-bad')+'">'+brl0(eco)+'</span>')+'</td>'+
+        '<td class="num tabular">'+(desv===null ? '—' : (desv>0 ? '<span class="rd-bad">'+brl0(desv)+' acima do limite</span>' : '<span class="rd-ok">dentro do limite</span>'))+'</td></tr>';
+    });
+    var falta = R ? Math.max(0, fixada - alc) : null;
+    var proj = plan.base.lop + fixada;
+    var dt = new Date(plan.fixedAt), dts = isNaN(dt) ? plan.fixedAt : dt.toLocaleDateString('pt-BR')+' '+dt.toLocaleTimeString('pt-BR',{hour:'2-digit', minute:'2-digit'});
+    var origem = rdPlansLocal[t+'|'+m] ? 'salvo neste navegador' : 'publicado em planos.json';
+    var h = '<div class="rd-card" id="'+id+'" style="border-left-color:var(--good);">';
+    h += '<div class="rd-title">Plano de redução mensal — '+t+' <span class="rd-badge fix">fixado</span></div>';
+    h += '<div class="rd-sub">Simulação de resultado operacional (DRE) · base: DRE de '+rdMonthName(m)+' · meta: '+rdPctLabel(plan.meta)+' · fixado em '+dts+' ('+origem+') · execução: '+rdMonthName(em)+'</div>';
+    // DRE mudou depois de fixar? mostra lado a lado, sem alterar o plano
+    var diffs = [];
+    function cmp(lbl, a, b){ if(Math.abs((a||0)-(b||0)) > 1) diffs.push('<tr><td>'+lbl+'</td><td class="num tabular">'+brl0(a||0)+'</td><td class="num tabular">'+brl0(b||0)+'</td></tr>'); }
+    cmp('Faturamento bruto', plan.base.fb, M.fb); cmp('Resultado operacional', plan.base.lop, M.lop);
+    RD_GROUPS.forEach(function(g){ cmp(g.label, plan.base.contas[g.k], Math.max(0, M[g.k]||0)); });
+    if(diffs.length){
+      h += '<div class="rd-diff"><b>⚠ A DRE de '+rdMonthName(m)+' mudou depois que o plano foi fixado.</b> O plano não foi alterado.'+
+        '<div class="table-scroll" style="margin-top:6px;"><table><thead><tr><th>Item</th><th class="num">Meta fixada (base)</th><th class="num">DRE atualizada</th></tr></thead><tbody>'+diffs.join('')+'</tbody></table></div>'+
+        '<div class="rd-tools" style="margin:8px 0 0;"><button type="button" class="primary" data-rd-revisar="'+t+'">Revisar plano com a DRE atualizada</button></div></div>';
+    }
+    h += '<div class="rd-kpis">'+
+      '<div class="rd-kpi"><span>Resultado atual (base)</span><b class="'+(plan.base.lop<0?'rd-bad':'rd-ok')+'">'+brl0(plan.base.lop)+'</b></div>'+
+      '<div class="rd-kpi"><span>Economia total fixada</span><b>'+brl0(fixada)+'</b></div>'+
+      '<div class="rd-kpi"><span>Economia alcançada</span><b>'+(R ? brl0(alc) : 'aguardando')+'</b></div>'+
+      '<div class="rd-kpi"><span>Quanto falta</span><b class="'+(falta>0?'rd-bad':'')+'">'+(falta===null ? '—' : (falta>0 ? brl0(falta) : '✓ atingida'))+'</b></div>'+
+      '<div class="rd-kpi"><span>Resultado projetado</span><b class="'+(proj<0?'rd-bad':'rd-ok')+'">'+brl0(proj)+' ('+pct(proj/plan.base.fb*100)+')</b></div>'+
+      '<div class="rd-kpi'+(plan.semAcao>0.5?' alert':'')+'"><span>Meta sem ação definida</span><b class="'+(plan.semAcao>0.5?'rd-warn':'rd-ok')+'">'+(plan.semAcao>0.5 ? brl0(plan.semAcao) : '✓ nenhuma')+'</b></div>'+
+      '</div>';
+    h += '<div class="rd-sim"><h4>Execução do plano — '+rdMonthName(em)+'</h4><div class="table-scroll"><table><thead><tr><th>Conta</th><th class="num">Gasto base</th><th class="num">Redução fixada</th><th class="num">Limite de gasto</th><th class="num">Gasto realizado</th><th class="num">Economia alcançada</th><th class="num">Desvio da meta</th></tr></thead><tbody>'+rowsH+'</tbody>'+
+      '<tfoot><tr><td>Total</td><td class="num tabular">'+brl0(sumBase)+'</td><td class="num tabular">'+brl0(fixada)+'</td><td class="num tabular">'+brl0(sumLim)+'</td><td class="num tabular">'+(R ? brl0(sumReal) : '—')+'</td><td class="num tabular">'+(R ? brl0(alc) : '—')+'</td><td class="num tabular">'+(R ? (sumReal-sumLim>0 ? '<span class="rd-bad">'+brl0(sumReal-sumLim)+' acima</span>' : '<span class="rd-ok">dentro</span>') : '—')+'</td></tr></tfoot></table></div>'+
+      (R ? '' : '<p class="rd-hint">Gasto realizado, economia alcançada e desvio aparecem quando a DRE de '+rdMonthName(em)+' for carregada no painel.</p>')+
+      '<p class="rd-hint">Limite de gasto = gasto base − redução fixada, em R$ por mês. Economia alcançada soma as contas com redução fixada (gasto base − gasto realizado).</p></div>';
+    h += '<div class="rd-tools" style="margin-top:10px;"><button type="button" data-rd-revisar="'+t+'">Revisar plano</button><button type="button" data-rd-export="1">Exportar planos (.json)</button></div>';
+    h += '</div>';
+    return h;
   }
   function rdRefresh(t, fromEl){
     var M = storeMetrics(t, fState.month); if(!M) return;
-    var id = rdId(t), S = rdSim(t, M), st = rdState[rdKey(t)] || {};
+    var id = rdId(t), card = document.getElementById(id);
+    if(!card || rdPlan(t, fState.month)){ renderRdSummary(); return; }
+    var PN = rdPlanNumbers(t, M), S = PN.S, st = rdState[rdKey(t)] || {};
+    var limT = 0;
     RD_GROUPS.forEach(function(g){
       var base = Math.max(0, M[g.k] || 0), eff = S.red[g.k], e = st[g.k] || {};
+      limT += base - eff;
       var c = document.getElementById(id+'-'+g.k);
       if(c) c.innerHTML = eff>0 ? brl0(eff)+'<small>'+fmt2.format(eff/base*100)+'% da conta · '+fmt2.format(eff/M.fb*100)+'% do bruto</small>' : '—';
-      // mantém o outro campo coerente com o que foi digitado (sem mexer no campo em foco)
-      var card = document.getElementById(id);
-      if(!card) return;
+      var l = document.getElementById(id+'-lim-'+g.k); if(l) l.textContent = brl0(base - eff);
       var ip = card.querySelector('[data-rd-k="'+g.k+'"][data-rd-f="pct"]'), ir = card.querySelector('[data-rd-k="'+g.k+'"][data-rd-f="rs"]');
       if(e.last==='pct' && ir && ir!==fromEl) ir.value = eff>0 ? fmt2.format(eff) : '';
       if(e.last==='rs' && ip && ip!==fromEl) ip.value = eff>0 && base>0 ? fmt2.format(eff/base*100) : '';
     });
-    var tp = document.getElementById(id+'-tpct'), tr = document.getElementById(id+'-trs'), te = document.getElementById(id+'-teff');
+    var tp = document.getElementById(id+'-tpct'), tr = document.getElementById(id+'-trs'), te = document.getElementById(id+'-teff'), tl = document.getElementById(id+'-tlim');
     if(tp) tp.textContent = S.total>0 && S.baseTotal>0 ? fmt2.format(S.total/S.baseTotal*100)+'% dos gastos' : '—';
     if(tr) tr.textContent = S.total>0 ? brl2(S.total) : '—';
+    if(tl) tl.textContent = brl0(limT);
     if(te) te.innerHTML = S.total>0 ? brl0(S.total)+'<small>'+fmt2.format(S.total/M.fb*100)+'% do bruto</small>' : '—';
+    var ml = document.getElementById(id+'-metaline');
+    if(ml){
+      ml.className = 'rd-metaline'+(PN.sem>0.5?' alert':'');
+      ml.innerHTML = '<b>'+rdPctLabel(PN.p)+':</b> redução necessária '+brl2(PN.eco)+' · definida nas contas '+brl2(S.total)+' · '+
+        (PN.sem>0.5 ? '<b class="rd-warn">meta sem ação definida: '+brl2(PN.sem)+'</b> (as contas marcadas não comportam o restante — marque outras contas ou ajuste à mão)' :
+          (S.total - PN.eco > 0.5 ? '<span class="rd-ok">plano cobre a meta com folga de '+brl2(S.total-PN.eco)+'</span>' : '<span class="rd-ok">✓ soma das contas = redução necessária</span>'));
+    }
     var res = document.getElementById(id+'-res'); if(res) res.innerHTML = rdResultHtml(t, M);
     renderRdSummary();
   }
   function renderRdSummary(){
     var s = fState.scope, box = document.getElementById('rdSummary'); if(!box) return;
     box.innerHTML = isGroupScope(s) ? rdSummaryHtml(scopeStores(s), fState.month, s==='Consolidado' ? 'Rede' : scopeName(s)) : '';
+  }
+  function rdAllPlans(){ var o = {}; Object.keys(rdPlansServer).forEach(function(k){ o[k] = rdPlansServer[k]; }); Object.keys(rdPlansLocal).forEach(function(k){ o[k] = rdPlansLocal[k]; }); return o; }
+  function rdExport(){
+    var data = {versao:1, geradoEm:new Date().toISOString(), observacao:'Planos de redução mensal (metas de resultado da DRE). Publique este arquivo como planos.json junto do index.html para valer para todos.', planos: rdAllPlans()};
+    var blob = new Blob([JSON.stringify(data, null, 2)], {type:'application/json'});
+    var a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'planos.json';
+    document.body.appendChild(a); a.click(); setTimeout(function(){ URL.revokeObjectURL(a.href); a.remove(); }, 500);
   }
   function rdSummaryHtml(unidades, m, label){
     var L = unidades.map(function(t){ return {t:t, M:storeMetrics(t, m)}; }).filter(function(x){ return x.M; });
@@ -1997,21 +2127,47 @@
     // reduções simuladas em cada loja -> resultado consolidado projetado
     var SUMR = 0, rowsS = '';
     L.forEach(function(x){
-      var S = rdSim(x.t, x.M); SUMR += S.total;
+      var S = rdSim(x.t, x.M), plx = rdPlan(x.t, m);
+      if(plx){ var fxx = 0; Object.keys(plx.reducoes).forEach(function(k){ fxx += plx.reducoes[k]||0; }); S = {total:fxx, proj:x.M.lop + fxx}; }  // loja com plano fixado: usa as reduções fixadas
+      SUMR += S.total;
       rowsS += '<tr><td>'+x.t+'</td><td class="num tabular">'+brl0(x.M.lop)+'</td><td class="num tabular">'+(S.total>0 ? brl0(S.total)+' ('+fmt2.format(S.total/x.M.fb*100)+'%)' : '—')+'</td>'+
         '<td class="num tabular '+(S.proj<0?'rd-bad':'rd-ok')+'">'+brl0(S.proj)+'</td></tr>';
     });
     var PROJ = LOP + SUMR;
-    h += '<h4 style="margin-top:14px;">Reduções simuladas por loja → consolidado</h4>'+
+    h += '<h4 style="margin-top:14px;">Reduções por loja (fixadas ou simuladas) → consolidado</h4>'+
       '<div class="table-scroll"><table><thead><tr><th>Loja</th><th class="num">Resultado atual</th><th class="num">Redução simulada (% do bruto)</th><th class="num">Resultado projetado</th></tr></thead><tbody>'+rowsS+'</tbody>'+
       '<tfoot><tr><td>Consolidado</td><td class="num tabular">'+brl0(LOP)+'</td><td class="num tabular">'+brl0(SUMR)+' ('+fmt2.format(SUMR/FB*100)+'%)</td><td class="num tabular '+(PROJ<0?'rd-bad':'rd-ok')+'">'+brl0(PROJ)+' ('+pct(PROJ/FB*100)+')</td></tr></tfoot></table></div>'+
       '<p class="rd-hint" style="margin:6px 0 0; font-size:11.5px; color:var(--ink-muted);">'+
       RD_METAS.map(function(p){ var f = Math.max(0, p*FB - PROJ); return rdPctLabel(p)+': '+(f>0 ? 'falta '+brl0(f) : '✓ atingida'); }).join(' · ')+
       ' — abra o card "Redução necessária" de cada loja para simular.</p></div>';
+    // planos fixados das lojas do filtro (cada DRE entra uma vez — Biggs 08 e 09 já é uma única DRE no Voxel)
+    var nPl = 0, fixT = 0, semT = 0, alcT = 0, comReal = 0, projPl = LOP, rowsP = '';
+    L.forEach(function(x){
+      var pl = rdPlan(x.t, m);
+      if(!pl){ rowsP += '<tr><td>'+x.t+'</td><td colspan="4" style="color:var(--ink-muted)">sem plano fixado</td></tr>'; return; }
+      nPl++;
+      var fx = 0; Object.keys(pl.reducoes).forEach(function(k){ fx += pl.reducoes[k]||0; });
+      var R = rdRealizado(x.t, m+1), al = null;
+      if(R){ al = 0; Object.keys(pl.reducoes).forEach(function(k){ if(pl.reducoes[k]>0) al += (pl.base.contas[k]||0) - Math.max(0, R[k]||0); }); alcT += al; comReal++; }
+      fixT += fx; semT += pl.semAcao||0; projPl += fx;
+      rowsP += '<tr><td>'+x.t+'</td><td class="num tabular">'+brl0(fx)+'</td><td class="num tabular">'+(al===null ? 'aguardando' : brl0(al))+'</td>'+
+        '<td class="num tabular '+((pl.semAcao||0)>0.5?'rd-warn':'')+'">'+((pl.semAcao||0)>0.5 ? brl0(pl.semAcao) : '—')+'</td><td class="num tabular">'+rdPctLabel(pl.meta)+'</td></tr>';
+    });
+    h += '<div class="rd-sum"><h4>Plano de redução mensal — consolidado ('+nPl+' de '+L.length+' lojas com plano fixado)</h4>'+
+      '<div class="rd-kpis">'+
+        '<div class="rd-kpi"><span>Reduções fixadas</span><b>'+brl0(fixT)+'</b></div>'+
+        '<div class="rd-kpi"><span>Economia alcançada</span><b>'+(comReal ? brl0(alcT) : 'aguardando DRE de '+rdMonthName(m+1))+'</b></div>'+
+        '<div class="rd-kpi'+(semT>0.5?' alert':'')+'"><span>Meta sem ação definida</span><b class="'+(semT>0.5?'rd-warn':'')+'">'+brl0(semT)+'</b></div>'+
+        '<div class="rd-kpi"><span>Resultado projetado c/ planos</span><b class="'+(projPl<0?'rd-bad':'rd-ok')+'">'+brl0(projPl)+'</b></div>'+
+      '</div>'+
+      (nPl ? '<div class="table-scroll"><table><thead><tr><th>Loja</th><th class="num">Redução fixada</th><th class="num">Economia alcançada</th><th class="num">Sem ação definida</th><th class="num">Meta</th></tr></thead><tbody>'+rowsP+'</tbody></table></div>' : '<p class="rd-hint">Nenhum plano fixado neste mês. Abra o card de uma loja, ajuste a proposta e clique em "Fixar plano".</p>')+
+      '<div class="rd-tools" style="margin-top:8px;"><button type="button" data-rd-export="1">Exportar planos (.json)</button><button type="button" data-rd-import="1">Importar planos</button>'+
+      '<span class="rd-hint">Planos fixados ficam salvos neste navegador. Para valerem para todos, exporte e publique o arquivo como planos.json junto do painel.</span></div></div>';
     var FA = fnCalc(FB, MC, CF), eq = FA ? FA.metas[0] : null, faltaFat = eq ? Math.max(0, eq.v - FB) : 0;
     h += '<div class="rd-sep"><b>Bloco separado — faturamento adicional para o equilíbrio do consolidado: '+brl0(faltaFat)+'</b><br>'+
       'É faturamento bruto a mais (coluna "Falta p/ equilíbrio"), não valor de corte, e não é distribuído como meta de corte por loja. '+
-      'Também não é um gap de caixa: o painel ainda não tem as saídas de caixa conciliadas e atribuídas às unidades — até essa conciliação, qualquer meta de caixa deve ser tratada fora desta simulação.</div>';
+      'Também não é um gap de caixa: o painel ainda não tem as saídas de caixa conciliadas e atribuídas às unidades — até essa conciliação, qualquer meta de caixa deve ser tratada fora desta simulação. '+
+      'O plano de redução fixa metas de resultado da DRE e, sozinho, não elimina déficit de caixa.</div>';
     return h;
   }
 
@@ -2025,7 +2181,8 @@
       var C = M ? fnCalc(M.fb, M.mc, M.cf) : null;
       if(C){ tot.fb += M.fb; tot.mc += M.mc; tot.cf += M.cf; tot.n++; }
       var open = !!rdOpen[t];
-      var lbl = t + (M ? '<button type="button" class="rd-toggle" data-rd-toggle="'+t+'" aria-expanded="'+open+'" aria-controls="'+rdId(t)+'">Redução necessária '+(open?'▾':'▸')+'</button>' : '');
+      var hasPlan = M && rdPlan(t, m);
+      var lbl = t + (M ? '<button type="button" class="rd-toggle" data-rd-toggle="'+t+'" aria-expanded="'+open+'" aria-controls="'+rdId(t)+'"'+(hasPlan?' style="border-color:var(--good);"':'')+'>'+(hasPlan?'📌 Plano fixado ':'Redução necessária ')+(open?'▾':'▸')+'</button>' : '');
       rows += fnRow(lbl, C);
       if(M && open) rows += '<tr class="rd-row"><td colspan="8">'+rdCardHtml(t, M)+'</td></tr>';
     });
@@ -2064,22 +2221,62 @@
     if(f==='pct'){ e.pct = v; e.last = 'pct'; } else { e.rs = v; e.last = 'rs'; }
     rdRefresh(t, el);
   }
-  document.getElementById('fnTable').addEventListener('input', function(e){ if(e.target.matches('[data-rd-k]')) rdOnEdit(e.target); });
-  document.getElementById('fnTable').addEventListener('click', function(e){
-    var fb = e.target.closest('[data-rd-fill]'), cl = e.target.closest('[data-rd-clear]');
-    if(!fb && !cl) return;
-    var t = (fb||cl).getAttribute(fb ? 'data-rd-fill' : 'data-rd-clear'), M = storeMetrics(t, fState.month); if(!M) return;
-    var key = rdKey(t);
-    if(cl){ rdState[key] = {}; renderFatNecessario(); return; }
-    var sel = document.getElementById(rdId(t)+'-meta'), p = RD_METAS[parseInt(sel.value,10)] || 0;
-    var eco = Math.max(0, p*M.fb - M.lop), baseT = 0;
-    RD_GROUPS.forEach(function(g){ baseT += Math.max(0, M[g.k] || 0); });
-    var pc = baseT>0 ? Math.min(100, Math.ceil(eco/baseT*10000)/100) : 0;   // mesmo % em todas as contas, arredondado p/ cima
-    rdState[key] = {};
-    RD_GROUPS.forEach(function(g){ if((M[g.k]||0) > 0 && pc>0) rdState[key][g.k] = {pct:pc, last:'pct'}; });
-    renderFatNecessario();
-    var s2 = document.getElementById(rdId(t)+'-meta'); if(s2) s2.value = sel ? sel.value : '0';
+  var fnTbl = document.getElementById('fnTable');
+  fnTbl.addEventListener('input', function(e){ if(e.target.matches('[data-rd-k]')) rdOnEdit(e.target); });
+  fnTbl.addEventListener('change', function(e){
+    var el = e.target, t = el.getAttribute('data-rd-store') || el.getAttribute('data-rd-meta'); if(!t) return;
+    var key = rdKey(t), M = storeMetrics(t, fState.month); if(!M) return;
+    if(el.matches('[data-rd-elig]')){
+      var k = el.getAttribute('data-rd-elig'); rdEligOf(t)[k] = el.checked;
+      if(!el.checked && rdState[key]) delete rdState[key][k];
+      renderFatNecessario();
+    } else if(el.matches('[data-rd-meta]')){
+      rdMetaSel[key] = parseInt(el.value, 10); rdPropose(t, M); renderFatNecessario();
+    }
   });
+  document.addEventListener('click', function(e){
+    var b = e.target.closest('[data-rd-propose],[data-rd-clear],[data-rd-fixar],[data-rd-revisar],[data-rd-export],[data-rd-import]'); if(!b) return;
+    if(b.hasAttribute('data-rd-export')){ rdExport(); return; }
+    if(b.hasAttribute('data-rd-import')){ document.getElementById('rdImportFile').click(); return; }
+    var t = b.getAttribute('data-rd-propose') || b.getAttribute('data-rd-clear') || b.getAttribute('data-rd-fixar') || b.getAttribute('data-rd-revisar');
+    var m = fState.month, key = t+'|'+m, M = storeMetrics(t, m); if(!M) return;
+    if(b.hasAttribute('data-rd-propose')){ rdPropose(t, M); }
+    else if(b.hasAttribute('data-rd-clear')){ rdState[key] = {}; }
+    else if(b.hasAttribute('data-rd-fixar')){
+      var PN = rdPlanNumbers(t, M), contas = {}, reducoes = {};
+      RD_GROUPS.forEach(function(g){ contas[g.k] = Math.max(0, M[g.k]||0); reducoes[g.k] = Math.round((PN.S.red[g.k]||0)*100)/100; });
+      rdPlansLocal[key] = {loja:t, baseMonth:m, meta:PN.p, metaIdx:rdMetaIdx(t), fixedAt:new Date().toISOString(),
+        base:{fb:M.fb, lop:M.lop, mc:M.mc, cf:M.cf, contas:contas}, reducoes:reducoes, elig:rdEligOf(t),
+        reducaoNecessaria:Math.round(PN.eco*100)/100, economiaFixada:Math.round(PN.S.total*100)/100, semAcao:PN.sem};
+      delete rdRevising[key];
+      rdMsg[key] = rdSaveLocal() ? '' : 'Não foi possível salvar neste navegador — exporte os planos para não perder.';
+    }
+    else if(b.hasAttribute('data-rd-revisar')){
+      var pl = rdPlan(t, m);
+      if(pl){
+        var st = {}; Object.keys(pl.reducoes).forEach(function(k){ if(pl.reducoes[k]>0) st[k] = {rs:pl.reducoes[k], last:'rs'}; });
+        rdState[key] = st; rdElig[key] = Object.assign({}, pl.elig || {}); rdMetaSel[key] = pl.metaIdx!==undefined ? pl.metaIdx : RD_METAS.indexOf(pl.meta);
+      }
+      delete rdPlansLocal[key]; rdSaveLocal(); rdRevising[key] = true;
+    }
+    rdOpen[t] = true;
+    renderFatNecessario();
+  });
+  document.getElementById('rdImportFile').addEventListener('change', function(){
+    var f = this.files && this.files[0]; if(!f) return;
+    var rd = new FileReader();
+    rd.onload = function(){
+      try{ var d = JSON.parse(rd.result), p = (d && d.planos) || d; Object.keys(p).forEach(function(k){ if(p[k] && p[k].reducoes && p[k].base) rdPlansLocal[k] = p[k]; }); rdSaveLocal(); renderFatNecessario(); }
+      catch(err){ alert('Arquivo de planos inválido.'); }
+    };
+    rd.readAsText(f); this.value = '';
+  });
+  // planos oficiais publicados junto do painel (planos.json); sem o arquivo, segue só com os locais
+  try{
+    fetch('planos.json', {cache:'no-store'}).then(function(r){ return r.ok ? r.json() : null; }).then(function(d){
+      if(d && d.planos){ rdPlansServer = d.planos; renderFatNecessario(); }
+    }).catch(function(){});
+  }catch(e){}
   // toque na célula mostra o valor completo (celular)
   document.getElementById('fnTable').addEventListener('click', function(e){
     var td = e.target.closest('td.fn-val'); if(td) td.classList.toggle('show-full');

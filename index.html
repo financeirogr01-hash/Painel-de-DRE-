@@ -509,7 +509,7 @@
   .rd-diff{margin:10px 0; padding:10px 12px; border:1px solid var(--warning); border-radius:10px; background:color-mix(in srgb, var(--warning) 10%, var(--surface)); font-size:12.5px;}
   .rd-msg{font-size:12px; font-weight:700; margin-left:4px;}
   /* ---------- sinaleiro compacto: uma única fileira ---------- */
-  .sig-panel{display:grid; grid-template-columns:repeat(9, minmax(112px, 1fr)); gap:6px; overflow-x:auto; padding-bottom:4px; scrollbar-width:thin;}
+  .sig-panel{display:grid; grid-template-columns:repeat(8, minmax(112px, 1fr)); gap:6px; overflow-x:auto; padding-bottom:4px; scrollbar-width:thin;}
   .sig-panel .sig-card{flex:none; padding:8px 9px; border-radius:10px; border-left-width:3px;}
   .sig-panel .sig-card:hover{transform:none;}
   .sig-card .sig-name{font-size:11px; gap:5px; line-height:1.2; min-height:2.4em; align-items:flex-start;}
@@ -1474,7 +1474,7 @@
     mc:       {label:'Margem de contribuição', color:'var(--accent)', base:'flt', dir:'high', g:50, y:40},
     lop:      {label:'Resultado operacional', color:'var(--accent)', base:'fb', dir:'high', g:8, y:0}
   };
-  var SIG_ORDER = ['cmv','cf','cartao','desc','roy','entregas','cmo','mc','lop'];
+  var SIG_ORDER = ['cmv','cf','desc','roy','entregas','cmo','mc','lop'];
   // linha da DRE Voxel -> indicador (a 1ª linha de cada indicador recebe o sinal; as demais, só a cor)
   var SIG_LINES = {
     'CMV - Custo da Mercadoria Vendida':{k:'cmv', sig:true}, 'Insumos':{k:'cmv'}, 'Embalagens':{k:'cmv'}, 'Produtos para Comercialização':{k:'cmv'},

@@ -481,6 +481,17 @@
   .rd-sum h4{font-size:14px; font-weight:800; margin:0 0 4px;}
   .rd-sum table{width:100%; font-size:12.5px; margin-top:6px;}
   .rd-sep{margin-top:12px; border:1px dashed var(--border); border-radius:12px; padding:10px 14px; font-size:12.5px; color:var(--ink-2); line-height:1.5;}
+
+  .rd-in input.rd-pct{width:70px;}
+  .rd-in input.rd-rs{width:104px;}
+  .rd-in .u{font-size:11px; color:var(--ink-muted); font-weight:700;}
+  .rd-eff{line-height:1.25;}
+  .rd-eff small{display:block; font-size:10.5px; color:var(--ink-muted); font-weight:600;}
+  .rd-sim tfoot td{font-weight:800; background:var(--surface-2); border-top:2px solid var(--border);}
+  .rd-tools{display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin:0 0 8px; font-size:12.5px;}
+  .rd-tools select, .rd-tools button{font:inherit; font-size:12.5px; border-radius:8px; padding:5px 10px; border:1px solid var(--border); background:var(--surface); color:var(--ink); cursor:pointer;}
+  .rd-tools button.primary{background:var(--accent); border-color:var(--accent); color:#fff; font-weight:800;}
+  .rd-tools .rd-hint{margin:0;}
 </style>
 
 <div class="page">
@@ -1842,11 +1853,15 @@
   }
   function rdSim(t, M){
     var st = rdState[rdKey(t)] || {};
-    var red = {}, varRed = 0, fixRed = 0, clamped = [];
+    var red = {}, varRed = 0, fixRed = 0, clamped = [], base0 = 0;
     RD_GROUPS.forEach(function(g){
       var base = Math.max(0, M[g.k] || 0), e = st[g.k], raw = 0;
-      if(e && e.v > 0){ raw = e.u==='%' ? base*Math.min(e.v,100)/100 : e.v; }  // só reduções efetivas (> 0)
-      var eff = Math.min(raw, base);                                           // nunca maior que o gasto da conta
+      base0 += base;
+      if(e){
+        if(e.last==='pct' && e.pct > 0) raw = base*Math.min(e.pct, 100)/100;   // % da conta
+        else if(e.last==='rs' && e.rs > 0) raw = e.rs;                          // valor em R$
+      }
+      var eff = Math.min(raw, base);                     // só reduções efetivas, nunca maior que o gasto da conta
       if(raw > base + 0.005) clamped.push(g.label);
       red[g.k] = eff;
       if(g.type==='var') varRed += eff; else fixRed += eff;
@@ -1855,7 +1870,7 @@
     var proj = M.lop + total;                        // resultado atual + economias
     var mc2 = M.mc + varRed, cf2 = M.cf - fixRed;
     var proj2 = mc2 - cf2;                           // recalculado pela DRE simulada (conferência)
-    return {red:red, varRed:varRed, fixRed:fixRed, total:total, proj:proj, proj2:proj2, mc2:mc2, cf2:cf2, clamped:clamped, ok: Math.abs(proj - proj2) < 1};
+    return {red:red, varRed:varRed, fixRed:fixRed, total:total, baseTotal:base0, proj:proj, proj2:proj2, mc2:mc2, cf2:cf2, clamped:clamped, ok: Math.abs(proj - proj2) < 1};
   }
   function rdFatAdic(fb, mc, cf){
     var C = fnCalc(fb, mc, cf);
@@ -1909,26 +1924,62 @@
     });
     h += '</tbody></table><p class="rd-hint">Outro cálculo: quanto vender a mais mantendo custos fixos e margem. Não é valor de corte — por isso o "falta p/ equilíbrio" da tabela não é igual à economia ao lado.</p></div>';
     h += '</div>';
-    // simulador por conta
-    h += '<div class="rd-sim"><h4>Simule reduções por conta (nenhum corte é atribuído automaticamente)</h4><div class="table-scroll"><table><thead><tr><th>Conta</th><th class="num">Gasto atual</th><th class="num">% do bruto</th><th>Redução</th><th class="num">Redução efetiva</th></tr></thead><tbody>';
+    // simulador por conta: % e R$ ligados em cada conta, redução efetiva e total da loja
+    h += '<div class="rd-sim"><h4>Simule reduções por conta</h4>';
+    h += '<div class="rd-tools"><label for="'+id+'-meta">Preencher para atingir</label><select id="'+id+'-meta">'+
+      RD_METAS.map(function(p, i){ return '<option value="'+i+'">'+rdPctLabel(p)+' — '+brl0(Math.max(0, p*M.fb - M.lop))+'</option>'; }).join('')+'</select>'+
+      '<button type="button" class="primary" data-rd-fill="'+t+'">Mesmo % em todas as contas</button><button type="button" data-rd-clear="'+t+'">Limpar</button>'+
+      '<span class="rd-hint">Sugestão proporcional, só quando você clica — ajuste conta a conta depois.</span></div>';
+    h += '<div class="table-scroll"><table><thead><tr><th>Conta</th><th class="num">Gasto atual</th><th class="num">% do bruto</th><th class="num">Redução (% da conta)</th><th class="num">Redução (R$)</th><th class="num">Redução efetiva</th></tr></thead><tbody>';
+    var sumBase = 0;
     RD_GROUPS.forEach(function(g){
-      var base = Math.max(0, M[g.k] || 0), e = st[g.k] || {v:'', u:'R$'};
+      var base = Math.max(0, M[g.k] || 0), e = st[g.k] || {};
+      sumBase += base;
+      var eff = rdEffOf(e, base);
+      var pv = e.last==='rs' ? (base>0 && eff>0 ? eff/base*100 : '') : (e.pct>0 ? e.pct : '');
+      var rv = e.last==='pct' ? (eff>0 ? eff : '') : (e.rs>0 ? e.rs : '');
+      var dis = base<=0 ? ' disabled' : '';
       h += '<tr><td>'+g.label+' <span class="rd-type">'+(g.type==='var'?'variável':'fixo')+'</span></td>'+
         '<td class="num tabular">'+brl0(base)+'</td><td class="num tabular">'+fmt2.format(base/M.fb*100)+'%</td>'+
-        '<td><span class="rd-in"><input type="text" inputmode="decimal" aria-label="Redução em '+g.label+'" data-rd-store="'+t+'" data-rd-k="'+g.k+'" value="'+(e.v===''||e.v===undefined?'':String(e.v).replace('.',','))+'" placeholder="0"'+(base<=0?' disabled':'')+'>'+
-        '<select aria-label="Unidade da redução" data-rd-store="'+t+'" data-rd-u="'+g.k+'"'+(base<=0?' disabled':'')+'><option value="R$"'+(e.u==='R$'?' selected':'')+'>R$</option><option value="%"'+(e.u==='%'?' selected':'')+'>% da conta</option></select></span></td>'+
-        '<td class="num tabular" id="'+id+'-'+g.k+'">—</td></tr>';
+        '<td class="num"><span class="rd-in"><input class="rd-pct" type="text" inputmode="decimal" aria-label="Redução em % de '+g.label+'" data-rd-store="'+t+'" data-rd-k="'+g.k+'" data-rd-f="pct" value="'+(pv===''?'':fmt2.format(pv))+'" placeholder="0"'+dis+'><span class="u">%</span></span></td>'+
+        '<td class="num"><span class="rd-in"><span class="u">R$</span><input class="rd-rs" type="text" inputmode="decimal" aria-label="Redução em R$ de '+g.label+'" data-rd-store="'+t+'" data-rd-k="'+g.k+'" data-rd-f="rs" value="'+(rv===''?'':fmt2.format(rv))+'" placeholder="0"'+dis+'></span></td>'+
+        '<td class="num tabular rd-eff" id="'+id+'-'+g.k+'">—</td></tr>';
     });
-    h += '</tbody></table></div></div>';
+    h += '</tbody><tfoot><tr><td>Total da loja</td><td class="num tabular">'+brl0(sumBase)+'</td><td class="num tabular">'+fmt2.format(sumBase/M.fb*100)+'%</td>'+
+      '<td class="num tabular" id="'+id+'-tpct">—</td><td class="num tabular" id="'+id+'-trs">—</td><td class="num tabular rd-eff" id="'+id+'-teff">—</td></tr></tfoot></table></div></div>';
     h += '<div class="rd-res" id="'+id+'-res">'+rdResultHtml(t, M)+'</div>';
     h += '</div>';
     return h;
   }
-  function rdRefresh(t){
+  function rdEffOf(e, base){
+    if(!e) return 0;
+    var raw = e.last==='pct' ? (e.pct>0 ? base*Math.min(e.pct,100)/100 : 0) : (e.last==='rs' ? (e.rs>0 ? e.rs : 0) : 0);
+    return Math.min(raw, base);
+  }
+  function rdRefresh(t, fromEl){
     var M = storeMetrics(t, fState.month); if(!M) return;
-    var id = rdId(t), S = rdSim(t, M);
-    RD_GROUPS.forEach(function(g){ var c = document.getElementById(id+'-'+g.k); if(c) c.textContent = S.red[g.k]>0 ? brl0(S.red[g.k]) : '—'; });
+    var id = rdId(t), S = rdSim(t, M), st = rdState[rdKey(t)] || {};
+    RD_GROUPS.forEach(function(g){
+      var base = Math.max(0, M[g.k] || 0), eff = S.red[g.k], e = st[g.k] || {};
+      var c = document.getElementById(id+'-'+g.k);
+      if(c) c.innerHTML = eff>0 ? brl0(eff)+'<small>'+fmt2.format(eff/base*100)+'% da conta · '+fmt2.format(eff/M.fb*100)+'% do bruto</small>' : '—';
+      // mantém o outro campo coerente com o que foi digitado (sem mexer no campo em foco)
+      var card = document.getElementById(id);
+      if(!card) return;
+      var ip = card.querySelector('[data-rd-k="'+g.k+'"][data-rd-f="pct"]'), ir = card.querySelector('[data-rd-k="'+g.k+'"][data-rd-f="rs"]');
+      if(e.last==='pct' && ir && ir!==fromEl) ir.value = eff>0 ? fmt2.format(eff) : '';
+      if(e.last==='rs' && ip && ip!==fromEl) ip.value = eff>0 && base>0 ? fmt2.format(eff/base*100) : '';
+    });
+    var tp = document.getElementById(id+'-tpct'), tr = document.getElementById(id+'-trs'), te = document.getElementById(id+'-teff');
+    if(tp) tp.textContent = S.total>0 && S.baseTotal>0 ? fmt2.format(S.total/S.baseTotal*100)+'% dos gastos' : '—';
+    if(tr) tr.textContent = S.total>0 ? brl2(S.total) : '—';
+    if(te) te.innerHTML = S.total>0 ? brl0(S.total)+'<small>'+fmt2.format(S.total/M.fb*100)+'% do bruto</small>' : '—';
     var res = document.getElementById(id+'-res'); if(res) res.innerHTML = rdResultHtml(t, M);
+    renderRdSummary();
+  }
+  function renderRdSummary(){
+    var s = fState.scope, box = document.getElementById('rdSummary'); if(!box) return;
+    box.innerHTML = isGroupScope(s) ? rdSummaryHtml(scopeStores(s), fState.month, s==='Consolidado' ? 'Rede' : scopeName(s)) : '';
   }
   function rdSummaryHtml(unidades, m, label){
     var L = unidades.map(function(t){ return {t:t, M:storeMetrics(t, m)}; }).filter(function(x){ return x.M; });
@@ -1942,7 +1993,21 @@
       var soma = L.reduce(function(a, x){ return a + Math.max(0, p*x.M.fb - x.M.lop); }, 0);
       h += '<tr><td>'+rdPctLabel(p)+'</td><td class="num tabular">'+brl0(rede)+'</td><td class="num tabular">'+brl0(soma)+'</td><td class="num tabular">'+brl0(soma - rede)+'</td></tr>';
     });
-    h += '</tbody></table></div><p class="rd-hint" style="margin:6px 0 0; font-size:11.5px; color:var(--ink-muted);">Os dois valores não são iguais: no consolidado, o lucro de uma loja compensa o prejuízo de outra; na soma por loja, cada unidade precisa atingir a meta sozinha.</p></div>';
+    h += '</tbody></table></div><p class="rd-hint" style="margin:6px 0 0; font-size:11.5px; color:var(--ink-muted);">Os dois valores não são iguais: no consolidado, o lucro de uma loja compensa o prejuízo de outra; na soma por loja, cada unidade precisa atingir a meta sozinha.</p>';
+    // reduções simuladas em cada loja -> resultado consolidado projetado
+    var SUMR = 0, rowsS = '';
+    L.forEach(function(x){
+      var S = rdSim(x.t, x.M); SUMR += S.total;
+      rowsS += '<tr><td>'+x.t+'</td><td class="num tabular">'+brl0(x.M.lop)+'</td><td class="num tabular">'+(S.total>0 ? brl0(S.total)+' ('+fmt2.format(S.total/x.M.fb*100)+'%)' : '—')+'</td>'+
+        '<td class="num tabular '+(S.proj<0?'rd-bad':'rd-ok')+'">'+brl0(S.proj)+'</td></tr>';
+    });
+    var PROJ = LOP + SUMR;
+    h += '<h4 style="margin-top:14px;">Reduções simuladas por loja → consolidado</h4>'+
+      '<div class="table-scroll"><table><thead><tr><th>Loja</th><th class="num">Resultado atual</th><th class="num">Redução simulada (% do bruto)</th><th class="num">Resultado projetado</th></tr></thead><tbody>'+rowsS+'</tbody>'+
+      '<tfoot><tr><td>Consolidado</td><td class="num tabular">'+brl0(LOP)+'</td><td class="num tabular">'+brl0(SUMR)+' ('+fmt2.format(SUMR/FB*100)+'%)</td><td class="num tabular '+(PROJ<0?'rd-bad':'rd-ok')+'">'+brl0(PROJ)+' ('+pct(PROJ/FB*100)+')</td></tr></tfoot></table></div>'+
+      '<p class="rd-hint" style="margin:6px 0 0; font-size:11.5px; color:var(--ink-muted);">'+
+      RD_METAS.map(function(p){ var f = Math.max(0, p*FB - PROJ); return rdPctLabel(p)+': '+(f>0 ? 'falta '+brl0(f) : '✓ atingida'); }).join(' · ')+
+      ' — abra o card "Redução necessária" de cada loja para simular.</p></div>';
     var FA = fnCalc(FB, MC, CF), eq = FA ? FA.metas[0] : null, faltaFat = eq ? Math.max(0, eq.v - FB) : 0;
     h += '<div class="rd-sep"><b>Bloco separado — faturamento adicional para o equilíbrio do consolidado: '+brl0(faltaFat)+'</b><br>'+
       'É faturamento bruto a mais (coluna "Falta p/ equilíbrio"), não valor de corte, e não é distribuído como meta de corte por loja. '+
@@ -1970,7 +2035,7 @@
     }
     document.querySelector('#fnTable tbody').innerHTML = rows;
     unidades.forEach(function(t){ if(rdOpen[t]) rdRefresh(t); });
-    document.getElementById('rdSummary').innerHTML = isGroupScope(s) ? rdSummaryHtml(unidades, m, s==='Consolidado' ? 'Rede' : scopeName(s)) : '';
+    renderRdSummary();
     document.getElementById('fnSub').textContent = periodName(m)+' · '+scopeName(s)+' · valores em reais (R$), sobre o faturamento bruto · premissa de cenário: meta + '+fmt1.format(fnPremissa*100).replace(',0','')+' pp de margem';
   }
   document.getElementById('fnUnits').addEventListener('click', function(e){
@@ -1993,14 +2058,28 @@
   function rdOnEdit(el){
     var t = el.getAttribute('data-rd-store'); if(!t) return;
     var key = rdKey(t); rdState[key] = rdState[key] || {};
-    var k = el.getAttribute('data-rd-k') || el.getAttribute('data-rd-u');
-    var e = rdState[key][k] = rdState[key][k] || {v:'', u:'R$'};
-    if(el.hasAttribute('data-rd-k')) e.v = el.value.trim()==='' ? '' : rdParse(el.value);
-    else e.u = el.value;
-    rdRefresh(t);
+    var k = el.getAttribute('data-rd-k'), f = el.getAttribute('data-rd-f');
+    var e = rdState[key][k] = rdState[key][k] || {};
+    var v = el.value.trim()==='' ? 0 : rdParse(el.value);
+    if(f==='pct'){ e.pct = v; e.last = 'pct'; } else { e.rs = v; e.last = 'rs'; }
+    rdRefresh(t, el);
   }
   document.getElementById('fnTable').addEventListener('input', function(e){ if(e.target.matches('[data-rd-k]')) rdOnEdit(e.target); });
-  document.getElementById('fnTable').addEventListener('change', function(e){ if(e.target.matches('[data-rd-u]')) rdOnEdit(e.target); });
+  document.getElementById('fnTable').addEventListener('click', function(e){
+    var fb = e.target.closest('[data-rd-fill]'), cl = e.target.closest('[data-rd-clear]');
+    if(!fb && !cl) return;
+    var t = (fb||cl).getAttribute(fb ? 'data-rd-fill' : 'data-rd-clear'), M = storeMetrics(t, fState.month); if(!M) return;
+    var key = rdKey(t);
+    if(cl){ rdState[key] = {}; renderFatNecessario(); return; }
+    var sel = document.getElementById(rdId(t)+'-meta'), p = RD_METAS[parseInt(sel.value,10)] || 0;
+    var eco = Math.max(0, p*M.fb - M.lop), baseT = 0;
+    RD_GROUPS.forEach(function(g){ baseT += Math.max(0, M[g.k] || 0); });
+    var pc = baseT>0 ? Math.min(100, Math.ceil(eco/baseT*10000)/100) : 0;   // mesmo % em todas as contas, arredondado p/ cima
+    rdState[key] = {};
+    RD_GROUPS.forEach(function(g){ if((M[g.k]||0) > 0 && pc>0) rdState[key][g.k] = {pct:pc, last:'pct'}; });
+    renderFatNecessario();
+    var s2 = document.getElementById(rdId(t)+'-meta'); if(s2) s2.value = sel ? sel.value : '0';
+  });
   // toque na célula mostra o valor completo (celular)
   document.getElementById('fnTable').addEventListener('click', function(e){
     var td = e.target.closest('td.fn-val'); if(td) td.classList.toggle('show-full');

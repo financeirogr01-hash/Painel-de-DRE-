@@ -567,6 +567,17 @@
   .pt-ctrl button{font:inherit; font-size:12px; border-radius:8px; padding:5px 10px; border:1px solid var(--border); background:var(--surface); color:var(--ink); cursor:pointer;}
   .pt-ctrl label{display:inline-flex; align-items:center; gap:6px;}
   .pt-ctrl input[type=checkbox]{width:16px; height:16px; accent-color:var(--accent);}
+
+  /* real -> com a redução, por conta */
+  .pt-ad{display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:8px; margin-top:10px;}
+  .pt-ad-card{border:1px solid var(--border); border-left:4px solid var(--c); border-radius:10px; padding:9px 12px; background:var(--surface);}
+  .pt-ad-card h5{margin:0 0 6px; font-size:12.5px; font-weight:800; display:flex; align-items:center; gap:6px;}
+  .pt-ad-row{display:flex; justify-content:space-between; gap:8px; font-size:12.5px; font-variant-numeric:tabular-nums; padding:2px 0;}
+  .pt-ad-row span{color:var(--ink-muted); font-weight:600;}
+  .pt-ad-row b small{font-weight:600; color:var(--ink-muted); margin-left:4px;}
+  .pt-ad-row.red b{color:var(--critical);}
+  .pt-ad-row.fim{border-top:1px dashed var(--border); margin-top:3px; padding-top:5px;}
+  .pt-ad-row.fim b{color:var(--good);}
 </style>
 
 <div class="page">
@@ -2252,12 +2263,23 @@
     var rows = '';
     RD_GROUPS.forEach(function(g){
       var c = porConta[g.k]; if(c.base<=0 || (g.toCmo && c.red<=0)) return;   // contas retiradas do plano não aparecem
-      rows += '<tr><td>'+g.label+'</td><td class="num tabular">'+brl0(c.base)+'</td><td class="num tabular">'+(c.red>0 ? brl0(c.red) : '—')+'</td>'+
-        '<td class="num tabular">'+(c.red>0 ? fmt2.format(c.red/c.base*100)+'%' : '—')+'</td><td class="num tabular">'+brl0(c.base - c.red)+'</td></tr>';
+      rows += '<tr><td>'+g.label+'</td><td class="num tabular">'+brl0(c.base)+'</td><td class="num tabular">'+fmt2.format(c.base/FB*100)+'%</td><td class="num tabular">'+(c.red>0 ? '−'+brl0(c.red) : '—')+'</td>'+
+        '<td class="num tabular">'+(c.red>0 ? fmt2.format(c.red/c.base*100)+'%' : '—')+'</td><td class="num tabular">'+brl0(c.base - c.red)+'</td><td class="num tabular">'+fmt2.format((c.base-c.red)/FB*100)+'%</td></tr>';
     });
     var sb = 0, sr = 0; RD_GROUPS.forEach(function(g){ var c = porConta[g.k]; if(c.base<=0 || (g.toCmo && c.red<=0)) return; sb += c.base; sr += c.red; });
-    h += '<details><summary>Ver redução total por conta</summary><div class="table-scroll" style="margin-top:6px;"><table><thead><tr><th>Conta</th><th class="num">Gasto total</th><th class="num">Redução total</th><th class="num">% da conta</th><th class="num">Novo limite total</th></tr></thead><tbody>'+rows+'</tbody>'+
-      '<tfoot><tr><td>Total</td><td class="num tabular">'+brl0(sb)+'</td><td class="num tabular">'+brl0(sr)+'</td><td class="num tabular">'+(sb>0?fmt2.format(sr/sb*100)+'%':'—')+'</td><td class="num tabular">'+brl0(sb-sr)+'</td></tr></tfoot></table></div></details>';
+    var AD_COLOR = {cmv:'var(--cat-1)', cmo:'var(--ink-muted)', admin:'var(--cat-2)', cartao:'var(--cat-3)', desc:'var(--cat-4)', entDev:'var(--cat-6)', mkt:'var(--accent)', ident:'var(--baseline)'};
+    var ad = '';
+    RD_GROUPS.forEach(function(g){
+      var c = porConta[g.k]; if(!(c.red>0)) return;
+      var col = AD_COLOR[g.k] || 'var(--accent)';
+      ad += '<div class="pt-ad-card" style="--c:'+col+'"><h5><span class="cat-dot" style="background:'+col+'"></span>'+g.label+'</h5>'+
+        '<div class="pt-ad-row"><span>Real</span><b>'+brl0(c.base)+'<small>'+fmt2.format(c.base/FB*100)+'% do fat.</small></b></div>'+
+        '<div class="pt-ad-row red"><span>Redução</span><b>−'+brl0(c.red)+'<small>'+fmt2.format(c.red/c.base*100)+'% da conta</small></b></div>'+
+        '<div class="pt-ad-row fim"><span>Com a redução</span><b>'+brl0(c.base-c.red)+'<small>'+fmt2.format((c.base-c.red)/FB*100)+'% do fat.</small></b></div></div>';
+    });
+    if(ad) h += '<div class="pt-ad">'+ad+'</div>';
+    h += '<details><summary>Ver tabela completa por conta</summary><div class="table-scroll" style="margin-top:6px;"><table><thead><tr><th>Conta</th><th class="num">Real</th><th class="num">% do fat.</th><th class="num">Redução</th><th class="num">% da conta</th><th class="num">Com a redução</th><th class="num">% do fat.</th></tr></thead><tbody>'+rows+'</tbody>'+
+      '<tfoot><tr><td>Total</td><td class="num tabular">'+brl0(sb)+'</td><td class="num tabular">'+fmt2.format(sb/FB*100)+'%</td><td class="num tabular">−'+brl0(sr)+'</td><td class="num tabular">'+(sb>0?fmt2.format(sr/sb*100)+'%':'—')+'</td><td class="num tabular">'+brl0(sb-sr)+'</td><td class="num tabular">'+fmt2.format((sb-sr)/FB*100)+'%</td></tr></tfoot></table></div></details>';
     h += '<p class="rd-hint" style="margin:8px 0 0;">A redução total é a soma do que cada loja precisa para a própria meta, mais a cota da rede quando a meta consolidada for maior. '+
       'Os R$ '+fmt0.format(Math.round(NQ.auto))+' do padrão são faturamento que falta para o equilíbrio — usá-los como meta de corte é uma decisão de gestão. '+
       'Lojas sem plano fixado usam a proposta padrão (ou o que você ajustou no card). É uma meta de resultado da DRE, não de caixa.</p>';
@@ -2597,8 +2619,15 @@
     L.push('* Redução definida nas contas: '+brl2(DEF));
     L.push('* Meta sem ação definida: '+(SEM>0.5 ? brl2(SEM) : 'nenhuma'));
     L.push('* Resultado operacional: '+brl2s(LOP)+' → '+brl2s(LOP+DEF)+' ('+pct2s((LOP+DEF)/FB*100)+')');
-    L.push('* Redução por conta:');
-    RD_GROUPS.forEach(function(g){ var c = porConta[g.k]; if(c.red>0) L.push('   - '+g.label+': '+brl2(c.red)+' ('+pct2(c.red/c.base*100)+' da conta) → limite '+brl2(c.base-c.red)); });
+    L.push('* Contas com redução (real → com a redução):');
+    RD_GROUPS.forEach(function(g){
+      var c = porConta[g.k]; if(!(c.red>0)) return;
+      L.push('');
+      L.push('   📌 '+g.label.toUpperCase());
+      L.push('      Real: '+brl2(c.base)+' ('+pct2(c.base/FB*100)+' do faturamento)');
+      L.push('      Redução: −'+brl2(c.red)+' ('+pct2(c.red/c.base*100)+' da conta)');
+      L.push('      Com a redução: '+brl2(c.base-c.red)+' ('+pct2((c.base-c.red)/FB*100)+' do faturamento)');
+    });
     L.push(RG_SEP);
     V.forEach(function(v){
       L.push(brandIcon(storeBrand(v.t))+' '+v.t.toUpperCase()+(v.fonte==='fixado' ? ' — PLANO FIXADO' : ''));
@@ -2607,7 +2636,7 @@
       var q = v.fonte==='fixado' ? (rdPlan(v.t, m).cotaRede||0) : (v.quota||0);
       L.push('* Redução do plano: '+brl2(v.eco)+(q>0.005 ? ' ('+rdPctLabel(v.meta).toLowerCase()+' '+brl2(v.eco-q)+' + cota da rede '+brl2(q)+')' : ' ('+rdPctLabel(v.meta).toLowerCase()+')'));
       var any = false;
-      RD_GROUPS.forEach(function(g){ var rd = v.red[g.k]||0, b = v.base[g.k]||0; if(rd>0){ any = true; L.push('   - '+g.label+': '+brl2(rd)+' ('+pct2(rd/b*100)+') → limite '+brl2(b-rd)); } });
+      RD_GROUPS.forEach(function(g){ var rd = v.red[g.k]||0, b = v.base[g.k]||0; if(rd>0){ any = true; L.push('   - '+g.label+': real '+brl2(b)+' → com a redução '+brl2(b-rd)+' (−'+brl2(rd)+' · −'+pct2(rd/b*100)+')'); } });
       if(!any) L.push('   - sem redução necessária');
       if(v.sem>0.5) L.push('⚠️ Meta sem ação definida: '+brl2(v.sem));
       L.push('* Resultado projetado: '+brl2s(v.lop+v.total)+' | '+pct2s((v.lop+v.total)/v.fb*100));

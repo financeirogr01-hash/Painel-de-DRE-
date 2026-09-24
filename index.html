@@ -2,7 +2,7 @@
 <html lang="pt-BR" translate="no">
 <meta charset="utf-8">
 <meta name="google" content="notranslate">
-<title>Painel DRE · Rede Biggs</title>
+<title>Painel Controladoria · SAL Restaurantes</title>
 <style>
   :root{
     color-scheme: light;
@@ -508,6 +508,19 @@
   .rd-chk input{width:16px; height:16px; accent-color:var(--accent);}
   .rd-diff{margin:10px 0; padding:10px 12px; border:1px solid var(--warning); border-radius:10px; background:color-mix(in srgb, var(--warning) 10%, var(--surface)); font-size:12.5px;}
   .rd-msg{font-size:12px; font-weight:700; margin-left:4px;}
+  /* ---------- sinaleiro compacto: uma única fileira ---------- */
+  .sig-panel{display:grid; grid-template-columns:repeat(9, minmax(112px, 1fr)); gap:6px; overflow-x:auto; padding-bottom:4px; scrollbar-width:thin;}
+  .sig-panel .sig-card{flex:none; padding:8px 9px; border-radius:10px; border-left-width:3px;}
+  .sig-panel .sig-card:hover{transform:none;}
+  .sig-card .sig-name{font-size:11px; gap:5px; line-height:1.2; min-height:2.4em; align-items:flex-start;}
+  .sig-card .sig-name .cat-dot{margin-top:2px;}
+  .sig-card .sig-val{font-size:18px; margin-top:2px;}
+  .sig-card .sig-val span{display:none;}
+  .sig-card .sig-bar{height:5px; margin-top:5px;}
+  .sig-card .sig-rm{font-size:10.5px; margin-top:4px;}
+  .sig-card .sig-gap{font-size:10.5px; padding:1px 6px; margin-top:5px; gap:4px;}
+  .sig-card .sig-gap .sig-dot{width:7px; height:7px;}
+  .sig-card .sig-foot, .sig-card .go-hint{display:none;}
 </style>
 
 <div class="page">
@@ -529,7 +542,7 @@
 <path d="M272.266 23.3698C271.966 22.8598 271.554 22.4773 271.021 22.2298C270.489 21.9823 269.874 21.8623 269.169 21.8623C268.464 21.8623 267.849 21.9823 267.316 22.2298C266.791 22.4773 266.371 22.8598 266.071 23.3698C265.771 23.8798 265.621 24.5173 265.621 25.2748V25.3198C265.621 26.0848 265.771 26.7148 266.071 27.2248C266.371 27.7348 266.784 28.1173 267.316 28.3648C267.849 28.6123 268.464 28.7398 269.169 28.7398C269.874 28.7398 270.489 28.6123 271.021 28.3648C271.546 28.1173 271.966 27.7348 272.266 27.2248C272.566 26.7148 272.716 26.0773 272.716 25.3198V25.2748C272.716 24.5173 272.566 23.8798 272.266 23.3698ZM271.899 25.3348C271.899 26.2273 271.666 26.8948 271.201 27.3373C270.736 27.7798 270.054 28.0048 269.169 28.0048C268.284 28.0048 267.601 27.7798 267.136 27.3373C266.664 26.8948 266.431 26.2273 266.431 25.3348V25.2673C266.431 24.3748 266.671 23.7073 267.136 23.2648C267.609 22.8223 268.276 22.5973 269.169 22.5973C270.061 22.5973 270.736 22.8223 271.201 23.2648C271.666 23.7073 271.899 24.3748 271.899 25.2673V25.3348Z" fill="currentColor"/>
 </svg></div>
     <span class="eyebrow">Grupo Ragga · Gestão Financeira</span>
-    <h1>Painel de DRE — Rede Biggs (Londrina-PR)</h1>
+    <h1>Painel Controladoria Gestão Financeira (SAL - Restaurantes)</h1>
     <p class="meta">Competência Agosto/2026 · 17 lojas: Biggs 01–13, Isaías 01–03, Robs e Mapoli (Biggs 01–12 + Isaías/Robs/Mapoli com DRE completo, base Voxel; Biggs 13 em DRE ajustado à parte) · dados enviados em 23/09/2026</p>
   </header>
   <div class="stickybar" id="stickyBar">
@@ -1429,7 +1442,7 @@
       } else {
         body = '<div class="sig-foot"><i class="sig-dot sig-na"></i>sem dados · '+sigMeta(k)+'</div>';
       }
-      html += '<div class="sig-card" style="--sig-c:'+d.color+'" data-go="'+k+'" role="button" tabindex="0" title="Ver '+d.label+' na DRE">'+
+      html += '<div class="sig-card" style="--sig-c:'+d.color+'" data-go="'+k+'" role="button" tabindex="0" title="'+d.label+(p!==null ? ': '+fmt1.format(p)+'% · '+(rsTxt||'') : '')+' — clique para ver na DRE">'+
         '<div class="sig-name"><span class="cat-dot" style="background:'+d.color+'"></span>'+d.label+'</div>'+
         '<div class="sig-val tabular">'+(p===null?'—':fmt1.format(p)+'%')+' <span style="font-size:11.5px;font-weight:600;color:var(--ink-muted);">realizado</span></div>'+body+'<div class="go-hint">Ver na DRE ↓</div></div>';
     });

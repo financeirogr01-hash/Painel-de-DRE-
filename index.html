@@ -1395,7 +1395,8 @@
 
     var cmvPct = fli!==0 ? (-cmv/fli*100) : 0;
     var cmoPct = fli!==0 ? (-pessoal/fli*100) : 0;
-    var opex = mkt+admin+ident;
+    var MMx = storeMetrics(scope, voxelActiveMonth);
+    var opex = MMx ? -MMx.opex : (mkt+admin+ident);   // OPEX = manutenção, transporte, marketing, outras e a identificar
     var opexPct = fli!==0 ? (-opex/fli*100) : 0;
     var ebitdaPct = revenueBase!==0 ? (lop/revenueBase*100) : 0;
     var resFinPct = revenueBase!==0 ? (ll/revenueBase*100) : 0;
@@ -1470,19 +1471,23 @@
   var SIG = {
     cmv:      {label:'CMV', color:'var(--cat-1)', base:'fli', dir:'low',  g:31, y:35},
     cf:       {label:'Custos fixos (sem pessoal)', color:'var(--cat-2)', base:'fli', dir:'low', g:15, y:20, o:25},  // régua do grupo: 10–15 / 15–20 / 20–25 / >25
+    opex:     {label:'OPEX', color:'#3fb6c6', base:'fli', dir:'low', g:1, y:2},   // meta ≤1% (já usada nos KPIs da DRE Voxel); faixa amarela até 2% provisória
     cartao:   {label:'Cartão + apps', color:'var(--cat-3)', base:'fb', dir:'low', g:10, y:13},
     desc:     {label:'Descontos', color:'var(--cat-4)', base:'fb', dir:'low', g:3, y:6},
     roy:      {label:'Royalties + marketing', color:'var(--cat-5)', base:'fb', dir:'low', g:9, y:12},
     entregas: {label:'Entregas + devoluções', color:'var(--cat-6)', base:'fb', dir:'low', g:2, y:3},
     cmo:      {label:'Pessoal (CMO)', color:'var(--ink-muted)', base:'fli', dir:'low', g:22, y:25},
     mc:       {label:'Margem de contribuição', color:'var(--accent)', base:'flt', dir:'high', g:50, y:40},
-    lop:      {label:'Resultado operacional', color:'var(--accent)', base:'fb', dir:'high', g:8, y:0}
+    lop:      {label:'EBITDA (resultado operacional)', color:'var(--accent)', base:'fb', dir:'high', g:8, y:0}
   };
-  var SIG_ORDER = ['cmv','cf','desc','roy','entregas','cmo','mc','lop'];
+  var SIG_ORDER = ['cmv','cmo','cf','opex','roy','desc','entregas','lop'];
   // linha da DRE Voxel -> indicador (a 1ª linha de cada indicador recebe o sinal; as demais, só a cor)
   var SIG_LINES = {
     'CMV - Custo da Mercadoria Vendida':{k:'cmv', sig:true}, 'Insumos':{k:'cmv'}, 'Embalagens':{k:'cmv'}, 'Produtos para Comercialização':{k:'cmv'},
-    'Custos Fixos':{k:'cf'}, 'Despesas Operacionais e Administrativas':{k:'cf', sig:true},
+    'Aluguel e Condomínio':{k:'cf'}, 'Água e Energia':{k:'cf'}, 'Gás de Cozinha':{k:'cf'}, 'Aluguel de Equipamentos':{k:'cf'}, 'Segurança, Telefonia e Internet':{k:'cf'},
+    'Softwares e Terceirizados':{k:'cf'}, 'Limpeza e Higiene':{k:'cf'}, 'Materiais de Escritório':{k:'cf'}, 'Tarifas Bancárias':{k:'cf'},
+    'Manutenção Predial e de Equipamentos':{k:'opex'}, 'Transporte':{k:'opex'}, 'Outras Despesas Administrativas':{k:'opex'}, 'Despesas a Identificar':{k:'opex'},
+    'Despesas com Vendas e Marketing':{k:'opex'}, 'Despesas com Marketing':{k:'opex'}, 'Pacote Anúncios Ifood':{k:'opex'},
     'Taxas de Cartão e Apps de Delivery':{k:'cartao', sig:true},
     'Descontos':{k:'desc', sig:true},
     'Royalties':{k:'roy', sig:true}, 'Taxa de Marketing':{k:'roy'}, 'Taxa Administrativa':{k:'roy'},
@@ -1494,7 +1499,7 @@
   function sigPct(k, M){
     if(!M) return null;
     var def = SIG[k], base = M[def.base];
-    var v = k==='mc' ? M.mc : (k==='lop' ? M.lop : (k==='cmo' ? M.cmo : (k==='cf' ? M.cf - M.cmo : M[k])));   // cf: sem pessoal (o CMO tem indicador próprio)
+    var v = k==='mc' ? M.mc : (k==='lop' ? M.lop : (k==='cmo' ? M.cmo : (k==='cf' ? M.cfFix : (k==='opex' ? M.opex : M[k]))));   // cf: fixos sem pessoal · opex: despesas operacionais
     if(!base) return null;
     return (v/base*100) || 0;
   }
@@ -1684,6 +1689,8 @@
       mkt: -g('Despesas com Vendas e Marketing'),
       admin: -g('Despesas Operacionais e Administrativas'),
       ident: -g('Despesas a Identificar'),
+      cfFix: -['Aluguel e Condomínio','Água e Energia','Gás de Cozinha','Aluguel de Equipamentos','Segurança, Telefonia e Internet','Softwares e Terceirizados','Limpeza e Higiene','Materiais de Escritório','Tarifas Bancárias'].reduce(function(a, l){ return a + g(l); }, 0),
+      opex: -['Manutenção Predial e de Equipamentos','Transporte','Outras Despesas Administrativas','Despesas a Identificar','Despesas com Marketing','Pacote Anúncios Ifood'].reduce(function(a, l){ return a + g(l); }, 0),
       cf: -g('Custos Fixos'),
       mc: g('Margem de Contribuição'),
       lop: g('Lucro/Prejuízo Operacional'),
@@ -2676,7 +2683,8 @@
       {n:'CMV', gap: M.pctCmv - SIG.cmv.g},
       {n:'CMO (pessoal)', gap: M.pctCmo - SIG.cmo.g},
       {n:'descontos', gap: rgDescPct(M) - SIG.desc.g},
-      {n:'custos fixos (sem pessoal)', gap: (M.fli ? (M.cf - M.cmo)/M.fli*100 : 0) - SIG.cf.g},
+      {n:'custos fixos (sem pessoal)', gap: (M.fli ? M.cfFix/M.fli*100 : 0) - SIG.cf.g},
+      {n:'OPEX', gap: (M.fli ? M.opex/M.fli*100 : 0) - SIG.opex.g},
       {n:'cartão/apps', gap: M.cartao/M.fb*100 - SIG.cartao.g}
     ].filter(function(x){ return x.gap>0.05; }).sort(function(a,b){ return b.gap-a.gap; }).slice(0,2);
     return c.map(function(x){ return x.n; });
@@ -2854,6 +2862,7 @@
   function goToDreLine(k){
     var line = null;
     Object.keys(SIG_LINES).forEach(function(l){ if(!line && SIG_LINES[l].k===k && SIG_LINES[l].sig) line = l; });
+    if(!line) Object.keys(SIG_LINES).forEach(function(l){ if(!line && SIG_LINES[l].k===k) line = l; });
     if(!line) return;
     var tbody = document.querySelector('#voxelTable tbody');
     var row = null;

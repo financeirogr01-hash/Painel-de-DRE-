@@ -544,6 +544,23 @@
   #bnGrid .sig-pill{font-size:11px; margin-top:4px; padding:1px 7px;}
   #bnGrid .bn-sub{font-size:11px;}
   #bnGrid .bn.result{padding:8px 12px;}
+
+  /* ---------- plano de redução: total consolidado ---------- */
+  .pt-box{margin:4px 0 14px; padding:12px 14px; border:1px solid var(--border); border-left:4px solid var(--accent); border-radius:12px; background:var(--surface);}
+  .pt-head{display:flex; flex-wrap:wrap; justify-content:space-between; align-items:baseline; gap:6px 12px;}
+  .pt-head h4{font-size:14.5px; font-weight:800; margin:0;}
+  .pt-kpis{display:grid; grid-template-columns:repeat(5, minmax(0,1fr)); gap:8px; margin-top:10px;}
+  @media (max-width:900px){ .pt-kpis{grid-template-columns:repeat(2, minmax(0,1fr));} }
+  .pt-kpi{border:1px solid var(--border); border-radius:10px; padding:8px 10px; background:var(--surface-2); min-width:0;}
+  .pt-kpi span{display:block; font-size:10.5px; font-weight:700; color:var(--ink-muted); text-transform:uppercase; letter-spacing:.03em;}
+  .pt-kpi b{display:block; font-size:18px; margin-top:2px; font-variant-numeric:tabular-nums;}
+  .pt-kpi small{display:block; font-size:11px; color:var(--ink-muted); margin-top:1px;}
+  .pt-kpi.alert{border-color:var(--warning); background:color-mix(in srgb, var(--warning) 12%, var(--surface));}
+  .pt-box details{margin-top:10px;}
+  .pt-box summary{cursor:pointer; font-size:12.5px; font-weight:800; color:var(--accent);}
+  :root:not([data-theme="light"]) .pt-box summary{color:color-mix(in srgb, var(--accent) 55%, #fff);}
+  .pt-box table{width:100%; font-size:12.5px;}
+  .pt-box td:first-child{font-weight:700;}
 </style>
 
 <div class="page">
@@ -664,6 +681,7 @@
       </div>
     </div>
     <div class="fn-note">Simulação baseada na margem de contribuição e nos custos fixos do período selecionado. Pressupõe que os custos fixos permaneçam no mesmo valor e que os custos variáveis mantenham a mesma proporção do faturamento. Resultado operacional não equivale à geração de caixa.</div>
+    <div class="pt-box" id="planTotals"></div>
     <div class="fn-prem">
       <label for="fnPrem"><b>Premissa de simulação:</b> margem mínima = meta +</label>
       <input type="number" id="fnPrem" value="10" min="1" max="60" step="1" inputmode="decimal"> <span>pp</span>
@@ -1980,8 +1998,9 @@
   }
   // Proposta: distribui a redução necessária entre as contas marcadas, proporcional ao gasto de cada uma,
   // em centavos (a soma fecha exatamente). O que não couber nas contas vira "meta sem ação definida".
-  function rdPropose(t, M){
-    var key = rdKey(t), p = RD_METAS[rdMetaIdx(t)], eco = Math.max(0, p*M.fb - M.lop), el = rdEligOf(t);
+  function rdPropose(t, M){ rdState[rdKey(t)] = rdProposeCalc(t, M); }
+  function rdProposeCalc(t, M){
+    var p = RD_METAS[rdMetaIdx(t)], eco = Math.max(0, p*M.fb - M.lop), el = rdEligOf(t);
     var list = RD_GROUPS.filter(function(g){ return !g.lock && el[g.k] && (M[g.k]||0) > 0; });
     var B = list.reduce(function(a, g){ return a + M[g.k]; }, 0);
     var cents = Math.round(Math.min(eco, B)*100), st = {}, acc = 0;
@@ -1990,7 +2009,7 @@
       var big = list.slice().sort(function(a, b){ return M[b.k]-M[a.k]; })[0];
       st[big.k].rs = Math.round(st[big.k].rs*100 + (cents-acc))/100;
     }
-    rdState[key] = st;
+    return st;
   }
   function rdPlanNumbers(t, M){
     var S = rdSim(t, M), p = RD_METAS[rdMetaIdx(t)], eco = Math.max(0, p*M.fb - M.lop);
@@ -2134,7 +2153,61 @@
     var res = document.getElementById(id+'-res'); if(res) res.innerHTML = rdResultHtml(t, M);
     renderRdSummary();
   }
+  // Plano de redução — consolidado: soma o que está determinado em cada loja do filtro
+  // (plano fixado > proposta ajustada no card > proposta padrão da meta da loja, 5% se não alterada).
+  function rdStorePlanView(t, m){
+    var M = storeMetrics(t, m); if(!M) return null;
+    var pl = rdPlan(t, m);
+    if(pl){
+      var tot = 0; Object.keys(pl.reducoes).forEach(function(k){ tot += pl.reducoes[k]||0; });
+      return {M:M, fonte:'fixado', meta:pl.meta, eco:pl.reducaoNecessaria!==undefined ? pl.reducaoNecessaria : Math.max(0, pl.meta*pl.base.fb - pl.base.lop), red:pl.reducoes, total:tot, sem:pl.semAcao||0, base:pl.base.contas, lop:pl.base.lop, fb:pl.base.fb};
+    }
+    var key = t+'|'+m, st = rdState[key] || rdProposeCalc(t, M), p = RD_METAS[rdMetaIdx(t)];
+    var red = {}, total = 0, bases = {};
+    RD_GROUPS.forEach(function(g){ var b = Math.max(0, M[g.k]||0); bases[g.k] = b; red[g.k] = rdEffOf(st[g.k], b); total += red[g.k]; });
+    var eco = Math.max(0, p*M.fb - M.lop);
+    return {M:M, fonte: rdState[key] ? 'ajustado' : 'proposta', meta:p, eco:eco, red:red, total:total, sem:Math.max(0, Math.round((eco-total)*100)/100), base:bases, lop:M.lop, fb:M.fb};
+  }
+  function renderPlanTotals(){
+    var box = document.getElementById('planTotals'); if(!box) return;
+    var s = fState.scope, m = fState.month;
+    if(m===-1){ box.innerHTML = '<div class="pt-head"><h4>Plano de redução — consolidado</h4></div><p class="rd-hint">Selecione um mês (não o acumulado) para ver o plano de redução.</p>'; return; }
+    var V = scopeStores(s).map(function(t){ var v = rdStorePlanView(t, m); if(v) v.t = t; return v; }).filter(Boolean);
+    if(!V.length){ box.innerHTML = ''; return; }
+    var FB=0, LOP=0, NEC=0, DEF=0, SEM=0, nMeta=0, nFix=0, nAdj=0, metas = {};
+    var porConta = {}; RD_GROUPS.forEach(function(g){ porConta[g.k] = {base:0, red:0}; });
+    V.forEach(function(v){
+      FB += v.fb; LOP += v.lop; NEC += v.eco; DEF += v.total; SEM += v.sem;
+      if(v.eco<=0) nMeta++; if(v.fonte==='fixado') nFix++; if(v.fonte==='ajustado') nAdj++;
+      metas[rdPctLabel(v.meta)] = (metas[rdPctLabel(v.meta)]||0) + 1;
+      RD_GROUPS.forEach(function(g){ porConta[g.k].base += v.base[g.k]||0; porConta[g.k].red += v.red[g.k]||0; });
+    });
+    var PROJ = LOP + DEF;
+    var metasTxt = Object.keys(metas).map(function(k){ return k+' ('+metas[k]+(metas[k]>1?' lojas':' loja')+')'; }).join(', ');
+    var h = '<div class="pt-head"><h4>📉 Plano de redução — consolidado · '+scopeName(s)+' · '+periodName(m)+'</h4>'+
+      '<span class="rd-hint" style="margin:0;">Se cada loja seguir o que está determinado · meta: '+metasTxt+'</span></div>';
+    h += '<div class="pt-kpis">'+
+      '<div class="pt-kpi"><span>Redução total necessária</span><b>'+brl0(NEC)+'</b><small>'+fmt2.format(NEC/FB*100)+'% do faturamento · soma das lojas</small></div>'+
+      '<div class="pt-kpi"><span>Definida nas contas</span><b>'+brl0(DEF)+'</b><small>'+(NEC>0 ? fmt1.format(Math.min(DEF/NEC,9.99)*100)+'% do necessário' : '—')+'</small></div>'+
+      '<div class="pt-kpi'+(SEM>0.5?' alert':'')+'"><span>Meta sem ação definida</span><b class="'+(SEM>0.5?'rd-warn':'rd-ok')+'">'+(SEM>0.5 ? brl0(SEM) : '✓ nenhuma')+'</b><small>'+(SEM>0.5 ? 'contas marcadas não comportam' : 'todas as metas cobertas')+'</small></div>'+
+      '<div class="pt-kpi"><span>Resultado atual → projetado</span><b class="'+(PROJ<0?'rd-bad':'rd-ok')+'">'+brl0(PROJ)+'</b><small>hoje '+brl0(LOP)+' ('+pct(LOP/FB*100)+') → '+pct(PROJ/FB*100)+'</small></div>'+
+      '<div class="pt-kpi"><span>Lojas</span><b>'+V.length+'</b><small>'+nMeta+' já na meta · '+nFix+' fixado(s) · '+nAdj+' ajustado(s)</small></div>'+
+      '</div>';
+    var rows = '';
+    RD_GROUPS.forEach(function(g){
+      var c = porConta[g.k]; if(c.base<=0) return;
+      rows += '<tr><td>'+g.label+'</td><td class="num tabular">'+brl0(c.base)+'</td><td class="num tabular">'+(c.red>0 ? brl0(c.red) : '—')+'</td>'+
+        '<td class="num tabular">'+(c.red>0 ? fmt2.format(c.red/c.base*100)+'%' : '—')+'</td><td class="num tabular">'+brl0(c.base - c.red)+'</td></tr>';
+    });
+    var sb = 0, sr = 0; RD_GROUPS.forEach(function(g){ sb += porConta[g.k].base; sr += porConta[g.k].red; });
+    h += '<details><summary>Ver redução total por conta</summary><div class="table-scroll" style="margin-top:6px;"><table><thead><tr><th>Conta</th><th class="num">Gasto total</th><th class="num">Redução total</th><th class="num">% da conta</th><th class="num">Novo limite total</th></tr></thead><tbody>'+rows+'</tbody>'+
+      '<tfoot><tr><td>Total</td><td class="num tabular">'+brl0(sb)+'</td><td class="num tabular">'+brl0(sr)+'</td><td class="num tabular">'+(sb>0?fmt2.format(sr/sb*100)+'%':'—')+'</td><td class="num tabular">'+brl0(sb-sr)+'</td></tr></tfoot></table></div></details>';
+    h += '<p class="rd-hint" style="margin:8px 0 0;">A redução total é a soma do que cada loja precisa para a própria meta — lojas acima da meta entram com zero e não compensam as demais. '+
+      'Lojas sem plano fixado usam a proposta padrão (ou o que você ajustou no card). É uma meta de resultado da DRE, não de caixa.</p>';
+    box.innerHTML = h;
+  }
   function renderRdSummary(){
+    renderPlanTotals();
     var s = fState.scope, box = document.getElementById('rdSummary'); if(!box) return;
     box.innerHTML = isGroupScope(s) ? rdSummaryHtml(scopeStores(s), fState.month, s==='Consolidado' ? 'Rede' : scopeName(s)) : '';
   }

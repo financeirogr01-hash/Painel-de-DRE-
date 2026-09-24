@@ -561,6 +561,12 @@
   :root:not([data-theme="light"]) .pt-box summary{color:color-mix(in srgb, var(--accent) 55%, #fff);}
   .pt-box table{width:100%; font-size:12.5px;}
   .pt-box td:first-child{font-weight:700;}
+
+  .pt-ctrl{display:flex; flex-wrap:wrap; align-items:center; gap:8px; margin-top:10px; padding:8px 10px; border-radius:10px; background:var(--surface-2); border:1px solid var(--border); font-size:12.5px;}
+  .pt-ctrl input[type=text]{width:130px; font:inherit; font-weight:800; color:var(--ink); background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:5px 8px; text-align:right;}
+  .pt-ctrl button{font:inherit; font-size:12px; border-radius:8px; padding:5px 10px; border:1px solid var(--border); background:var(--surface); color:var(--ink); cursor:pointer;}
+  .pt-ctrl label{display:inline-flex; align-items:center; gap:6px;}
+  .pt-ctrl input[type=checkbox]{width:16px; height:16px; accent-color:var(--accent);}
 </style>
 
 <div class="page">
@@ -597,6 +603,7 @@
       <a href="#setor">Setor</a>
     </nav>
     <button type="button" class="rg-btn" id="rgOpen" title="Gerar o resumo gerencial do mês selecionado">📊 Resumo gerencial</button>
+    <button type="button" class="rg-btn" id="rpOpen" title="Gerar o resumo do plano de redução do mês selecionado" style="background:var(--good);">📉 Resumo do plano</button>
     </div>
     <div class="filterbar" role="region" aria-label="Filtros de mês e loja">
       <div class="filter-group"><span class="filter-label">Mês</span><div class="voxel-tabs" id="fMonth"></div></div>
@@ -1998,9 +2005,39 @@
   }
   // Proposta: distribui a redução necessária entre as contas marcadas, proporcional ao gasto de cada uma,
   // em centavos (a soma fecha exatamente). O que não couber nas contas vira "meta sem ação definida".
+  // Meta consolidada de redução da REDE. Padrão: cobrir o faturamento que falta para o equilíbrio da rede
+  // (coluna "Falta p/ equilíbrio" do consolidado), calculado pela DRE do mês. Se a soma das metas das lojas
+  // for menor, a diferença vira "cota da rede", dividida entre as lojas pelo gasto gerenciável (contas marcadas).
+  var RD_NET_LS = 'painelDRE.metaRedeReducao.v1';
+  var rdNet = (function(){ try{ var o = JSON.parse(localStorage.getItem(RD_NET_LS)||'null'); if(o && (o.mode==='auto'||o.mode==='manual'||o.mode==='off')) return o; }catch(e){} return {mode:'auto', value:0}; })();
+  function rdNetSave(){ try{ localStorage.setItem(RD_NET_LS, JSON.stringify(rdNet)); }catch(e){} }
+  function rdEligBase(t, M){ var el = rdEligOf(t), b = 0; RD_GROUPS.forEach(function(g){ if(!g.lock && el[g.k]) b += Math.max(0, M[g.k]||0); }); return b; }
+  function rdNetAuto(m){
+    var FB=0, MC=0, CF=0, n=0;
+    voxelTabsList.forEach(function(t){ var M = storeMetrics(t, m); if(M){ FB+=M.fb; MC+=M.mc; CF+=M.cf; n++; } });
+    var C = n ? fnCalc(FB, MC, CF) : null;
+    return C ? Math.max(0, C.metas[0].v - FB) : 0;
+  }
+  function rdNetQuotas(m){
+    var T = rdNet.mode==='off' ? 0 : (rdNet.mode==='manual' ? Math.max(0, rdNet.value||0) : rdNetAuto(m));
+    var need = 0, EB = 0, per = {};
+    voxelTabsList.forEach(function(t){
+      var M = storeMetrics(t, m); if(!M) return;
+      var p = RD_METAS[rdMetaIdx(t)], nd = Math.max(0, p*M.fb - M.lop), eb = rdEligBase(t, M);
+      per[t] = {need:nd, eb:eb}; need += nd; EB += eb;
+    });
+    var extra = Math.max(0, T - need), quota = {};
+    Object.keys(per).forEach(function(t){ quota[t] = EB>0 ? Math.round(extra*per[t].eb/EB*100)/100 : 0; });
+    return {T:T, need:need, extra:extra, quota:quota, auto:rdNetAuto(m)};
+  }
+  function rdStoreTarget(t, M){
+    var p = RD_METAS[rdMetaIdx(t)], base = Math.max(0, p*M.fb - M.lop);
+    var q = rdNetQuotas(fState.month).quota[t] || 0;
+    return {p:p, base:base, quota:q, eco: base + q};
+  }
   function rdPropose(t, M){ rdState[rdKey(t)] = rdProposeCalc(t, M); }
   function rdProposeCalc(t, M){
-    var p = RD_METAS[rdMetaIdx(t)], eco = Math.max(0, p*M.fb - M.lop), el = rdEligOf(t);
+    var p = RD_METAS[rdMetaIdx(t)], eco = rdStoreTarget(t, M).eco, el = rdEligOf(t);
     var list = RD_GROUPS.filter(function(g){ return !g.lock && el[g.k] && (M[g.k]||0) > 0; });
     var B = list.reduce(function(a, g){ return a + M[g.k]; }, 0);
     var cents = Math.round(Math.min(eco, B)*100), st = {}, acc = 0;
@@ -2012,8 +2049,8 @@
     return st;
   }
   function rdPlanNumbers(t, M){
-    var S = rdSim(t, M), p = RD_METAS[rdMetaIdx(t)], eco = Math.max(0, p*M.fb - M.lop);
-    return {S:S, p:p, eco:eco, sem: Math.max(0, Math.round((eco - S.total)*100)/100)};
+    var S = rdSim(t, M), TG = rdStoreTarget(t, M), p = TG.p, eco = TG.eco;
+    return {S:S, p:p, eco:eco, base:TG.base, quota:TG.quota, sem: Math.max(0, Math.round((eco - S.total)*100)/100)};
   }
   function rdCardHtml(t, M){
     var plan = rdPlan(t, fState.month);
@@ -2146,7 +2183,8 @@
     var ml = document.getElementById(id+'-metaline');
     if(ml){
       ml.className = 'rd-metaline'+(PN.sem>0.5?' alert':'');
-      ml.innerHTML = '<b>'+rdPctLabel(PN.p)+':</b> redução necessária '+brl2(PN.eco)+' · definida nas contas '+brl2(S.total)+' · '+
+      ml.innerHTML = '<b>'+rdPctLabel(PN.p)+(PN.quota>0.005?' + cota da rede':'')+':</b> redução necessária '+brl2(PN.eco)+
+        (PN.quota>0.005 ? ' ('+rdPctLabel(PN.p).toLowerCase()+' '+brl2(PN.base)+' + cota da meta consolidada '+brl2(PN.quota)+')' : '')+' · definida nas contas '+brl2(S.total)+' · '+
         (PN.sem>0.5 ? '<b class="rd-warn">meta sem ação definida: '+brl2(PN.sem)+'</b> (as contas marcadas não comportam o restante — marque outras contas ou ajuste à mão)' :
           (S.total - PN.eco > 0.5 ? '<span class="rd-ok">plano cobre a meta com folga de '+brl2(S.total-PN.eco)+'</span>' : '<span class="rd-ok">✓ soma das contas = redução necessária</span>'));
     }
@@ -2160,13 +2198,13 @@
     var pl = rdPlan(t, m);
     if(pl){
       var tot = 0; Object.keys(pl.reducoes).forEach(function(k){ tot += pl.reducoes[k]||0; });
-      return {M:M, fonte:'fixado', meta:pl.meta, eco:pl.reducaoNecessaria!==undefined ? pl.reducaoNecessaria : Math.max(0, pl.meta*pl.base.fb - pl.base.lop), red:pl.reducoes, total:tot, sem:pl.semAcao||0, base:pl.base.contas, lop:pl.base.lop, fb:pl.base.fb};
+      return {M:M, fonte:'fixado', need:pl.reducaoMetaLoja, meta:pl.meta, eco:pl.reducaoNecessaria!==undefined ? pl.reducaoNecessaria : Math.max(0, pl.meta*pl.base.fb - pl.base.lop), red:pl.reducoes, total:tot, sem:pl.semAcao||0, base:pl.base.contas, lop:pl.base.lop, fb:pl.base.fb};
     }
     var key = t+'|'+m, st = rdState[key] || rdProposeCalc(t, M), p = RD_METAS[rdMetaIdx(t)];
     var red = {}, total = 0, bases = {};
     RD_GROUPS.forEach(function(g){ var b = Math.max(0, M[g.k]||0); bases[g.k] = b; red[g.k] = rdEffOf(st[g.k], b); total += red[g.k]; });
-    var eco = Math.max(0, p*M.fb - M.lop);
-    return {M:M, fonte: rdState[key] ? 'ajustado' : 'proposta', meta:p, eco:eco, red:red, total:total, sem:Math.max(0, Math.round((eco-total)*100)/100), base:bases, lop:M.lop, fb:M.fb};
+    var TG = rdStoreTarget(t, M), eco = TG.eco;
+    return {M:M, quota:TG.quota, need:TG.base, fonte: rdState[key] ? 'ajustado' : 'proposta', meta:p, eco:eco, red:red, total:total, sem:Math.max(0, Math.round((eco-total)*100)/100), base:bases, lop:M.lop, fb:M.fb};
   }
   function renderPlanTotals(){
     var box = document.getElementById('planTotals'); if(!box) return;
@@ -2178,14 +2216,21 @@
     var porConta = {}; RD_GROUPS.forEach(function(g){ porConta[g.k] = {base:0, red:0}; });
     V.forEach(function(v){
       FB += v.fb; LOP += v.lop; NEC += v.eco; DEF += v.total; SEM += v.sem;
-      if(v.eco<=0) nMeta++; if(v.fonte==='fixado') nFix++; if(v.fonte==='ajustado') nAdj++;
+      if((v.need!==undefined ? v.need : v.eco)<=0) nMeta++;   // já na meta da própria loja (antes da cota da rede) if(v.fonte==='fixado') nFix++; if(v.fonte==='ajustado') nAdj++;
       metas[rdPctLabel(v.meta)] = (metas[rdPctLabel(v.meta)]||0) + 1;
       RD_GROUPS.forEach(function(g){ porConta[g.k].base += v.base[g.k]||0; porConta[g.k].red += v.red[g.k]||0; });
     });
+    var NQ = rdNetQuotas(m);
+    var ctrl = '<div class="pt-ctrl">'+
+      '<label><input type="checkbox" id="ptNetOn"'+(rdNet.mode!=='off'?' checked':'')+'> Cobrir a meta consolidada de redução</label>'+
+      '<input type="text" inputmode="decimal" id="ptNetVal" aria-label="Meta consolidada de redução em R$" value="'+fmt2.format(NQ.T)+'"'+(rdNet.mode==='off'?' disabled':'')+'>'+
+      '<button type="button" id="ptNetAuto"'+(rdNet.mode==='auto'?' disabled':'')+'>Usar padrão ('+brl0(NQ.auto)+')</button>'+
+      '<span class="rd-hint" style="margin:0;">'+(rdNet.mode==='off' ? 'Desligado: cada loja só busca a própria meta.' :
+        'Padrão = faturamento que falta para o equilíbrio da rede. Soma das metas das lojas: '+brl0(NQ.need)+(NQ.extra>0.5 ? ' · cota da rede distribuída: <b>'+brl0(NQ.extra)+'</b>' : ' · já cobre a meta consolidada')+'.')+'</span></div>';
     var PROJ = LOP + DEF;
     var metasTxt = Object.keys(metas).map(function(k){ return k+' ('+metas[k]+(metas[k]>1?' lojas':' loja')+')'; }).join(', ');
     var h = '<div class="pt-head"><h4>📉 Plano de redução — consolidado · '+scopeName(s)+' · '+periodName(m)+'</h4>'+
-      '<span class="rd-hint" style="margin:0;">Se cada loja seguir o que está determinado · meta: '+metasTxt+'</span></div>';
+      '<span class="rd-hint" style="margin:0;">Se cada loja seguir o que está determinado · meta: '+metasTxt+(NQ.extra>0.5?' + cota da rede':'')+'</span></div>' + ctrl;
     h += '<div class="pt-kpis">'+
       '<div class="pt-kpi"><span>Redução total necessária</span><b>'+brl0(NEC)+'</b><small>'+fmt2.format(NEC/FB*100)+'% do faturamento · soma das lojas</small></div>'+
       '<div class="pt-kpi"><span>Definida nas contas</span><b>'+brl0(DEF)+'</b><small>'+(NEC>0 ? fmt1.format(Math.min(DEF/NEC,9.99)*100)+'% do necessário' : '—')+'</small></div>'+
@@ -2202,9 +2247,21 @@
     var sb = 0, sr = 0; RD_GROUPS.forEach(function(g){ sb += porConta[g.k].base; sr += porConta[g.k].red; });
     h += '<details><summary>Ver redução total por conta</summary><div class="table-scroll" style="margin-top:6px;"><table><thead><tr><th>Conta</th><th class="num">Gasto total</th><th class="num">Redução total</th><th class="num">% da conta</th><th class="num">Novo limite total</th></tr></thead><tbody>'+rows+'</tbody>'+
       '<tfoot><tr><td>Total</td><td class="num tabular">'+brl0(sb)+'</td><td class="num tabular">'+brl0(sr)+'</td><td class="num tabular">'+(sb>0?fmt2.format(sr/sb*100)+'%':'—')+'</td><td class="num tabular">'+brl0(sb-sr)+'</td></tr></tfoot></table></div></details>';
-    h += '<p class="rd-hint" style="margin:8px 0 0;">A redução total é a soma do que cada loja precisa para a própria meta — lojas acima da meta entram com zero e não compensam as demais. '+
+    h += '<p class="rd-hint" style="margin:8px 0 0;">A redução total é a soma do que cada loja precisa para a própria meta, mais a cota da rede quando a meta consolidada for maior. '+
+      'Os R$ '+fmt0.format(Math.round(NQ.auto))+' do padrão são faturamento que falta para o equilíbrio — usá-los como meta de corte é uma decisão de gestão. '+
       'Lojas sem plano fixado usam a proposta padrão (ou o que você ajustou no card). É uma meta de resultado da DRE, não de caixa.</p>';
     box.innerHTML = h;
+  }
+  document.addEventListener('change', function(e){
+    if(e.target.id==='ptNetOn'){ rdNet.mode = e.target.checked ? 'auto' : 'off'; rdNetSave(); rdResetOpenProposals(); renderFatNecessario(); }
+    else if(e.target.id==='ptNetVal'){ var v = rdParse(e.target.value); rdNet = {mode:'manual', value:v}; rdNetSave(); rdResetOpenProposals(); renderFatNecessario(); }
+  });
+  document.addEventListener('click', function(e){
+    if(e.target.id==='ptNetAuto'){ rdNet = {mode:'auto', value:0}; rdNetSave(); rdResetOpenProposals(); renderFatNecessario(); }
+  });
+  // ao mudar a meta consolidada, as propostas não ajustadas à mão são recalculadas
+  function rdResetOpenProposals(){
+    Object.keys(rdState).forEach(function(k){ if(k.split('|')[1]===String(fState.month) && !rdState[k].__manual) delete rdState[k]; });
   }
   function renderRdSummary(){
     renderPlanTotals();
@@ -2326,6 +2383,7 @@
     var e = rdState[key][k] = rdState[key][k] || {};
     var v = el.value.trim()==='' ? 0 : rdParse(el.value);
     if(f==='pct'){ e.pct = v; e.last = 'pct'; } else { e.rs = v; e.last = 'rs'; }
+    Object.defineProperty(rdState[key], '__manual', {value:true, enumerable:false, configurable:true});
     rdRefresh(t, el);
   }
   var fnTbl = document.getElementById('fnTable');
@@ -2354,7 +2412,7 @@
       RD_GROUPS.forEach(function(g){ contas[g.k] = Math.max(0, M[g.k]||0); reducoes[g.k] = Math.round((PN.S.red[g.k]||0)*100)/100; });
       rdPlansLocal[key] = {loja:t, baseMonth:m, meta:PN.p, metaIdx:rdMetaIdx(t), fixedAt:new Date().toISOString(),
         base:{fb:M.fb, lop:M.lop, mc:M.mc, cf:M.cf, contas:contas}, reducoes:reducoes, elig:rdEligOf(t),
-        reducaoNecessaria:Math.round(PN.eco*100)/100, economiaFixada:Math.round(PN.S.total*100)/100, semAcao:PN.sem};
+        reducaoNecessaria:Math.round(PN.eco*100)/100, reducaoMetaLoja:Math.round(PN.base*100)/100, cotaRede:PN.quota, economiaFixada:Math.round(PN.S.total*100)/100, semAcao:PN.sem};
       delete rdRevising[key];
       rdMsg[key] = rdSaveLocal() ? '' : 'Não foi possível salvar neste navegador — exporte os planos para não perder.';
     }
@@ -2507,7 +2565,59 @@
     if(L[L.length-1]===RG_SEP) L.pop();
     return L.join('\n');
   }
+  function buildResumoPlano(){
+    var s = fState.scope, m = fState.month;
+    if(m===-1) return 'Selecione um mês (não o acumulado) para gerar o resumo do plano de redução.';
+    var V = scopeStores(s).map(function(t){ var v = rdStorePlanView(t, m); if(v) v.t = t; return v; }).filter(Boolean);
+    var NQ = rdNetQuotas(m), L = [];
+    var FB=0, LOP=0, NEC=0, DEF=0, SEM=0, porConta = {};
+    RD_GROUPS.forEach(function(g){ porConta[g.k] = {base:0, red:0}; });
+    V.forEach(function(v){ FB+=v.fb; LOP+=v.lop; NEC+=v.eco; DEF+=v.total; SEM+=v.sem; RD_GROUPS.forEach(function(g){ porConta[g.k].base += v.base[g.k]||0; porConta[g.k].red += v.red[g.k]||0; }); });
+    L.push('📉 PLANO DE REDUÇÃO — '+rdMonthName(m).toUpperCase()+' · '+scopeName(s).toUpperCase());
+    L.push('');
+    L.push('Base: DRE de '+rdMonthName(m)+', mantendo o faturamento bruto realizado. Meta de cada loja: '+rdPctLabel(V.length ? V[0].meta : 0.05).toLowerCase()+
+      (rdNet.mode!=='off' ? ', mais a cota da meta consolidada de redução da rede ('+brl0(NQ.T)+')' : '')+'.');
+    L.push('Metas de resultado da DRE — não equivalem a geração de caixa.');
+    L.push(RG_SEP);
+    L.push((s==='Consolidado' ? '🌐 CONSOLIDADO DA REDE' : '🏷️ CONSOLIDADO — '+scopeName(s).toUpperCase())+' ('+V.length+' lojas)');
+    L.push('');
+    if(rdNet.mode!=='off') L.push('* Meta consolidada de redução da rede: '+brl2(NQ.T)+' (soma das metas das lojas '+brl2(NQ.need)+' + cota distribuída '+brl2(NQ.extra)+')');
+    L.push('* Redução necessária (lojas do filtro): '+brl2(NEC)+' | '+pct2(NEC/FB*100)+' do faturamento');
+    L.push('* Redução definida nas contas: '+brl2(DEF));
+    L.push('* Meta sem ação definida: '+(SEM>0.5 ? brl2(SEM) : 'nenhuma'));
+    L.push('* Resultado operacional: '+brl2s(LOP)+' → '+brl2s(LOP+DEF)+' ('+pct2s((LOP+DEF)/FB*100)+')');
+    L.push('* Redução por conta:');
+    RD_GROUPS.forEach(function(g){ var c = porConta[g.k]; if(c.red>0) L.push('   - '+g.label+': '+brl2(c.red)+' ('+pct2(c.red/c.base*100)+' da conta) → limite '+brl2(c.base-c.red)); });
+    L.push(RG_SEP);
+    V.forEach(function(v){
+      L.push(brandIcon(storeBrand(v.t))+' '+v.t.toUpperCase()+(v.fonte==='fixado' ? ' — PLANO FIXADO' : ''));
+      L.push('');
+      L.push('* Resultado atual: '+brl2s(v.lop)+' | '+pct2s(v.lop/v.fb*100));
+      var q = v.fonte==='fixado' ? (rdPlan(v.t, m).cotaRede||0) : (v.quota||0);
+      L.push('* Redução do plano: '+brl2(v.eco)+(q>0.005 ? ' ('+rdPctLabel(v.meta).toLowerCase()+' '+brl2(v.eco-q)+' + cota da rede '+brl2(q)+')' : ' ('+rdPctLabel(v.meta).toLowerCase()+')'));
+      var any = false;
+      RD_GROUPS.forEach(function(g){ var rd = v.red[g.k]||0, b = v.base[g.k]||0; if(rd>0){ any = true; L.push('   - '+g.label+': '+brl2(rd)+' ('+pct2(rd/b*100)+') → limite '+brl2(b-rd)); } });
+      if(!any) L.push('   - sem redução necessária');
+      if(v.sem>0.5) L.push('⚠️ Meta sem ação definida: '+brl2(v.sem));
+      L.push('* Resultado projetado: '+brl2s(v.lop+v.total)+' | '+pct2s((v.lop+v.total)/v.fb*100));
+      L.push(RG_SEP);
+    });
+    if(L[L.length-1]===RG_SEP) L.pop();
+    return L.join('\n');
+  }
+  function openTextModal(title, sub, text){
+    document.getElementById('rgTitle').textContent = title;
+    document.getElementById('rgText').textContent = text;
+    document.getElementById('rgSub').textContent = sub;
+    document.getElementById('rgOverlay').hidden = false;
+    document.getElementById('rgCopy').textContent = 'Copiar texto';
+    document.getElementById('rgClose').focus();
+  }
+  document.getElementById('rpOpen').addEventListener('click', function(){
+    openTextModal('📉 Resumo do plano de redução', 'Gerado a partir dos filtros atuais: '+scopeName(fState.scope)+' · '+periodName(fState.month)+'. Lojas com plano fixado usam o plano; as demais, a proposta atual.', buildResumoPlano());
+  });
   function openResumoGerencial(){
+    document.getElementById('rgTitle').textContent = '📊 Resumo gerencial';
     document.getElementById('rgText').textContent = buildResumoGerencial();
     document.getElementById('rgSub').textContent = 'Gerado a partir dos filtros atuais: '+scopeName(fState.scope)+' · '+periodName(fState.month)+'. Mude mês/marca/loja no topo para gerar outro recorte.';
     var ov = document.getElementById('rgOverlay'); ov.hidden = false;

@@ -1901,15 +1901,15 @@
   // elig = entra na proposta automática (gerenciável pela loja); lock = obrigação/contrato, nunca recebe corte
   var RD_GROUPS = [
     {k:'cmv', label:'CMV (insumos, embalagens)', type:'var', elig:true},
-    {k:'desc', label:'Descontos concedidos', type:'var', elig:true},
+    {k:'desc', label:'Descontos concedidos', type:'var', elig:false, toCmo:true, note:'fora do plano — parcela transferida para Pessoal'},
     {k:'cartao', label:'Taxas de cartão + apps', type:'var', elig:false, note:'taxa contratada — incluir só se houver renegociação'},
     {k:'roy', label:'Royalties + marketing + tx. adm.', type:'var', lock:true, note:'contratual'},
-    {k:'entDev', label:'Entregas e devoluções', type:'var', elig:true},
+    {k:'entDev', label:'Entregas e devoluções', type:'var', elig:false, toCmo:true, note:'fora do plano — parcela transferida para Pessoal'},
     {k:'impostos', label:'Impostos sobre vendas', type:'var', lock:true, note:'obrigação legal'},
-    {k:'cmo', label:'Pessoal (CMO)', type:'fix', elig:false, note:'incluir só com plano de quadro/escala'},
-    {k:'mkt', label:'Vendas e marketing', type:'fix', elig:true},
+    {k:'cmo', label:'Pessoal (CMO)', type:'fix', elig:true, note:'recebe a parcela de descontos, entregas, marketing e a identificar'},
+    {k:'mkt', label:'Vendas e marketing', type:'fix', elig:false, toCmo:true, note:'fora do plano — parcela transferida para Pessoal'},
     {k:'admin', label:'Administrativas', type:'fix', elig:true},
-    {k:'ident', label:'Despesas a identificar', type:'fix', elig:true}
+    {k:'ident', label:'Despesas a identificar', type:'fix', elig:false, toCmo:true, note:'fora do plano — parcela transferida para Pessoal'}
   ];
   var rdOpen = {};   // lojas com o card aberto
   var rdState = {};  // reduções digitadas: rdState['loja|mês'][grupo] = {v, u}
@@ -2039,13 +2039,24 @@
   function rdProposeCalc(t, M){
     var p = RD_METAS[rdMetaIdx(t)], eco = rdStoreTarget(t, M).eco, el = rdEligOf(t);
     var list = RD_GROUPS.filter(function(g){ return !g.lock && el[g.k] && (M[g.k]||0) > 0; });
-    var B = list.reduce(function(a, g){ return a + M[g.k]; }, 0);
-    var cents = Math.round(Math.min(eco, B)*100), st = {}, acc = 0;
-    list.forEach(function(g){ var c = Math.floor(M[g.k]/B*cents); st[g.k] = {rs:c/100, last:'rs'}; acc += c; });
-    if(list.length && cents>acc){
-      var big = list.slice().sort(function(a, b){ return M[b.k]-M[a.k]; })[0];
-      st[big.k].rs = Math.round(st[big.k].rs*100 + (cents-acc))/100;
+    var cap = {}, w = {}, W = 0, B = 0;
+    var transf = RD_GROUPS.reduce(function(a, g){ return a + (g.toCmo && !el[g.k] ? Math.max(0, M[g.k]||0) : 0); }, 0);
+    list.forEach(function(g){
+      cap[g.k] = Math.round(M[g.k]*100); B += M[g.k];
+      w[g.k] = g.k==='cmo' ? (transf>0 ? transf : M[g.k]) : M[g.k];   // Pessoal absorve o peso das contas retiradas
+      W += w[g.k];
+    });
+    var cents = Math.round(Math.min(eco, B)*100), st = {}, got = {}, rest = cents, open = list.slice();
+    list.forEach(function(g){ got[g.k] = 0; });
+    for(var it=0; it<8 && rest>0 && open.length; it++){          // redistribui o que passar do gasto de alguma conta
+      var Wo = open.reduce(function(a, g){ return a + w[g.k]; }, 0), given = 0;
+      open.forEach(function(g){ var c = Math.min(cap[g.k]-got[g.k], Math.floor(w[g.k]/Wo*rest)); got[g.k] += c; given += c; });
+      rest -= given;
+      open = open.filter(function(g){ return got[g.k] < cap[g.k]; });
+      if(given===0) break;
     }
+    if(rest>0){ var byRoom = list.slice().sort(function(a, b){ return (cap[b.k]-got[b.k])-(cap[a.k]-got[a.k]); }); byRoom.forEach(function(g){ var c = Math.min(rest, cap[g.k]-got[g.k]); got[g.k] += c; rest -= c; }); }
+    list.forEach(function(g){ if(got[g.k]>0) st[g.k] = {rs:got[g.k]/100, last:'rs'}; });
     return st;
   }
   function rdPlanNumbers(t, M){
@@ -2085,7 +2096,7 @@
       RD_METAS.map(function(p, i){ return '<option value="'+i+'"'+(i===mi?' selected':'')+'>'+rdPctLabel(p)+' — '+brl0(Math.max(0, p*M.fb - M.lop))+'</option>'; }).join('')+'</select>'+
       '<button type="button" data-rd-propose="'+t+'">Gerar proposta</button><button type="button" data-rd-clear="'+t+'">Limpar</button>'+
       '<button type="button" class="primary" data-rd-fixar="'+t+'">📌 Fixar plano</button>'+(rdMsg[key]?'<span class="rd-msg rd-warn">'+rdMsg[key]+'</span>':'')+'</div>';
-    h += '<p class="rd-hint" style="margin:0 0 8px;">A proposta divide a redução entre as contas marcadas, proporcional ao gasto. Royalties e impostos nunca recebem corte automático; cartão/apps e pessoal só entram se você marcar.</p>';
+    h += '<p class="rd-hint" style="margin:0 0 8px;">A proposta divide a redução entre CMV e administrativas (proporcional ao gasto) e Pessoal, que recebe a parcela que iria para descontos, entregas, marketing e despesas a identificar — essas quatro ficam fora do plano. Royalties e impostos nunca recebem corte; cartão/apps só entra se você marcar.</p>';
     h += '<div class="table-scroll"><table><thead><tr><th>Conta</th><th>Incluir</th><th class="num">Gasto atual</th><th class="num">Redução (% da conta)</th><th class="num">Redução (R$)</th><th class="num">Novo limite mensal</th><th class="num">Redução efetiva</th></tr></thead><tbody>';
     var sumBase = 0;
     RD_GROUPS.forEach(function(g){
@@ -2240,11 +2251,11 @@
       '</div>';
     var rows = '';
     RD_GROUPS.forEach(function(g){
-      var c = porConta[g.k]; if(c.base<=0) return;
+      var c = porConta[g.k]; if(c.base<=0 || (g.toCmo && c.red<=0)) return;   // contas retiradas do plano não aparecem
       rows += '<tr><td>'+g.label+'</td><td class="num tabular">'+brl0(c.base)+'</td><td class="num tabular">'+(c.red>0 ? brl0(c.red) : '—')+'</td>'+
         '<td class="num tabular">'+(c.red>0 ? fmt2.format(c.red/c.base*100)+'%' : '—')+'</td><td class="num tabular">'+brl0(c.base - c.red)+'</td></tr>';
     });
-    var sb = 0, sr = 0; RD_GROUPS.forEach(function(g){ sb += porConta[g.k].base; sr += porConta[g.k].red; });
+    var sb = 0, sr = 0; RD_GROUPS.forEach(function(g){ var c = porConta[g.k]; if(c.base<=0 || (g.toCmo && c.red<=0)) return; sb += c.base; sr += c.red; });
     h += '<details><summary>Ver redução total por conta</summary><div class="table-scroll" style="margin-top:6px;"><table><thead><tr><th>Conta</th><th class="num">Gasto total</th><th class="num">Redução total</th><th class="num">% da conta</th><th class="num">Novo limite total</th></tr></thead><tbody>'+rows+'</tbody>'+
       '<tfoot><tr><td>Total</td><td class="num tabular">'+brl0(sb)+'</td><td class="num tabular">'+brl0(sr)+'</td><td class="num tabular">'+(sb>0?fmt2.format(sr/sb*100)+'%':'—')+'</td><td class="num tabular">'+brl0(sb-sr)+'</td></tr></tfoot></table></div></details>';
     h += '<p class="rd-hint" style="margin:8px 0 0;">A redução total é a soma do que cada loja precisa para a própria meta, mais a cota da rede quando a meta consolidada for maior. '+

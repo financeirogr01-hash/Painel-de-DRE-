@@ -637,6 +637,19 @@
   .loss-row b{font-variant-numeric:tabular-nums; text-align:right;}
   .loss-row small{font-variant-numeric:tabular-nums; text-align:right; color:var(--ink-muted); font-weight:700;}
   .loss-tot{display:flex; justify-content:space-between; font-size:12px; font-weight:800; margin-top:6px; padding-top:6px; border-top:1px dashed var(--border);}
+
+  /* Prime Cost no resumo, no mesmo modelo dos cards do sinaleiro */
+  .pcr-title{margin-top:14px;}
+  .pcr-row{display:grid; grid-template-columns:repeat(8, minmax(112px, 1fr)); gap:6px; margin-top:8px; overflow-x:auto; padding-bottom:4px;}
+  .pcr-row .sig-card{padding:8px 9px; border-radius:10px; border-left-width:3px;}
+  .pcr-row .sig-card.wide{grid-column:span 2;}
+  .pcr-row .sig-val{font-size:18px; margin-top:2px;}
+  .pcr-row .sig-name{font-size:11px; line-height:1.2; min-height:2.4em; align-items:flex-start;}
+  .pcr-row .sig-bar{height:5px; margin-top:5px;}
+  .pcr-row .sig-rm{font-size:10.5px; margin-top:4px;}
+  .pcr-row .sig-gap{font-size:10.5px; padding:1px 6px; margin-top:5px;}
+  .pcr-row .sub{font-size:10.5px; color:var(--ink-muted); margin-top:3px; line-height:1.35;}
+  .pcr-faixas{display:flex; gap:8px; margin-top:6px; font-size:12px; font-weight:800;}
 </style>
 
 <div class="page">
@@ -701,6 +714,9 @@
       <span><i class="sig-dot sig-bad"></i>Fora da meta</span>
       <span>A cor da borda e da bolinha em cada linha da DRE é a mesma do "cada R$ 100".</span>
     </div>
+
+    <div class="chart-title pcr-title" id="pcrTitle">Prime Cost (CMV + CMO)</div>
+    <div class="pcr-row" id="pcrRow"></div>
 
     <div class="grid two-col" style="margin-top:14px;">
       <div class="card lc-card">
@@ -2628,6 +2644,45 @@
       '<div class="pc-cols"><div class="rd-box"><h4>CMV — '+brl0(d.cmv)+' ('+fmt2.format(d.cmvP)+'%)</h4><table>'+hd+'<tbody>'+rows(PC_CMV_LINES)+'</tbody></table></div>'+
       '<div class="rd-box"><h4>CMO (pessoal) — '+brl0(d.cmo)+' ('+fmt2.format(d.cmoP)+'%)</h4><table>'+hd+'<tbody>'+rows(PC_CMO_LINES)+'</tbody></table></div></div></div>';
   }
+  // Prime Cost no resumo (mesmo modelo do sinaleiro); clique leva ao detalhamento na aba "As 17 lojas"
+  function renderPcResumo(){
+    var row = document.getElementById('pcrRow'); if(!row) return;
+    var s = fState.scope, m = fState.month;
+    var list = scopeStores(s).map(function(t){ return pcData(t, m); }).filter(Boolean);
+    document.getElementById('pcrTitle').textContent = 'Prime Cost (CMV + CMO) · realizado x meta · '+scopeName(s)+' · '+periodName(m);
+    if(!list.length){ row.innerHTML = '<div class="sig-card"><div class="sig-name">Prime Cost</div><div class="sub">Dados insuficientes</div></div>'; return; }
+    var A = list.length>1 || isGroupScope(s) ? pcAgg(list) : list[0];
+    var cls = pcCls(A.pc), col = pcColor(A.pc);
+    var hi = Math.max(A.pc, PC_ALERTA, 1)*1.15, px = A.pc/hi*100, mk = PC_META/hi*100;
+    var diff = A.pc - PC_META;
+    var gapTxt = (diff>0?'+':'−')+fmt1.format(Math.abs(diff))+' pp '+(diff>0?'acima':'abaixo');
+    var go = ' role="button" tabindex="0" data-pc-go="1" title="Ver o Prime Cost por loja na aba As 17 lojas"';
+    var nG = list.filter(function(d){ return pcCls(d.pc)==='sig-good'; }).length, nY = list.filter(function(d){ return pcCls(d.pc)==='sig-warn'; }).length, nR = list.length - nG - nY;
+    var h = '';
+    h += '<div class="sig-card" style="--sig-c:var(--accent)"'+go+'><div class="sig-name"><span class="cat-dot" style="background:var(--accent)"></span>Prime Cost</div>'+
+      '<div class="sig-val tabular">'+fmt1.format(A.pc)+'%</div>'+
+      '<div class="sig-bar"><span class="fill '+cls+'" style="left:0; width:'+px.toFixed(1)+'%"></span><span class="mark" style="left:calc('+mk.toFixed(1)+'% - 1px)"></span></div>'+
+      '<div class="sig-rm"><span>Meta</span><b>≤ '+PC_META+',0%</b></div>'+
+      '<span class="sig-gap '+cls+'"><i class="sig-dot '+cls+'"></i>'+gapTxt+'</span></div>';
+    h += '<div class="sig-card" style="--sig-c:var(--cat-1)"'+go+'><div class="sig-name"><span class="cat-dot" style="background:var(--cat-1)"></span>CMV no Prime Cost</div>'+
+      '<div class="sig-val tabular">'+fmt1.format(A.cmvP)+'%</div><div class="sub">'+brl0(A.cmv)+'<br>'+fmt1.format(A.cmvP/A.pc*100)+'% do Prime Cost</div></div>';
+    h += '<div class="sig-card" style="--sig-c:var(--ink-muted)"'+go+'><div class="sig-name"><span class="cat-dot" style="background:var(--ink-muted)"></span>CMO no Prime Cost</div>'+
+      '<div class="sig-val tabular">'+fmt1.format(A.cmoP)+'%</div><div class="sub">'+brl0(A.cmo)+'<br>'+fmt1.format(A.cmoP/A.pc*100)+'% do Prime Cost</div></div>';
+    h += '<div class="sig-card" style="--sig-c:var(--critical)"'+go+'><div class="sig-name"><span class="cat-dot" style="background:var(--critical)"></span>Excesso sobre a meta</div>'+
+      '<div class="sig-val tabular" style="color:'+(A.exc>0?'var(--critical)':'var(--good)')+'">'+(A.exc>0 ? brl0(A.exc) : '✓ R$ 0')+'</div><div class="sub">CMV + CMO acima de '+PC_META+'% da receita-base</div></div>';
+    if(list.length>1){
+      h += '<div class="sig-card" style="--sig-c:var(--baseline)"'+go+'><div class="sig-name"><span class="cat-dot" style="background:var(--baseline)"></span>Lojas por faixa</div>'+
+        '<div class="sig-val tabular">'+list.length+'</div><div class="pcr-faixas"><span class="sig-good">🟢 '+nG+'</span><span class="sig-warn">🟡 '+nY+'</span><span class="sig-bad">🔴 '+nR+'</span></div></div>';
+    }
+    row.innerHTML = h;
+  }
+  document.addEventListener('click', function(e){
+    if(!e.target.closest('[data-pc-go]')) return;
+    var a = document.querySelector('.tabnav a[href="#lojas"]'); if(a) a.click();
+    setTimeout(function(){ var el = document.getElementById('primeCost'); if(el){ var bar = document.getElementById('stickyBar'); window.scrollTo({top: el.getBoundingClientRect().top + window.scrollY - (bar?bar.getBoundingClientRect().height:0) - 8, behavior:'smooth'}); } }, 60);
+  });
+  document.addEventListener('keydown', function(e){ if((e.key==='Enter'||e.key===' ') && e.target.closest && e.target.closest('[data-pc-go]')){ e.preventDefault(); e.target.click(); } });
+
   function renderPrimeCost(){
     var tb = document.querySelector('#pcTable tbody'); if(!tb) return;
     var s = fState.scope, m = fState.month;
@@ -2715,6 +2770,7 @@
     renderCompare();
     renderFatNecessario();
     renderPrimeCost();
+    renderPcResumo();
   }
   renderFiltered();
 

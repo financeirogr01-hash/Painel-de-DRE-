@@ -1474,7 +1474,7 @@
     opex:     {label:'OPEX', color:'#3fb6c6', base:'fli', dir:'low', g:1, y:2},   // meta ≤1% (já usada nos KPIs da DRE Voxel); faixa amarela até 2% provisória
     cartao:   {label:'Cartão + apps', color:'var(--cat-3)', base:'fb', dir:'low', g:10, y:13},
     desc:     {label:'Descontos', color:'var(--cat-4)', base:'fb', dir:'low', g:3, y:6},
-    roy:      {label:'Royalties + marketing', color:'var(--cat-5)', base:'fb', dir:'low', g:9, y:12},
+    roy:      {label:'Royalties', color:'var(--cat-5)', base:'fb', dir:'low', g:9, y:12},
     entregas: {label:'Entregas + devoluções', color:'var(--cat-6)', base:'fb', dir:'low', g:2, y:3},
     cmo:      {label:'Pessoal (CMO)', color:'var(--ink-muted)', base:'fli', dir:'low', g:22, y:25},
     mc:       {label:'Margem de contribuição', color:'var(--accent)', base:'flt', dir:'high', g:50, y:40},
@@ -1816,7 +1816,7 @@
     var html = '';
     BN_CATS.forEach(function(c){
       var v = M[c.k] || 0, per = (v/M.fb*100) || 0;
-      html += '<div class="bn" data-go="'+c.k+'" role="button" tabindex="0" title="Ver '+c.label+' na DRE"><div class="bn-label"><span class="swatch" style="background:'+c.color+'"></span>'+c.label+'</div>'+
+      html += '<div class="bn" data-go="'+(c.k==='cf' ? 'cfTotal' : c.k)+'" role="button" tabindex="0" title="Ver '+c.label+' na DRE"><div class="bn-label"><span class="swatch" style="background:'+c.color+'"></span>'+c.label+'</div>'+
         '<div class="bn-value tabular">R$ '+fmt2.format(per)+'</div>'+
         '<span class="sig-pill '+sigClass(c.k, sigPct(c.k, M))+'"'+(c.k==='cf'?' title="Custos fixos sem pessoal, sobre o faturamento líquido"':'')+'><i class="sig-dot '+sigClass(c.k, sigPct(c.k, M))+'"></i><span class="tabular">'+fmt1.format(c.k==='cf' ? sigPct('cf', M) : per)+'%</span><span class="sig-meta">'+(c.k==='cf'?'sem pessoal · ':'')+sigMeta(c.k)+'</span></span>'+
         '<div class="bn-sub tabular">'+brl0(-v)+' no período</div></div>';
@@ -2859,26 +2859,44 @@
 
   // Clique num card do sinaleiro / big number -> rola até a linha correspondente da DRE Voxel,
   // abrindo os grupos necessários e destacando a linha.
+  // Destino de cada card na DRE Voxel. Indicadores que somam várias contas (CF sem pessoal e OPEX)
+  // destacam todas as contas que os compõem; os demais vão para a linha-total correspondente.
+  var GO_TARGETS = {
+    cmv:      ['CMV - Custo da Mercadoria Vendida'],
+    cmo:      ['Despesas com Pessoal'],
+    cf:       ['Aluguel e Condomínio','Água e Energia','Gás de Cozinha','Aluguel de Equipamentos','Segurança, Telefonia e Internet','Softwares e Terceirizados','Limpeza e Higiene','Materiais de Escritório','Tarifas Bancárias'],
+    opex:     ['Manutenção Predial e de Equipamentos','Transporte','Outras Despesas Administrativas','Despesas a Identificar','Despesas com Marketing','Pacote Anúncios Ifood'],
+    roy:      ['Royalties','Taxa de Marketing','Taxa Administrativa'],
+    desc:     ['Descontos'],
+    entregas: ['Despesas com entregas','Devoluções de Vendas'],
+    cartao:   ['Taxas de Cartão e Apps de Delivery'],
+    cfTotal:  ['Custos Fixos'],
+    mc:       ['Margem de Contribuição'],
+    lop:      ['Lucro/Prejuízo Operacional']
+  };
   function goToDreLine(k){
-    var line = null;
-    Object.keys(SIG_LINES).forEach(function(l){ if(!line && SIG_LINES[l].k===k && SIG_LINES[l].sig) line = l; });
-    if(!line) Object.keys(SIG_LINES).forEach(function(l){ if(!line && SIG_LINES[l].k===k) line = l; });
-    if(!line) return;
+    var lines = GO_TARGETS[k]; if(!lines) return;
     var tbody = document.querySelector('#voxelTable tbody');
-    var row = null;
+    var rows = [];
     Array.prototype.forEach.call(tbody.querySelectorAll('tr'), function(tr){
-      var t = tr.querySelector('.voxel-label-text'); if(!row && t && (t.getAttribute('data-line')||t.textContent)===line) row = tr;
+      var t = tr.querySelector('.voxel-label-text'); if(t && lines.indexOf(t.getAttribute('data-line')||t.textContent) > -1) rows.push(tr);
     });
-    if(!row) return;
-    var chain = [], p = row.getAttribute('data-parent');
-    while(p){ var pr = tbody.querySelector('tr[data-id="'+p+'"]'); if(!pr) break; chain.unshift(pr); p = pr.getAttribute('data-parent'); }
-    chain.forEach(function(pr){ var b = pr.querySelector('.voxel-expand[data-toggle]'); if(b && b.textContent!=='▾') b.click(); });
+    if(!rows.length) return;
+    // abre todos os grupos necessários (pais e avós) de cada linha-alvo
+    rows.forEach(function(row){
+      var chain = [], p = row.getAttribute('data-parent');
+      while(p){ var pr = tbody.querySelector('tr[data-id="'+p+'"]'); if(!pr) break; chain.unshift(pr); p = pr.getAttribute('data-parent'); }
+      chain.forEach(function(pr){ var bt = pr.querySelector('.voxel-expand[data-toggle]'); if(bt && bt.textContent!=='▾') bt.click(); });
+    });
     Array.prototype.forEach.call(tbody.querySelectorAll('tr.row-flash'), function(tr){ tr.classList.remove('row-flash'); });
-    void row.offsetWidth; row.classList.add('row-flash');
-    clearTimeout(goToDreLine._t); goToDreLine._t = setTimeout(function(){ row.classList.remove('row-flash'); }, 2400);
-    // centraliza a linha descontando a barra fixa (menu + filtros)
+    rows.forEach(function(row){ void row.offsetWidth; row.classList.add('row-flash'); });
+    clearTimeout(goToDreLine._t); goToDreLine._t = setTimeout(function(){ rows.forEach(function(row){ row.classList.remove('row-flash'); }); }, 2600);
+    // centraliza o bloco destacado, descontando a barra fixa (menu + filtros)
+    var first = rows[0], last = rows[rows.length-1];
     var bar = document.getElementById('stickyBar'), barH = bar ? bar.getBoundingClientRect().height : 0;
-    var y = row.getBoundingClientRect().top + window.scrollY - barH - Math.max(0, (window.innerHeight - barH)/2 - row.offsetHeight);
+    var top = first.getBoundingClientRect().top + window.scrollY, bottom = last.getBoundingClientRect().bottom + window.scrollY;
+    var avail = window.innerHeight - barH, blockH = bottom - top;
+    var y = top - barH - Math.max(12, (avail - blockH)/2);
     window.scrollTo({top: Math.max(0, y), behavior: 'smooth'});
   }
   document.addEventListener('click', function(e){

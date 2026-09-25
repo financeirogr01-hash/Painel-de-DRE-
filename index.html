@@ -655,6 +655,10 @@
   .pcr-detail{margin-top:10px;}
   .pcr-detail[hidden]{display:none;}
   .pcr-detail .pc-table td.hl, .pcr-detail .pc-table th.hl{background:color-mix(in srgb, var(--accent) 12%, transparent);}
+  /* Prime Cost: cards centralizados, com a mesma largura dos cards do sinaleiro */
+  .pcr-row{display:flex; flex-wrap:nowrap; justify-content:center;}
+  .pcr-row .sig-card{flex:0 0 calc((100% - 42px)/8); min-width:112px;}
+  @media (max-width:900px){ .pcr-row{justify-content:flex-start;} }
 </style>
 
 <div class="page">

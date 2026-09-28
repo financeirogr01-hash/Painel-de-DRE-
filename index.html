@@ -279,7 +279,8 @@
 
   .voxel-note{font-size:12.5px; color:var(--ink-muted); background:var(--surface-2); border:1px solid var(--border); border-radius:10px; padding:9px 12px; margin-top:10px;}
 
-  table.voxel-table{table-layout:fixed; min-width:960px;}
+  table.voxel-table{table-layout:fixed; min-width:1080px;}
+  .voxel-table td.avg-col, .voxel-table th.avg-col{color:var(--ink-2); font-style:italic;}
   table.voxel-table th:first-child, table.voxel-table td:first-child{width:38%; white-space:normal;}
   .voxel-cell{display:flex; align-items:baseline; gap:6px;}
   .voxel-row.level-0 td{font-weight:700;}
@@ -774,6 +775,7 @@
             <th class="num">Jul</th>
             <th class="num">Ago</th>
             <th class="num">Acumulado</th>
+            <th class="num avg-col" id="voxelAvgHeader" title="Acumulado ÷ número de meses com dados">Média mensal</th>
             <th class="num" id="voxelPctHeader">% Fat.Líq.</th>
             <th class="num sig-cell" id="voxelSigHeader" style="width:70px;">Sinal</th>
           </tr>
@@ -1652,12 +1654,16 @@
         }
         var mkAcc = (cmvAcc!==null && fliAcc!==null && cmvAcc!==0) ? (fliAcc/Math.abs(cmvAcc)) : null;
         cells += '<td class="num tabular">'+(mkAcc===null?'—':mkAcc.toFixed(2).replace('.',',')+'x')+'</td>';
+        cells += '<td class="num tabular avg-col">'+(mkAcc===null?'—':mkAcc.toFixed(2).replace('.',',')+'x')+'</td>';
         cells += '<td class="num tabular" style="color:var(--ink-muted);">—</td>';
       } else {
         var vals = voxelGetVals(voxelActiveScope, node.l);
         vals.forEach(function(v){ cells += '<td class="num tabular">'+(v===null?'—':voxelBRL(v))+'</td>'; });
         var rowAcc = voxelAcc(vals);
         cells += '<td class="num tabular">'+(rowAcc===null?'—':voxelBRL(rowAcc))+'</td>';
+        // média mensal = acumulado ÷ meses com dados (Biggs 13 só tem agosto)
+        var nMes = vals.filter(function(v){ return v!==null && v!==undefined; }).length;
+        cells += '<td class="num tabular avg-col">'+(rowAcc===null || !nMes ? '—' : voxelBRL(rowAcc/nMes))+'</td>';
         var pctV = (rowAcc!==null && baseAcc && baseAcc!==0) ? (rowAcc/baseAcc*100) : null;
         cells += '<td class="num tabular" style="color:var(--ink-muted);">'+(pctV===null?'—':voxelPct1(pctV))+'</td>';
       }

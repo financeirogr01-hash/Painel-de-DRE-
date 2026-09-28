@@ -662,6 +662,15 @@
   @media (max-width:900px){ .pcr-row{justify-content:flex-start;} }
   .kpi-desp{font-size:11.5px; color:var(--ink-2); margin-top:4px; cursor:help;}
   .kpi-desp b{color:var(--ink); font-variant-numeric:tabular-nums;}
+
+  /* composição consolidada do CMV / CMO (clique nos cards do Prime Cost) */
+  .pcr-comp{border:1px solid var(--border); border-left:4px solid var(--c); border-radius:12px; background:var(--surface); padding:10px 12px; margin-bottom:10px;}
+  .pcr-comp h4{margin:0 0 6px; font-size:13px; font-weight:800;}
+  .pcr-comp table{width:100%; font-size:12.5px;}
+  .pcr-comp td, .pcr-comp th{padding:5px 6px; white-space:nowrap;}
+  .pcr-comp .bar{height:6px; border-radius:3px; background:var(--surface-2); min-width:80px; overflow:hidden;}
+  .pcr-comp .bar span{display:block; height:100%; background:var(--c); border-radius:3px;}
+  .pcr-comp tfoot td{font-weight:800; border-top:2px solid var(--border);}
 </style>
 
 <div class="page">
@@ -730,6 +739,7 @@
     <div class="chart-title pcr-title" id="pcrTitle">Prime Cost (CMV + CMO)</div>
     <div class="pcr-row" id="pcrRow"></div>
     <div class="pcr-detail" id="pcrDetail" hidden>
+      <div id="pcrComp"></div>
       <div class="table-scroll">
         <table class="pc-table" id="pcrTable">
           <thead><tr><th>Unidade</th><th class="num" data-c="base">Receita-base</th><th class="num" data-c="cmv">CMV R$ e %</th><th class="num" data-c="cmo">CMO R$ e %</th><th class="num" data-c="pc">Prime Cost %</th><th class="num" data-c="pc">Desvio (p.p.)</th><th class="num" data-c="exc">Excesso em R$</th><th data-c="faixa">Status</th></tr></thead>
@@ -2714,10 +2724,37 @@
     renderPcrDetail(list, A, m);
   }
   var pcrOpen = null, pcrOpenStore = {};
+  // composição consolidada (soma das lojas do filtro) das contas de CMV ou de CMO, com comparação ao mês anterior
+  function pcrCompHtml(kind, list, A, m){
+    var lines = kind==='cmv' ? PC_CMV_LINES : PC_CMO_LINES, total = kind==='cmv' ? A.cmv : A.cmo;
+    var color = kind==='cmv' ? 'var(--cat-1)' : 'var(--ink-muted)', title = kind==='cmv' ? 'Composição do CMV' : 'Composição do CMO (pessoal)';
+    var prevList = m>0 ? list.map(function(d){ return pcData(d.t, m-1); }).filter(Boolean) : [];
+    var prevBase = prevList.reduce(function(a, d){ return a + d.base; }, 0);
+    var prevName = m>0 ? VOXEL_MONTH_LABELS[m-1].toLowerCase() : '';
+    var rows = lines.map(function(l){
+      var v = list.reduce(function(a, d){ return a + (pcLine(d.t, l, m)||0); }, 0);
+      var pv = prevList.length ? prevList.reduce(function(a, d){ return a + (pcLine(d.t, l, m-1)||0); }, 0) : null;
+      return {l:l, v:v, p:v/A.base*100, share: total ? v/total*100 : 0, pp: (pv!==null && prevBase) ? v/A.base*100 - pv/prevBase*100 : null};
+    }).filter(function(x){ return Math.abs(x.v) > 0.5; }).sort(function(a, b){ return b.v - a.v; });
+    var soma = rows.reduce(function(a, x){ return a + x.v; }, 0);
+    var h = '<div class="pcr-comp" style="--c:'+color+'"><h4>'+title+' — '+scopeName(fState.scope)+' · '+periodName(m)+'</h4><div class="table-scroll"><table><thead><tr>'+
+      '<th>Conta</th><th class="num">R$</th><th class="num">% da receita-base</th><th class="num">% do '+(kind==='cmv'?'CMV':'CMO')+'</th><th></th><th class="num">vs. '+(prevName||'mês ant.')+'</th></tr></thead><tbody>';
+    rows.forEach(function(x){
+      h += '<tr><td>'+x.l+'</td><td class="num tabular">'+brl0(x.v)+'</td><td class="num tabular">'+fmt2.format(x.p)+'%</td><td class="num tabular">'+fmt1.format(x.share)+'%</td>'+
+        '<td><div class="bar"><span style="width:'+Math.min(100, Math.max(0, x.share)).toFixed(1)+'%"></span></div></td>'+
+        '<td class="num tabular">'+(x.pp===null ? '—' : '<span class="'+(x.pp>0.005?'rd-bad':(x.pp<-0.005?'rd-ok':''))+'">'+(x.pp>=0?'+':'−')+fmt2.format(Math.abs(x.pp))+' pp</span>')+'</td></tr>';
+    });
+    h += '</tbody><tfoot><tr><td>Total '+(kind==='cmv'?'CMV':'CMO')+'</td><td class="num tabular">'+brl0(soma)+'</td><td class="num tabular">'+fmt2.format(soma/A.base*100)+'%</td><td class="num tabular">100%</td><td></td><td></td></tr></tfoot></table></div>'+
+      (Math.abs(soma - total) > 1 ? '<p class="rd-hint rd-warn">⚠ As contas somam '+brl2(soma)+' e a linha da DRE é '+brl2(total)+' — classificação a conferir.</p>' : '')+
+      '<p class="rd-hint" style="margin:6px 0 0;">Receita-base = faturamento líquido de itens ('+brl0(A.base)+'). "vs. mês anterior" compara o % da receita em pontos percentuais (vermelho = aumentou).</p></div>';
+    return h;
+  }
   function renderPcrDetail(list, A, m){
     var box = document.getElementById('pcrDetail'); if(!box) return;
     if(!pcrOpen){ box.hidden = true; return; }
     box.hidden = false;
+    var comp = document.getElementById('pcrComp');
+    if(comp) comp.innerHTML = (pcrOpen==='cmv' || pcrOpen==='cmo') ? pcrCompHtml(pcrOpen, list, A, m) : '';
     Array.prototype.forEach.call(box.querySelectorAll('th[data-c]'), function(th){ th.classList.toggle('hl', th.getAttribute('data-c')===pcrOpen); });
     function hl(c){ return c===pcrOpen ? ' hl' : ''; }
     var rows = list.slice().sort(function(a, b){ return a.ordem - b.ordem; }), html = '';
@@ -2737,7 +2774,7 @@
       html += '<tr class="pc-total"><td>Consolidado ('+rows.length+' lojas)</td><td class="num tabular">'+brl0(A.base)+'</td><td class="num tabular">'+brl0(A.cmv)+'<small>'+fmt2.format(A.cmvP)+'%</small></td><td class="num tabular">'+brl0(A.cmo)+'<small>'+fmt2.format(A.cmoP)+'%</small></td>'+
         '<td class="num tabular" style="color:'+pcColor(A.pc)+'">'+fmt2.format(A.pc)+'%</td><td class="num tabular">'+(A.dev>=0?'+':'−')+fmt2.format(Math.abs(A.dev))+'</td><td class="num tabular">'+(A.exc>0?brl0(A.exc):'—')+'</td><td>'+pcStatus(A.pc)+'</td></tr>';
     }
-    box.querySelector('tbody').innerHTML = html;
+    document.querySelector('#pcrTable tbody').innerHTML = html;
   }
   document.addEventListener('click', function(e){
     var c = e.target.closest('[data-pc-go]');

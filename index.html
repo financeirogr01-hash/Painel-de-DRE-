@@ -676,6 +676,9 @@
   .pctop-panel[hidden]{display:none;}
   @media (max-width:900px){ .pctop-panel{grid-template-columns:1fr;} }
   .pctop-panel .pcr-comp{margin-bottom:0;}
+
+  .ri-cell{background:color-mix(in srgb, var(--good) 6%, transparent);}
+  .ri-flip{display:inline-block; font-size:10px; font-weight:800; color:#fff; background:var(--good); border-radius:5px; padding:0 5px; margin-left:4px;}
 </style>
 
 <div class="page">
@@ -954,6 +957,7 @@
             <th class="num" title="Quanto o CMV acima do ideal custou em R$ no mês (desvio × faturamento líquido)">Desvio financeiro (R$)</th>
             <th class="num">Marg. contrib.</th>
             <th class="num">Resultado</th>
+            <th class="num ri-cell" title="Resultado operacional se o CMV fosse igual ao CMV ideal (resultado + desvio financeiro do CMV)">Resultado c/ CMV ideal</th>
             <th title="Equilíbrio líquido — DRE atual: faturamento líquido x ponto de equilíbrio Voxel">Equilíbrio líquido</th>
           </tr>
         </thead>
@@ -3340,13 +3344,23 @@
       var resultadoCell = '<td class="num tabular res">'+
         '<div>'+brl(s.lucro_operacional)+'</div>'+
         '<div style="font-size:11px;">'+pct(s.pct_lucro_operacional)+(incomplete?'*':'')+'</div></td>';
+      // resultado se o CMV fosse o ideal = resultado atual + desvio financeiro (lojas sem CMV ideal ficam como estão)
+      var riCell;
+      if(cmv){
+        var ri = s.lucro_operacional + cmv.impacto, riPct = fatShown ? ri/fatShown*100 : 0;
+        riCell = '<td class="num tabular ri-cell" title="'+brl(s.lucro_operacional)+' + '+brl(cmv.impacto)+' de desvio do CMV">'+
+          '<div style="font-weight:800; color:'+(ri<0?'var(--critical)':'var(--good)')+';">'+brl(ri)+(s.lucro_operacional<0 && ri>=0 ? '<span class="ri-flip">vira positivo</span>' : '')+'</div>'+
+          '<div style="font-size:11px; color:'+(ri<0?'var(--critical)':'var(--good)')+';">'+pct(riPct)+'</div></td>';
+      } else {
+        riCell = '<td class="num tabular ri-cell" style="color:var(--ink-muted);">sem CMV ideal</td>';
+      }
       tr.innerHTML = '<td><b>'+s.label+'</b></td>'+
         '<td>'+s.legal+'</td>'+
         '<td class="num tabular">'+brl(fatShown)+fatFlag+'</td>'+
         '<td class="num tabular">'+fmt1.format(s.pct_cmv)+(incomplete?'*':'')+'%</td>'+
         cmvIdealCell + desvioImpactoCell +
         '<td class="num tabular">'+fmt1.format(s.pct_margem_contrib)+(incomplete?'*':'')+'%</td>'+
-        resultadoCell +
+        resultadoCell + riCell +
         '<td>'+peCell+flag+'</td>';
       tbody.appendChild(tr);
     });
@@ -3354,8 +3368,10 @@
     // totais do desvio financeiro (média ponderada pelo faturamento líquido)
     function tot(list){
       var fat=0, imp=0, real=0, ideal=0;
-      list.forEach(function(d){ fat+=d.fat; imp+=d.impacto; real+=d.fat*d.real/100; ideal+=d.fat*d.ideal/100; });
-      return {n:list.length, fat:fat, imp:imp, real:real/fat*100, ideal:ideal/fat*100, pp:(real-ideal)/fat*100};
+      var lop = 0;
+      list.forEach(function(d){ fat+=d.fat; imp+=d.impacto; real+=d.fat*d.real/100; ideal+=d.fat*d.ideal/100;
+        var st = stores.filter(function(x){ return x.label===d.label; })[0]; if(st) lop += st.lucro_operacional; });
+      return {n:list.length, fat:fat, imp:imp, real:real/fat*100, ideal:ideal/fat*100, pp:(real-ideal)/fat*100, lop:lop, ri:lop+imp};
     }
     function totRow(label, t, cls){
       var dc = dvClass(t.pp);
@@ -3365,12 +3381,19 @@
         '<td class="num tabular">'+fmt2.format(t.ideal)+'%</td>'+
         '<td class="num tabular" style="color:'+DV_COLOR[dc]+';">+'+fmt2.format(t.pp)+' pp</td>'+
         '<td class="num tabular" style="color:'+DV_COLOR[dc]+';">+'+brl(t.imp)+'</td>'+
-        '<td colspan="3" style="color:var(--ink-muted); font-weight:600;">'+t.n+' lojas · média ponderada</td></tr>';
+        '<td style="color:var(--ink-muted); font-weight:600;">'+t.n+' lojas</td>'+
+        '<td class="num tabular" style="color:'+(t.lop<0?'var(--critical)':'var(--good)')+';">'+brl(t.lop)+'</td>'+
+        '<td class="num tabular ri-cell" style="color:'+(t.ri<0?'var(--critical)':'var(--good)')+';">'+brl(t.ri)+'</td>'+
+        '<td style="color:var(--ink-muted); font-weight:600;">média ponderada</td></tr>';
     }
     var bgs = cmvPerf.filter(function(d){ return d.label.indexOf('Biggs')===0; });
     var isa = cmvPerf.filter(function(d){ return d.label.indexOf('Isaías')===0; });
     var tfoot = document.createElement('tfoot');
-    tfoot.innerHTML = totRow('Total Biggs (01–13)', tot(bgs), 'sub') + totRow('Total Isaías (01–03)', tot(isa), 'sub') + totRow('Total geral com CMV ideal (sem Robs e Mapoli)', tot(cmvPerf));
+    var TT = tot(cmvPerf), lopRede = stores.reduce(function(a, x){ return a + x.lucro_operacional; }, 0), riRede = lopRede + TT.imp;
+    tfoot.innerHTML = totRow('Total Biggs (01–13)', tot(bgs), 'sub') + totRow('Total Isaías (01–03)', tot(isa), 'sub') + totRow('Total geral com CMV ideal (sem Robs e Mapoli)', TT) +
+      '<tr><td colspan="8">Rede completa (17 lojas) — Robs e Mapoli entram com o resultado atual</td>'+
+      '<td class="num tabular" style="color:'+(lopRede<0?'var(--critical)':'var(--good)')+';">'+brl(lopRede)+'</td>'+
+      '<td class="num tabular ri-cell" style="color:'+(riRede<0?'var(--critical)':'var(--good)')+';">'+brl(riRede)+'</td><td></td></tr>';
     document.getElementById('storeTable').appendChild(tfoot);
 
     // card de destaque acima do gráfico de lojas
@@ -3383,7 +3406,8 @@
         '<div class="card kpi"><div class="kpi-label">Desvio financeiro do CMV (ago)</div>'+
         '<div class="kpi-value tabular" style="color:var(--critical)">+'+brl(T.imp)+'</div>'+
         '<div class="kpi-sub">'+acima+' de '+T.n+' lojas acima do CMV ideal · +'+fmt2.format(T.pp)+' pp na média · maiores: '+
-          top.slice(0,3).map(function(d){ return d.label+' '+brl(d.impacto); }).join(', ')+'</div></div>');
+          top.slice(0,3).map(function(d){ return d.label+' '+brl(d.impacto); }).join(', ')+'</div>'+
+        '<div class="kpi-sub" style="margin-top:6px; color:var(--ink-2);">Com o CMV no ideal, o resultado da rede iria de <b style="color:'+(lopRede<0?'var(--critical)':'var(--good)')+'">'+brl(lopRede)+'</b> para <b style="color:'+(riRede<0?'var(--critical)':'var(--good)')+'">'+brl(riRede)+'</b>.</div></div>');
     }
   })();
 

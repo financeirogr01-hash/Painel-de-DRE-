@@ -660,6 +660,8 @@
   .pcr-row{display:flex; flex-wrap:nowrap; justify-content:center;}
   .pcr-row .sig-card{flex:0 0 calc((100% - 42px)/8); min-width:112px;}
   @media (max-width:900px){ .pcr-row{justify-content:flex-start;} }
+  .kpi-desp{font-size:11.5px; color:var(--ink-2); margin-top:4px; cursor:help;}
+  .kpi-desp b{color:var(--ink); font-variant-numeric:tabular-nums;}
 </style>
 
 <div class="page">
@@ -1842,7 +1844,12 @@
         chip = '<span class="chip '+(d>=0?'good':'critical')+'">'+(d>=0?'+':'−')+fmt1.format(Math.abs(d))+' pp vs. '+VOXEL_MONTH_LABELS[m-1].toLowerCase()+'</span>';
       }
     }
-    html += kpiCard('Resultado operacional', brl0(M.lop), M.lop<0?'var(--critical)':'var(--good)', pct(M.pctLop)+' do faturamento bruto', chip);
+    // despesas totais = faturamento bruto − resultado (descontos + custos variáveis + custos fixos)
+    var despT = M.fb - M.lop, varT = M.flt - M.mc;
+    var despTip = 'Descontos '+brl0(M.desc)+' + custos variáveis '+brl0(varT)+' + custos fixos '+brl0(M.cf)+' = '+brl0(despT);
+    html += kpiCard('Resultado operacional', brl0(M.lop), M.lop<0?'var(--critical)':'var(--good)',
+      pct(M.pctLop)+' do faturamento bruto'+
+      '<div class="kpi-desp" title="'+despTip+'">Faturamento '+brl0(M.fb)+' − despesas <b>'+brl0(despT)+'</b> ('+fmt1.format(despT/M.fb*100)+'%)</div>', chip);
     if(isRede){
       var neg = lojas.filter(function(x){ return x.lop<0; }).length;
       var abaixo = lojas.filter(function(x){ return !x.peOk; }).length;

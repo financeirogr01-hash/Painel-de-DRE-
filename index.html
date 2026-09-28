@@ -942,29 +942,29 @@
     <div class="table-scroll" style="margin-top:14px;">
       <table id="storeTable" class="table-compact">
         <caption style="caption-side:bottom; text-align:left; font-size:12px; color:var(--ink-muted); padding:8px 10px;">
-          <span><i class="sig-dot sig-good"></i> no ideal ou abaixo</span> &nbsp;·&nbsp;
-          <span><i class="sig-dot sig-warn"></i> até 4 pp acima do ideal</span> &nbsp;·&nbsp;
-          <span><i class="sig-dot sig-bad"></i> mais de 4 pp acima do ideal</span> &nbsp;·&nbsp;
-          Desvio financeiro = (CMV real − CMV ideal) × faturamento líquido do mês.
+          <span><i class="sig-dot sig-good"></i> no teórico ou abaixo</span> &nbsp;·&nbsp;
+          <span><i class="sig-dot sig-warn"></i> até 4 pp acima do teórico</span> &nbsp;·&nbsp;
+          <span><i class="sig-dot sig-bad"></i> mais de 4 pp acima do teórico</span> &nbsp;·&nbsp;
+          Desvio financeiro = (CMV real − CMV teórico) × faturamento líquido do mês.
         </caption>
         <thead>
           <tr>
             <th>Loja</th><th>Razão social</th>
             <th class="num">Fat. líquido*</th>
             <th class="num">CMV %</th>
-            <th class="num">CMV Ideal</th>
+            <th class="num">CMV Teórico</th>
             <th class="num">Desvio CMV (pp)</th>
-            <th class="num" title="Quanto o CMV acima do ideal custou em R$ no mês (desvio × faturamento líquido)">Desvio financeiro (R$)</th>
+            <th class="num" title="Quanto o CMV acima do teórico custou em R$ no mês (desvio × faturamento líquido)">Desvio financeiro (R$)</th>
             <th class="num">Marg. contrib.</th>
             <th class="num">Resultado</th>
-            <th class="num ri-cell" title="Resultado operacional se o CMV fosse igual ao CMV ideal (resultado + desvio financeiro do CMV)">Resultado c/ CMV ideal</th>
+            <th class="num ri-cell" title="Resultado operacional se o CMV fosse igual ao CMV teórico (resultado + desvio financeiro do CMV)">Resultado c/ CMV teórico</th>
             <th title="Equilíbrio líquido — DRE atual: faturamento líquido x ponto de equilíbrio Voxel">Equilíbrio líquido</th>
           </tr>
         </thead>
         <tbody></tbody>
       </table>
     </div>
-    <p class="chart-note" style="margin-top:8px;">Em vermelho: lojas com prejuízo em pelo menos 3 dos últimos 4 meses (mai–ago) — candidatas prioritárias a plano de recuperação individual: <b>Biggs 06, Biggs 10, Mapoli e Isaías 01</b> (negativas nos 4 meses); <b>Biggs 03, 04, 07/Açaí, 08 e 09, Isaías 02, Isaías 03 e Robs</b> (negativas em 3 dos 4 meses). CMV Ideal/Desvio/Impacto: fonte <code>Analise_CMV_Alimentar</code> (Biggs) e <code>Analise_CMV_Rede_Isaias</code> — CMV Ideal = custo de ficha técnica aplicado ao mix real de vendas do mês; Desvio = CMV Real − CMV Ideal; Impacto = quanto isso representou em R$ sobre o faturamento. Robs e Mapoli aparecem com "—" nessas três colunas — ainda não têm CMV Ideal calculado. *Faturamento: líquido de itens (convenção do DRE Voxel). Na Biggs 13 o líquido é igual ao bruto, porque a planilha dela informa descontos de R$ 0; seu CMV Ideal usa o proxy de Biggs 04.</p>
+    <p class="chart-note" style="margin-top:8px;">Em vermelho: lojas com prejuízo em pelo menos 3 dos últimos 4 meses (mai–ago) — candidatas prioritárias a plano de recuperação individual: <b>Biggs 06, Biggs 10, Mapoli e Isaías 01</b> (negativas nos 4 meses); <b>Biggs 03, 04, 07/Açaí, 08 e 09, Isaías 02, Isaías 03 e Robs</b> (negativas em 3 dos 4 meses). CMV Teórico/Desvio/Impacto: fonte <code>Analise_CMV_Alimentar</code> (Biggs) e <code>Analise_CMV_Rede_Isaias</code> — CMV Teórico = custo de ficha técnica aplicado ao mix real de vendas do mês; Desvio = CMV Real − CMV Teórico; Impacto = quanto isso representou em R$ sobre o faturamento. Robs e Mapoli aparecem com "—" nessas três colunas — ainda não têm CMV Teórico calculado. *Faturamento: líquido de itens (convenção do DRE Voxel). Na Biggs 13 o líquido é igual ao bruto, porque a planilha dela informa descontos de R$ 0; seu CMV Teórico usa o proxy de Biggs 04.</p>
   </section>
 
   <section id="criticos">
@@ -1018,31 +1018,31 @@
     </div>
 
     <div class="section-head" style="margin-top:32px;">
-      <h3 style="font-size:17px; font-weight:800;">CMV Real x Ideal — performance por loja (ago/26)</h3>
-      <span class="section-sub">15 das 17 lojas com CMV Ideal calculado (Biggs 01–13 e Isaías 01–03; Biggs 13 usa proxy de Biggs 04) · CMV Ideal = custo de ficha técnica de cada prato aplicado sobre o mix de vendas real do mês; Desvio = CMV Real − CMV Ideal</span>
+      <h3 style="font-size:17px; font-weight:800;">CMV Real x Teórico — performance por loja (ago/26)</h3>
+      <span class="section-sub">15 das 17 lojas com CMV Teórico calculado (Biggs 01–13 e Isaías 01–03; Biggs 13 usa proxy de Biggs 04) · CMV Teórico = custo de ficha técnica de cada prato aplicado sobre o mix de vendas real do mês; Desvio = CMV Real − CMV Teórico</span>
     </div>
 
     <div class="grid kpi-row" style="grid-template-columns:repeat(3,1fr);">
       <div class="card kpi">
         <div class="kpi-label">Impacto financeiro do desvio</div>
         <div class="kpi-value tabular" style="color:var(--critical)">R$ 705.599</div>
-        <div class="kpi-sub">consumido em agosto por CMV acima do ideal, somando as 15 lojas analisadas</div>
+        <div class="kpi-sub">consumido em agosto por CMV acima do teórico, somando as 15 lojas analisadas</div>
       </div>
       <div class="card kpi">
         <div class="kpi-label">Maior desvio</div>
         <div class="kpi-value tabular" style="color:var(--critical)">Biggs 06 · +20,8 p.p.</div>
-        <div class="kpi-sub">R$ 56.608 de CMV acima do ideal só nessa loja</div>
+        <div class="kpi-sub">R$ 56.608 de CMV acima do teórico só nessa loja</div>
       </div>
       <div class="card kpi">
-        <div class="kpi-label">Única loja dentro do ideal</div>
+        <div class="kpi-label">Única loja dentro do teórico</div>
         <div class="kpi-value tabular" style="color:var(--good)">Biggs 11 · -0,1 p.p.</div>
         <div class="kpi-sub">referência interna de execução de cardápio</div>
       </div>
     </div>
 
     <div class="card" style="margin-top:12px;">
-      <div class="chart-title">Desvio de CMV Real vs. Ideal, por loja (pontos percentuais)</div>
-      <div class="chart-note">Positivo = CMV realizado acima do que o cardápio precifica como ideal · passe o mouse para ver o impacto financeiro</div>
+      <div class="chart-title">Desvio de CMV Real vs. Teórico, por loja (pontos percentuais)</div>
+      <div class="chart-note">Positivo = CMV realizado acima do que o cardápio precifica como teórico · passe o mouse para ver o impacto financeiro</div>
       <svg id="cmvChart" class="divchart" viewBox="0 0 720 441" preserveAspectRatio="xMidYMid meet"></svg>
     </div>
 
@@ -1053,7 +1053,7 @@
             <th>Loja</th>
             <th class="num">Fat. líquido</th>
             <th class="num">CMV Real</th>
-            <th class="num">CMV Ideal</th>
+            <th class="num">CMV Teórico</th>
             <th class="num">Desvio</th>
             <th class="num">Impacto (R$)</th>
           </tr>
@@ -1061,8 +1061,8 @@
         <tbody></tbody>
       </table>
     </div>
-    <p class="chart-note" style="margin-top:10px;">Biggs 05, 06 e 07/Açaí compartilham o mesmo cardápio informado — o CMV Ideal é o mesmo proxy para as três, então parte do desvio de cada uma pode refletir diferenças reais de mix entre lojas, não só execução. Biggs 08 e 09: CMV Ideal é a média ponderada dos dois cardápios (o DRE só informa o resultado das duas unidades juntas). *Biggs 13 ainda não tem cardápio próprio precificado — o CMV Ideal usado é o mesmo proxy de Biggs 04 (a loja com cardápio mais próximo disponível), então o desvio dela é uma estimativa, não um cálculo específico da unidade. †O "faturamento líquido" de Biggs 13 é na verdade o faturamento bruto — o DRE dela não discrimina essa linha, e o CMV real também é calculado sobre essa base — então a comparação com as demais lojas não é 100% 1:1. Robs e Mapoli ainda não têm CMV Ideal calculado e não entram nesta análise.</p>
-    <p class="chart-note" style="margin-top:6px;"><b>Isaías:</b> o CMV já realizado no cardápio (ficha técnica) está em 31,2% — perto do ideal de 30,2% e bem abaixo do CMV das DREs das 3 lojas (43,7% ponderado). Isso indica que a maior parte do desvio de Isaías vem de perdas, compras ou operação — não da precificação do cardápio. Vale checar a mesma hipótese nas lojas Biggs com maior desvio.</p>
+    <p class="chart-note" style="margin-top:10px;">Biggs 05, 06 e 07/Açaí compartilham o mesmo cardápio informado — o CMV Teórico é o mesmo proxy para as três, então parte do desvio de cada uma pode refletir diferenças reais de mix entre lojas, não só execução. Biggs 08 e 09: CMV Teórico é a média ponderada dos dois cardápios (o DRE só informa o resultado das duas unidades juntas). *Biggs 13 ainda não tem cardápio próprio precificado — o CMV Teórico usado é o mesmo proxy de Biggs 04 (a loja com cardápio mais próximo disponível), então o desvio dela é uma estimativa, não um cálculo específico da unidade. †O "faturamento líquido" de Biggs 13 é na verdade o faturamento bruto — o DRE dela não discrimina essa linha, e o CMV real também é calculado sobre essa base — então a comparação com as demais lojas não é 100% 1:1. Robs e Mapoli ainda não têm CMV Teórico calculado e não entram nesta análise.</p>
+    <p class="chart-note" style="margin-top:6px;"><b>Isaías:</b> o CMV já realizado no cardápio (ficha técnica) está em 31,2% — perto do teórico de 30,2% e bem abaixo do CMV das DREs das 3 lojas (43,7% ponderado). Isso indica que a maior parte do desvio de Isaías vem de perdas, compras ou operação — não da precificação do cardápio. Vale checar a mesma hipótese nas lojas Biggs com maior desvio.</p>
 
     <div class="callout" style="margin-top:18px;">
       <h3>Outras informações que valem observar</h3>
@@ -1179,7 +1179,7 @@
   // equilíbrio (R$ 866.732), mas o líquido (R$ 776.380) não passa e o resultado de agosto é negativo.
   stores.forEach(function(st){ if(st.ponto_equilibrio!==null){ st.abaixo_equilibrio = st.lucro_operacional < 0; } });
 
-  // CMV Real x Ideal por loja (ago/26) — fonte: Analise_CMV_Alimentar (Biggs) + Analise_CMV_Rede_Isaias.
+  // CMV Real x Teórico por loja (ago/26) — fonte: Analise_CMV_Alimentar (Biggs) + Analise_CMV_Rede_Isaias.
   // "fat" = Faturamento Líquido de Itens (base do % CMV de cada DRE); para Biggs 13 é Faturamento Bruto,
   // pois o DRE dela não discrimina líquido (mesma ressalva do restante do painel). Ordem: desvio decrescente.
   var cmvPerf = [
@@ -3339,12 +3339,12 @@
             '<div class="dv-bar"><span class="'+dc+'" style="width:'+(Math.abs(cmv.impacto)/maxImp*100).toFixed(1)+'%"></span></div></td>';
       } else {
         cmvIdealCell = '<td class="num tabular" style="color:var(--ink-muted);">—</td>';
-        desvioImpactoCell = '<td class="num tabular" style="color:var(--ink-muted);">—</td><td class="num tabular" style="color:var(--ink-muted);">sem CMV ideal</td>';
+        desvioImpactoCell = '<td class="num tabular" style="color:var(--ink-muted);">—</td><td class="num tabular" style="color:var(--ink-muted);">sem CMV teórico</td>';
       }
       var resultadoCell = '<td class="num tabular res">'+
         '<div>'+brl(s.lucro_operacional)+'</div>'+
         '<div style="font-size:11px;">'+pct(s.pct_lucro_operacional)+(incomplete?'*':'')+'</div></td>';
-      // resultado se o CMV fosse o ideal = resultado atual + desvio financeiro (lojas sem CMV ideal ficam como estão)
+      // resultado se o CMV fosse o teórico = resultado atual + desvio financeiro (lojas sem CMV teórico ficam como estão)
       var riCell;
       if(cmv){
         var ri = s.lucro_operacional + cmv.impacto, riPct = fatShown ? ri/fatShown*100 : 0;
@@ -3352,7 +3352,7 @@
           '<div style="font-weight:800; color:'+(ri<0?'var(--critical)':'var(--good)')+';">'+brl(ri)+(s.lucro_operacional<0 && ri>=0 ? '<span class="ri-flip">vira positivo</span>' : '')+'</div>'+
           '<div style="font-size:11px; color:'+(ri<0?'var(--critical)':'var(--good)')+';">'+pct(riPct)+'</div></td>';
       } else {
-        riCell = '<td class="num tabular ri-cell" style="color:var(--ink-muted);">sem CMV ideal</td>';
+        riCell = '<td class="num tabular ri-cell" style="color:var(--ink-muted);">sem CMV teórico</td>';
       }
       tr.innerHTML = '<td><b>'+s.label+'</b></td>'+
         '<td>'+s.legal+'</td>'+
@@ -3390,7 +3390,7 @@
     var isa = cmvPerf.filter(function(d){ return d.label.indexOf('Isaías')===0; });
     var tfoot = document.createElement('tfoot');
     var TT = tot(cmvPerf), lopRede = stores.reduce(function(a, x){ return a + x.lucro_operacional; }, 0), riRede = lopRede + TT.imp;
-    tfoot.innerHTML = totRow('Total Biggs (01–13)', tot(bgs), 'sub') + totRow('Total Isaías (01–03)', tot(isa), 'sub') + totRow('Total geral com CMV ideal (sem Robs e Mapoli)', TT) +
+    tfoot.innerHTML = totRow('Total Biggs (01–13)', tot(bgs), 'sub') + totRow('Total Isaías (01–03)', tot(isa), 'sub') + totRow('Total geral com CMV teórico (sem Robs e Mapoli)', TT) +
       '<tr><td colspan="8">Rede completa (17 lojas) — Robs e Mapoli entram com o resultado atual</td>'+
       '<td class="num tabular" style="color:'+(lopRede<0?'var(--critical)':'var(--good)')+';">'+brl(lopRede)+'</td>'+
       '<td class="num tabular ri-cell" style="color:'+(riRede<0?'var(--critical)':'var(--good)')+';">'+brl(riRede)+'</td><td></td></tr>';
@@ -3405,13 +3405,13 @@
       box.insertAdjacentHTML('beforeend',
         '<div class="card kpi"><div class="kpi-label">Desvio financeiro do CMV (ago)</div>'+
         '<div class="kpi-value tabular" style="color:var(--critical)">+'+brl(T.imp)+'</div>'+
-        '<div class="kpi-sub">'+acima+' de '+T.n+' lojas acima do CMV ideal · +'+fmt2.format(T.pp)+' pp na média · maiores: '+
+        '<div class="kpi-sub">'+acima+' de '+T.n+' lojas acima do CMV teórico · +'+fmt2.format(T.pp)+' pp na média · maiores: '+
           top.slice(0,3).map(function(d){ return d.label+' '+brl(d.impacto); }).join(', ')+'</div>'+
-        '<div class="kpi-sub" style="margin-top:6px; color:var(--ink-2);">Com o CMV no ideal, o resultado da rede iria de <b style="color:'+(lopRede<0?'var(--critical)':'var(--good)')+'">'+brl(lopRede)+'</b> para <b style="color:'+(riRede<0?'var(--critical)':'var(--good)')+'">'+brl(riRede)+'</b>.</div></div>');
+        '<div class="kpi-sub" style="margin-top:6px; color:var(--ink-2);">Com o CMV no teórico, o resultado da rede iria de <b style="color:'+(lopRede<0?'var(--critical)':'var(--good)')+'">'+brl(lopRede)+'</b> para <b style="color:'+(riRede<0?'var(--critical)':'var(--good)')+'">'+brl(riRede)+'</b>.</div></div>');
     }
   })();
 
-  // ---------------- CMV Real x Ideal chart ----------------
+  // ---------------- CMV Real x Teórico chart ----------------
   (function(){
     var svg = document.getElementById('cmvChart');
     var W=720, rowH=26, gap=3, padL=170, padR=90, padT=6;
@@ -3444,8 +3444,8 @@
       var color = d.biggs13 ? 'var(--warning)' : tierColor(d.desvio);
       var rect = el('rect',{x:x0, y:cy+3, width:Math.max(barW,1.5), height:rowH-6, rx:4, fill:color, class:'div-bar'});
       rect.addEventListener('mousemove', function(evt){
-        var tip = '<b>'+d.label+'</b><br>CMV Real: '+fmt1.format(d.real)+'% · CMV Ideal: '+fmt1.format(d.ideal)+'%<br>Desvio: '+(d.desvio>0?'+':'')+fmt1.format(d.desvio)+' p.p.<br>Impacto: '+brl(d.impacto);
-        if(d.biggs13){ tip += '<br><b style="color:#ffd27a;">CMV Ideal = proxy do cardápio de Biggs 04; base = faturamento bruto (não líquido)</b>'; }
+        var tip = '<b>'+d.label+'</b><br>CMV Real: '+fmt1.format(d.real)+'% · CMV Teórico: '+fmt1.format(d.ideal)+'%<br>Desvio: '+(d.desvio>0?'+':'')+fmt1.format(d.desvio)+' p.p.<br>Impacto: '+brl(d.impacto);
+        if(d.biggs13){ tip += '<br><b style="color:#ffd27a;">CMV Teórico = proxy do cardápio de Biggs 04; base = faturamento bruto (não líquido)</b>'; }
         showTip(evt, tip);
       });
       rect.addEventListener('mouseleave', hideTip);
@@ -3468,7 +3468,7 @@
     });
   })();
 
-  // ---------------- CMV Real x Ideal table ----------------
+  // ---------------- CMV Real x Teórico table ----------------
   (function(){
     var tbody = document.querySelector('#cmvTable tbody');
     cmvPerf.slice().sort(function(a, b){ return voxelTabsList.indexOf(a.label) - voxelTabsList.indexOf(b.label); }).forEach(function(d){

@@ -1848,9 +1848,14 @@
       html += kpiCard('Equilíbrio líquido — DRE atual', M.pe===null ? '—' : brl0(M.pe), null, peSub,
         '<span class="chip '+(M.peOk?'good':'critical')+'">'+(M.peOk?'atingido':'não atingido')+'</span>');
     }
-    var dc = M.pctCmv - 31;
-    html += kpiCard(s==='Consolidado' ? 'CMV da rede' : (isBrandScope(s) ? 'CMV da marca' : 'CMV'), fmt1.format(M.pctCmv)+'%', null, 'Meta ≤31,0% (CMV ideal) · sobre faturamento líquido',
-      '<span class="chip '+(dc>0.05?'critical':'good')+'">'+(dc>0.05 ? '+'+fmt1.format(dc)+'pp acima da meta' : 'dentro da meta')+'</span>');
+    // Prime Cost (CMV + CMO) no lugar do card de CMV — mesma conta da seção Prime Cost (soma ÷ soma, base fat. líquido)
+    var pcL = grupo.map(function(t){ return pcData(t, m); }).filter(Boolean), PCa = pcL.length>1 ? pcAgg(pcL) : pcL[0];
+    if(PCa){
+      var dpc = PCa.pc - PC_META, pcl = pcCls(PCa.pc);
+      html += kpiCard((s==='Consolidado' ? 'Prime Cost da rede' : (isBrandScope(s) ? 'Prime Cost da marca' : 'Prime Cost'))+' (CMV + CMO)', fmt1.format(PCa.pc)+'%', pcColor(PCa.pc),
+        'CMV '+fmt1.format(PCa.cmvP)+'% + CMO '+fmt1.format(PCa.cmoP)+'% · meta ≤'+PC_META+'% · sobre faturamento líquido',
+        '<span class="chip '+(pcl==='sig-good'?'good':(pcl==='sig-warn'?'warning':'critical'))+'">'+(dpc>0.05 ? '+'+fmt1.format(dpc)+'pp acima da meta' : 'dentro da meta')+'</span>');
+    }
     box.innerHTML = html;
     renderLossPanel(isRede ? grupo : []);
   }

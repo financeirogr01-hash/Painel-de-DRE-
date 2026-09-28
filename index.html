@@ -671,6 +671,11 @@
   .pcr-comp .bar{height:6px; border-radius:3px; background:var(--surface-2); min-width:80px; overflow:hidden;}
   .pcr-comp .bar span{display:block; height:100%; background:var(--c); border-radius:3px;}
   .pcr-comp tfoot td{font-weight:800; border-top:2px solid var(--border);}
+
+  .pctop-panel{display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:10px;}
+  .pctop-panel[hidden]{display:none;}
+  @media (max-width:900px){ .pctop-panel{grid-template-columns:1fr;} }
+  .pctop-panel .pcr-comp{margin-bottom:0;}
 </style>
 
 <div class="page">
@@ -723,6 +728,7 @@
 
     <div class="grid kpi-row" id="resumoKpis"></div>
     <div class="loss-panel" id="lossPanel" hidden></div>
+    <div class="pctop-panel" id="pcTopPanel" hidden></div>
 
 
     <div class="chart-title" style="margin-top:18px;" id="sigTitle">Sinaleiro da DRE</div>
@@ -1877,11 +1883,21 @@
       var dpc = PCa.pc - PC_META, pcl = pcCls(PCa.pc);
       html += kpiCard((s==='Consolidado' ? 'Prime Cost da rede' : (isBrandScope(s) ? 'Prime Cost da marca' : 'Prime Cost'))+' (CMV + CMO)', fmt1.format(PCa.pc)+'%', pcColor(PCa.pc),
         'CMV '+fmt1.format(PCa.cmvP)+'% + CMO '+fmt1.format(PCa.cmoP)+'% · meta ≤'+PC_META+'% · sobre faturamento líquido',
-        '<span class="chip '+(pcl==='sig-good'?'good':(pcl==='sig-warn'?'warning':'critical'))+'">'+(dpc>0.05 ? '+'+fmt1.format(dpc)+'pp acima da meta' : 'dentro da meta')+'</span>');
+        '<span class="chip '+(pcl==='sig-good'?'good':(pcl==='sig-warn'?'warning':'critical'))+'">'+(dpc>0.05 ? '+'+fmt1.format(dpc)+'pp acima da meta' : 'dentro da meta')+'</span>'+
+        '<div class="kpi-hint">'+(pcTopOpen ? 'Ocultar composição ▴' : 'Ver composição do CMV e do CMO ▾')+'</div>')
+        .replace('<div class="card kpi">', '<div class="card kpi kpi-click" id="pcTopCard" role="button" tabindex="0" aria-expanded="'+pcTopOpen+'" aria-controls="pcTopPanel">');
     }
     box.innerHTML = html;
     renderLossPanel(isRede ? grupo : []);
+    var pp = document.getElementById('pcTopPanel');
+    if(pp){
+      if(pcTopOpen && PCa){ pp.innerHTML = pcrCompHtml('cmv', pcL, PCa, m) + pcrCompHtml('cmo', pcL, PCa, m); pp.hidden = false; }
+      else { pp.hidden = true; pp.innerHTML = ''; }
+    }
   }
+  var pcTopOpen = false;
+  document.addEventListener('click', function(e){ if(e.target.closest('#pcTopCard')){ pcTopOpen = !pcTopOpen; renderResumo(); } });
+  document.addEventListener('keydown', function(e){ if((e.key==='Enter' || e.key===' ') && e.target.id==='pcTopCard'){ e.preventDefault(); pcTopOpen = !pcTopOpen; renderResumo(); var c = document.getElementById('pcTopCard'); if(c) c.focus(); } });
   var lossOpen = false;
   function renderLossPanel(grupo){
     var p = document.getElementById('lossPanel'); if(!p) return;

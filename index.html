@@ -1882,7 +1882,7 @@
     document.getElementById('resumoTitle').textContent = (s==='Consolidado' ? 'Resumo da rede' : 'Resumo — '+scopeName(s)) + ' · ' + periodName(m);
     var aviso = document.getElementById('mesAberto');
     if(aviso) aviso.hidden = !(m===VOXEL_MES_ABERTO || m===-1);
-    if(aviso) aviso.innerHTML = m===-1 ? '⚠ O acumulado inclui <b>setembro</b>, que ainda está em aberto (base exportada em 30/09): pessoal, despesas e CMV de setembro estão incompletos.' : '⚠ <b>Setembro em aberto</b> — base exportada em 30/09. Pessoal e despesas administrativas estão em ~70% e o CMV em ~81% do nível de agosto; o resultado deste mês ainda vai piorar quando os lançamentos forem concluídos.';
+    if(aviso) aviso.innerHTML = m===-1 ? '⚠ O acumulado inclui <b>setembro</b>, que ainda está em aberto (base exportada em 30/09): pessoal, despesas e CMV de setembro estão incompletos.' : '⚠ <b>Setembro em aberto</b> — base exportada em 30/09. Pessoal e despesas administrativas estão em ~70% e o CMV em ~81% do nível de agosto.';
     var box = document.getElementById('resumoKpis');
     if(!M){ box.innerHTML = '<div class="card kpi" style="grid-column:1/-1;">Sem dados de '+scopeName(s)+' em '+periodName(m)+'.</div>'; return; }
     var grupo = scopeStores(s);

@@ -772,6 +772,9 @@
   .dre-ctx{display:flex; flex-direction:column; gap:2px; text-transform:none; letter-spacing:0;}
   .dre-ctx b{font-size:13px; font-weight:800; color:var(--ink);}
   .dre-ctx span{font-size:11px; font-weight:600; color:var(--accent);}
+  .loss-flip{display:inline-block; margin-left:8px; font-size:10.5px; font-weight:800; padding:1px 7px; border-radius:999px; vertical-align:1px;}
+  .loss-flip.up{background:color-mix(in srgb, var(--good) 22%, transparent); color:var(--good);}
+  .loss-flip.down{background:color-mix(in srgb, var(--critical) 22%, transparent); color:var(--critical);}
 </style>
 
 <div class="page">
@@ -2376,7 +2379,15 @@
   function renderLossPanel(grupo){
     var p = document.getElementById('lossPanel'); if(!p) return;
     var m = fState.month;
-    var L = grupo.map(function(t){ var M = storeMetrics(t, m); return M ? {t:t, lop:M.lop, pct:M.lop/M.fb*100} : null; }).filter(Boolean);
+    var L = grupo.map(function(t){ var M = storeMetrics(t, m), P = (M && m>0) ? storeMetrics(t, m-1) : null; return M ? {t:t, lop:M.lop, pct:M.lop/M.fb*100, prev:P ? P.lop : null} : null; }).filter(Boolean);
+    var prevLbl = m>0 ? VOXEL_MONTH_LABELS[m-1].toLowerCase() : '';
+    // lojas que trocaram de lado em relação ao mês anterior
+    function virou(x){
+      if(x.prev===null) return '';
+      if(x.prev<0 && x.lop>=0) return '<span class="loss-flip up" title="Em '+prevLbl+': '+brl0(x.prev)+'">↑ virou positivo vs. '+prevLbl+'</span>';
+      if(x.prev>=0 && x.lop<0) return '<span class="loss-flip down" title="Em '+prevLbl+': '+brl0(x.prev)+'">↓ virou negativo vs. '+prevLbl+'</span>';
+      return '';
+    }
     if(!lossOpen || !L.length){ p.hidden = true; p.innerHTML = ''; return; }
     var neg = L.filter(function(x){ return x.lop<0; }).sort(function(a, b){ return a.lop - b.lop; });
     var pos = L.filter(function(x){ return x.lop>=0; }).sort(function(a, b){ return b.lop - a.lop; });
@@ -2384,7 +2395,7 @@
       var tot = list.reduce(function(a, x){ return a + x.lop; }, 0);
       return '<div class="loss-col" style="--c:'+color+'"><h4>'+title+' <span>'+list.length+(list.length===1?' loja':' lojas')+'</span></h4>'+
         (list.length ? list.map(function(x){
-          return '<div class="loss-row" data-loss-store="'+x.t+'" title="Ver o resumo de '+x.t+'"><span>'+x.t+'</span><b style="color:'+color+'">'+brl0(x.lop)+'</b><small>'+pct(x.pct)+'</small></div>';
+          return '<div class="loss-row" data-loss-store="'+x.t+'" title="Ver o resumo de '+x.t+'"><span>'+x.t+virou(x)+'</span><b style="color:'+color+'">'+brl0(x.lop)+'</b><small>'+pct(x.pct)+'</small></div>';
         }).join('') : '<p class="rd-hint">Nenhuma loja.</p>')+
         '<div class="loss-tot"><span>Total</span><span style="color:'+color+'">'+brl0(tot)+'</span></div></div>';
     }

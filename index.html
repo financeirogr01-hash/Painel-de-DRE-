@@ -784,7 +784,6 @@
       <h2 id="resumoTitle">Resumo da rede — Agosto/2026</h2>
     </div>
 
-    <div class="pc-warn" id="mesAberto" hidden style="margin:0 0 10px;"></div>
     <div class="grid kpi-row" id="resumoKpis"></div>
     <div class="loss-panel" id="lossPanel" hidden></div>
     <div class="pctop-panel" id="pcTopPanel" hidden></div>
@@ -2069,9 +2068,6 @@
   function renderResumo(){
     var s = fState.scope, m = fState.month, M = storeMetrics(s, m), isRede = isGroupScope(s);
     document.getElementById('resumoTitle').textContent = (s==='Consolidado' ? 'Resumo da rede' : 'Resumo — '+scopeName(s)) + ' · ' + periodName(m);
-    var aviso = document.getElementById('mesAberto');
-    if(aviso) aviso.hidden = !(m===VOXEL_MES_ABERTO || m===-1);
-    if(aviso) aviso.innerHTML = m===-1 ? 'ℹ O acumulado inclui <b>setembro</b> das 17 lojas. Na Biggs 13, as taxas de cartão/apps de setembro são estimadas (9,5% do faturamento, mesmo % de agosto).' : 'ℹ <b>Setembro</b> — 17 lojas com os lançamentos completos do mês e faturamento pelo relatório de cupons. Na Biggs 13, as taxas de cartão/apps são estimadas (9,5% do faturamento, mesmo % de agosto) até o valor real ser informado.';
     var box = document.getElementById('resumoKpis');
     if(!M){ box.innerHTML = '<div class="card kpi" style="grid-column:1/-1;">Sem dados de '+scopeName(s)+' em '+periodName(m)+'.</div>'; return; }
     var grupo = scopeStores(s);

@@ -2401,23 +2401,27 @@
     if(!M){ grid.innerHTML = '<div class="bn">Sem dados neste período.</div>'; foot.textContent = ''; note.textContent = ''; return; }
     var n = scopeStores(s).filter(function(t){ return storeMetrics(t, m); }).length;
     note.textContent = (s==='Consolidado' ? 'Rede consolidada, '+n+' lojas' : (isBrandScope(s) ? scopeName(s)+(n>1?', '+n+' lojas':'') : s)) + ' · sobre o faturamento bruto de '+brl0(M.fb);
-    var html = '';
+    var html = '', MP = (m>0 && scopeHasData(s, m-1)) ? storeMetrics(s, m-1) : null;
+    // comparação com o mês anterior, em R$ a cada R$ 100 faturados
+    function bnVs(cur, prev, dirLow){
+      if(prev===null) return '';
+      var d = cur - prev, eq = Math.abs(d) < 0.005, good = dirLow ? d<0 : d>0;
+      return '<div class="vs-prev '+(eq?'':(good?'better':'worse'))+'"><b>'+(eq?'＝':(d>0?'▲ +':'▼ −'))+'R$ '+fmt2.format(Math.abs(d))+'</b> vs. '+VOXEL_MONTH_LABELS[m-1].toLowerCase()+' <span class="vs-was">('+(prev<0?'-':'')+'R$ '+fmt2.format(Math.abs(prev))+')</span></div>';
+    }
     BN_CATS.forEach(function(c){
-      var v = M[c.k] || 0, per = (v/M.fb*100) || 0;
+      var v = M[c.k] || 0, per = (v/M.fb*100) || 0, perP = MP ? ((MP[c.k]||0)/MP.fb*100) : null;
       html += '<div class="bn" data-go="'+(c.k==='cf' ? 'cfTotal' : c.k)+'" role="button" tabindex="0" title="Ver '+c.label+' na DRE"><div class="bn-label"><span class="swatch" style="background:'+c.color+'"></span>'+c.label+'</div>'+
-        '<div class="bn-value tabular">R$ '+fmt2.format(per)+'</div>'+
+        '<div class="bn-value tabular">R$ '+fmt2.format(per)+'</div>'+bnVs(per, perP, true)+
         '<span class="sig-pill '+sigClass(c.k, sigPct(c.k, M))+'"'+(c.k==='cf'?' title="Custos fixos sem pessoal, sobre o faturamento líquido"':'')+'><i class="sig-dot '+sigClass(c.k, sigPct(c.k, M))+'"></i><span class="tabular">'+fmt1.format(c.k==='cf' ? sigPct('cf', M) : per)+'%</span><span class="sig-meta">'+(c.k==='cf'?'sem pessoal · ':'')+sigMeta(c.k)+'</span></span>'+
         '<div class="bn-sub tabular">'+brl0(-v)+' no período</div></div>';
     });
     var perRes = M.lop/M.fb*100;
     var rc = sigClass('lop', perRes);
     html += '<div class="bn result" data-go="lop" role="button" tabindex="0" title="Ver resultado operacional na DRE"><div><div class="bn-label">Resultado operacional</div><div class="bn-sub tabular">'+brl0(M.lop)+' no período</div>'+
-      '<span class="sig-pill '+rc+'"><i class="sig-dot '+rc+'"></i><span class="tabular">'+pct(perRes)+'</span><span class="sig-meta">'+sigMeta('lop')+'</span></span></div>'+
+      '<span class="sig-pill '+rc+'"><i class="sig-dot '+rc+'"></i><span class="tabular">'+pct(perRes)+'</span><span class="sig-meta">'+sigMeta('lop')+'</span></span>'+(MP ? bnVs(perRes, MP.lop/MP.fb*100, false) : '')+'</div>'+
       '<div class="bn-value tabular" style="color:'+(perRes<0?'var(--critical)':'var(--good)')+'">'+(perRes<0?'-':'+')+'R$ '+fmt2.format(Math.abs(perRes))+' <span class="bn-sub" style="font-weight:600;">a cada R$ 100</span></div></div>';
     grid.innerHTML = html;
-    var inclB13 = s==='Biggs 13' || (isGroupScope(s) && scopeStores(s).indexOf('Biggs 13')>-1 && (b13Has(m) || m===-1));
-    foot.textContent = !inclB13 ? '' : (s==='Biggs 13' ? 'A planilha da Biggs 13 informa descontos de R$ 0 — vale confirmar se o faturamento já vem líquido de descontos.' :
-      'A Biggs 13 entra com descontos de R$ 0, como informado na planilha dela.');
+    foot.textContent = '';
   }
 
   // better: 'high' = maior é melhor, 'low' = menor é melhor, null = neutro

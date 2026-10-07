@@ -775,6 +775,16 @@
   .loss-flip{display:inline-block; margin-left:8px; font-size:10.5px; font-weight:800; padding:1px 7px; border-radius:999px; vertical-align:1px;}
   .loss-flip.up{background:color-mix(in srgb, var(--good) 22%, transparent); color:var(--good);}
   .loss-flip.down{background:color-mix(in srgb, var(--critical) 22%, transparent); color:var(--critical);}
+
+  /* DRE: % do faturamento e variação vs. mês anterior em cada mês */
+  .voxel-table td.num small.dc{display:block; font-size:10.5px; font-weight:600; line-height:1.3; color:var(--ink-muted); font-style:normal; letter-spacing:0; text-transform:none;}
+  .voxel-table td.num small.dc.good{color:var(--good);}
+  .voxel-table td.num small.dc.bad{color:var(--critical);}
+  .voxel-table td.num small.dflip{display:inline-block; margin-top:2px; font-size:9.5px; font-weight:800; padding:1px 6px; border-radius:999px; text-transform:none; letter-spacing:0;}
+  .voxel-table td.num small.dflip.good{background:color-mix(in srgb, var(--good) 22%, transparent); color:var(--good);}
+  .voxel-table td.num small.dflip.bad{background:color-mix(in srgb, var(--critical) 22%, transparent); color:var(--critical);}
+  #voxelTable thead th.num{white-space:normal;}
+  #voxelTable thead th .thsub{display:block; font-size:9.5px; font-weight:600; color:var(--ink-muted); text-transform:none; letter-spacing:0; line-height:1.25;}
 </style>
 
 <div class="page">
@@ -886,7 +896,7 @@
     <div class="voxel-tabs" id="voxelTabs" style="margin-top:14px;"></div>
 
     <div class="dre-tools">
-      <span class="dre-tools-hint">Clique num plano de contas para ver o que o compõe · linhas zeradas ficam ocultas</span>
+      <span class="dre-tools-hint">Em cada mês: <b>valor em R$</b> · <b>% do faturamento</b> (bruto do mês) · <b>vs. mês anterior</b> — nas margens: margem % e <b>Δ margem (p.p.)</b>. Seta = aumento/redução; cor = melhora (verde) ou piora (vermelho). Clique num plano de contas para ver o que o compõe.</span>
       <button type="button" class="dre-tool-btn" id="dreExpandAll">Expandir tudo</button>
       <button type="button" class="dre-tool-btn" id="dreCollapseAll">Recolher tudo</button>
     </div>
@@ -895,18 +905,18 @@
         <thead>
           <tr>
             <th><span id="voxelHeadCtx" class="dre-ctx">Plano de contas</span></th>
-            <th class="num">Jan</th>
-            <th class="num">Fev</th>
-            <th class="num">Mar</th>
-            <th class="num">Abr</th>
-            <th class="num">Mai</th>
-            <th class="num">Jun</th>
-            <th class="num">Jul</th>
-            <th class="num">Ago</th>
-            <th class="num">Set</th>
-            <th class="num">Acumulado</th>
+            <th class="num" title="Valor em R$ · % do faturamento bruto do mês · variação vs. mês anterior">Jan<span class="thsub">R$ · % do fat. · vs. mês ant.</span></th>
+            <th class="num" title="Valor em R$ · % do faturamento bruto do mês · variação vs. mês anterior">Fev<span class="thsub">R$ · % do fat. · vs. mês ant.</span></th>
+            <th class="num" title="Valor em R$ · % do faturamento bruto do mês · variação vs. mês anterior">Mar<span class="thsub">R$ · % do fat. · vs. mês ant.</span></th>
+            <th class="num" title="Valor em R$ · % do faturamento bruto do mês · variação vs. mês anterior">Abr<span class="thsub">R$ · % do fat. · vs. mês ant.</span></th>
+            <th class="num" title="Valor em R$ · % do faturamento bruto do mês · variação vs. mês anterior">Mai<span class="thsub">R$ · % do fat. · vs. mês ant.</span></th>
+            <th class="num" title="Valor em R$ · % do faturamento bruto do mês · variação vs. mês anterior">Jun<span class="thsub">R$ · % do fat. · vs. mês ant.</span></th>
+            <th class="num" title="Valor em R$ · % do faturamento bruto do mês · variação vs. mês anterior">Jul<span class="thsub">R$ · % do fat. · vs. mês ant.</span></th>
+            <th class="num" title="Valor em R$ · % do faturamento bruto do mês · variação vs. mês anterior">Ago<span class="thsub">R$ · % do fat. · vs. mês ant.</span></th>
+            <th class="num" title="Valor em R$ · % do faturamento bruto do mês · variação vs. mês anterior">Set<span class="thsub">R$ · % do fat. · vs. mês ant.</span></th>
+            <th class="num" title="Soma do período · % sobre o faturamento bruto acumulado">Acumulado<span class="thsub">R$ · % do fat.</span></th>
             <th class="num avg-col" id="voxelAvgHeader" title="Acumulado ÷ número de meses com dados">Média mensal</th>
-            <th class="num" id="voxelPctHeader">% Fat.Líq.</th>
+            <th class="num" id="voxelPctHeader">% do faturamento</th>
             <th class="num sig-cell" id="voxelSigHeader" style="width:70px;">Sinal</th>
           </tr>
         </thead>
@@ -2053,6 +2063,47 @@
     document.getElementById('sigPanel').innerHTML = html;
   }
 
+  // linhas de margem (variação em p.p.) e linhas neutras (movimentações de caixa: sem cor de melhora/piora)
+  var DRE_MARGEM = {'Margem de Contribuição':1,'Lucro/Prejuízo Operacional':1,'Lucro/Prejuízo Líquido':1};
+  var DRE_NEUTRO = {'Empréstimos, Aportes e Retiradas':1,'Empréstimos - Entrada':1,'Empréstimos - Saída':1,'Aportes':1,'Retiradas de Lucro':1,
+    'Reembolso':1,'Reembolso taxa de transação iFood benefícios':1,'Reembolso taxa de serviço iFood':1,'Ressarcimento de Pedido Cancelado':1,'Reembolso de Cobrança de Frete':1,
+    'Resultado Líquido de Empréstimos, Aportes e Retiradas':1,'Outras Entradas e Saídas':1,'Transferências de Saída':1,'Transferências de Entrada':1,'Saldo Inicial':1,'Ajuste de Caixa':1,
+    'Estoque Inicial':1,'Estoque Final':1};
+  // célula do mês: valor em R$; abaixo, % do faturamento bruto e comparação com o mês calendário anterior
+  function dreCell(v, prev, fb, fbPrev, kind, node, i){
+    if(v===null || v===undefined) return '—';
+    var h = voxelBRL(v);
+    if(node.ind) return h;                                   // indicador (equilíbrio): sem % e sem variação
+    var mesAnt = i>0 ? VOXEL_MONTH_LABELS[i-1].toLowerCase() : '';
+    var temFb = fb!==null && fb!==undefined && Math.abs(fb)>0.5;
+    if(kind==='margem'){
+      var mg = temFb ? v/fb*100 : null;
+      h += '<small class="dc">'+(mg===null ? '—' : 'margem '+fmt1.format(mg)+'%')+'</small>';
+      if(i<0) return h;
+      var temP = prev!==null && prev!==undefined && fbPrev!==null && fbPrev!==undefined && Math.abs(fbPrev)>0.5;
+      if(!temP || mg===null){ return h + '<small class="dc" title="Δ margem (p.p.) vs. mês anterior">Δ —</small>'; }
+      var mp = prev/fbPrev*100, d = mg - mp;
+      var cls = Math.abs(d)<0.05 ? '' : (d>0 ? ' good' : ' bad');
+      h += '<small class="dc'+cls+'" title="Δ margem (p.p.) vs. '+mesAnt+': '+fmt1.format(mp)+'% → '+fmt1.format(mg)+'%">'+(Math.abs(d)<0.05 ? '＝ 0,0 p.p.' : (d>0?'▲ +':'▼ −')+fmt1.format(Math.abs(d))+' p.p.')+'</small>';
+      if(prev<0 && v>=0) h += '<small class="dflip good">Virada para lucro</small>';
+      else if(prev>=0 && v<0) h += '<small class="dflip bad">Virada para prejuízo</small>';
+      return h;
+    }
+    h += '<small class="dc" title="% do faturamento bruto">'+(temFb ? fmt1.format(v/fb*100)+'%' : '—')+'</small>';
+    if(i<0) return h;
+    var vs = '—', cls2 = '', tip = 'vs. mês anterior';
+    if(prev!==null && prev!==undefined && Math.abs(prev)>=0.5 && (v<=0)===(prev<=0)){
+      var desp = v<=0 && prev<=0 && !(v===0 && prev===0);    // despesas (negativas): compara o valor absoluto
+      var ch = (Math.abs(v)/Math.abs(prev) - 1)*100;
+      if(Math.abs(ch)<0.05) vs = '＝ 0,0%';
+      else {
+        vs = (ch>0?'▲ +':'▼ −')+fmt1.format(Math.abs(ch))+'%';
+        if(kind!=='neutro') cls2 = (desp ? ch<0 : ch>0) ? ' good' : ' bad';
+      }
+      tip = 'vs. '+mesAnt+': '+voxelBRL(prev)+' → '+voxelBRL(v);
+    }
+    return h + '<small class="dc'+cls2+'" title="'+tip+'">'+vs+'</small>';
+  }
   function voxelRenderTable(){
     var flat = voxelFlatten(voxelHierarchy, 0, null, []);
     var sigM = storeMetrics(voxelActiveScope, voxelActiveMonth);
@@ -2064,18 +2115,12 @@
     var cmvVals = voxelGetVals(voxelActiveScope,'CMV - Custo da Mercadoria Vendida');
     var fliAcc = voxelAcc(fliVals), cmvAcc = voxelAcc(cmvVals);
 
-    var baseAcc = fliAcc, baseLabel = '% Fat.Líq.';
-    if(baseAcc===null || voxelActiveScope==='Consolidado'){
-      // Consolidado soma a Biggs 13 (formato bruto) no acumulado — a base vira faturamento
-      // bruto das 17 lojas para ficar coerente com o card "CMV da rede" do resumo.
-      baseAcc = voxelAcc(voxelGetVals(voxelActiveScope,'Faturamento Bruto Total'));
-      baseLabel = '% Fat.Bruto';
-    }
+    // base de todos os percentuais: faturamento bruto (de cada mês, ou acumulado no acumulado)
+    var fbVals = voxelGetVals(voxelActiveScope,'Faturamento Bruto Total');
+    var baseAcc = voxelAcc(fbVals), baseLabel = '% do faturamento';
     var pctHeader = document.getElementById('voxelPctHeader');
-    if(pctHeader){
-      pctHeader.textContent = baseLabel;
-      pctHeader.title = voxelActiveScope==='Consolidado' ? 'Sobre o faturamento bruto das 17 lojas (16 do Voxel + Biggs 13)' : '';
-    }
+    if(pctHeader){ pctHeader.textContent = baseLabel; pctHeader.title = 'Acumulado da linha ÷ faturamento bruto acumulado do período'; }
+    var mesesN = fbVals.filter(function(v){ return v!==null && v!==undefined; }).length;
 
     var hc = document.getElementById('voxelHeadCtx');
     if(hc) hc.innerHTML = '<b>'+scopeName(voxelActiveScope)+'</b><span>Plano de contas · em destaque: '+periodName(voxelActiveMonth)+'</span>';
@@ -2128,14 +2173,15 @@
         var vals = voxelGetVals(voxelActiveScope, node.l);
         if(node.l==='Estoque Inicial' || node.l==='Estoque Final') vals = vals.map(function(v, i){ return ESTOQUE[i] ? v : null; });   // só há contagem nos meses de ESTOQUE
         var sgn = (node.res && node.res!=='cost' && node.res!=='rev') ? function(v){ return v===null ? '' : (v<0 ? ' neg' : ' pos'); } : function(){ return ''; };
-        vals.forEach(function(v){ cells += '<td class="num tabular'+sgn(v)+'">'+(v===null?'—':voxelBRL(v))+'</td>'; });
+        var kind = DRE_MARGEM[node.l] ? 'margem' : (DRE_NEUTRO[node.l] ? 'neutro' : 'conta');
+        vals.forEach(function(v, i){ cells += '<td class="num tabular'+sgn(v)+'">'+dreCell(v, i>0 ? vals[i-1] : null, fbVals[i], i>0 ? fbVals[i-1] : null, kind, node, i)+'</td>'; });
         var rowAcc = voxelAcc(vals);
-        cells += '<td class="num tabular'+sgn(rowAcc)+'">'+(rowAcc===null?'—':voxelBRL(rowAcc))+'</td>';
-        // média mensal = acumulado ÷ meses com dados (Biggs 13 só tem agosto)
+        cells += '<td class="num tabular'+sgn(rowAcc)+'">'+dreCell(rowAcc, null, baseAcc, null, kind, node, -1)+'</td>';
+        // média mensal = acumulado ÷ meses com dados (Biggs 13 só a partir de agosto); % = acumulado ÷ faturamento acumulado
         var nMes = vals.filter(function(v){ return v!==null && v!==undefined; }).length;
-        cells += '<td class="num tabular avg-col">'+(rowAcc===null || !nMes ? '—' : voxelBRL(rowAcc/nMes))+'</td>';
-        var pctV = (rowAcc!==null && baseAcc && baseAcc!==0) ? (rowAcc/baseAcc*100) : null;
-        cells += '<td class="num tabular" style="color:var(--ink-muted);">'+(pctV===null?'—':voxelPct1(pctV))+'</td>';
+        cells += '<td class="num tabular avg-col">'+(rowAcc===null || !nMes ? '—' : dreCell(rowAcc/nMes, null, baseAcc/nMes, null, kind, node, -1))+'</td>';
+        var pctV = (rowAcc!==null && baseAcc) ? (rowAcc/baseAcc*100) : null;
+        cells += '<td class="num tabular" style="color:var(--ink-muted);">'+(pctV===null || node.ind ? '—' : voxelPct1(pctV))+'</td>';
       }
       var sigHtml = '';
       if(map && map.sig){

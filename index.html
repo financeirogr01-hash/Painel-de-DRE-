@@ -1388,7 +1388,7 @@
   }
 
   var voxelActiveScope = 'Consolidado';
-  var voxelActiveMonth = 7; // 0=Jan … 7=Ago (padrão: último mês fechado) … 8=Set; -1=Acumulado
+  var voxelActiveMonth = VOXEL_NM - 1; // 0=Jan … 8=Set; -1=Acumulado · abre sempre no mês mais recente
   var VOXEL_MONTH_LABELS = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set'];
   function voxelPick(vals){ return voxelActiveMonth===-1 ? voxelAcc(vals) : vals[voxelActiveMonth]; }
 
@@ -1872,7 +1872,7 @@
 
   // ---------------- filtros globais (mês + loja) ----------------
   var MONTH_FULL = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro'];
-  var fState = {scope:'Consolidado', month:7};
+  var fState = {scope:'Consolidado', month:VOXEL_NM - 1};
   var cmpState = {a:'Biggs 01', b:'Biggs 02'};
   var fmt2 = new Intl.NumberFormat('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2});
   var fmt0 = new Intl.NumberFormat('pt-BR', {maximumFractionDigits:0});

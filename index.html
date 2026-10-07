@@ -1035,7 +1035,7 @@
 
   <section id="lojas">
     <div class="section-head">
-      <h2>As 17 lojas da rede — resultado operacional (ago/26)</h2>
+      <h2 id="lojasTitulo">As 17 lojas da rede — resultado operacional</h2>
     </div>
     <div class="grid kpi-row" id="lojasHighlightKpis" style="grid-template-columns:repeat(2,1fr); margin-bottom:14px;"></div>
 
@@ -1069,7 +1069,7 @@
     </div>
 
     <div class="card">
-      <div class="chart-title">Resultado operacional por loja, do melhor para o pior (ago/26)</div>
+      <div class="chart-title" id="divChartTitulo">Resultado operacional por loja, do melhor para o pior</div>
       <div class="chart-note">Agosto/2026 · ordenado do melhor para o pior resultado % · passe o mouse na barra para ver os detalhes da loja</div>
       <div class="how-to">
         <b>Como ler este gráfico</b>
@@ -1109,7 +1109,7 @@
         <tbody></tbody>
       </table>
     </div>
-    <p class="chart-note" style="margin-top:8px;">Em vermelho: lojas com prejuízo em pelo menos 3 dos últimos 4 meses (mai–ago) — candidatas prioritárias a plano de recuperação individual: <b>Biggs 06, Biggs 10, Mapoli e Isaías 01</b> (negativas nos 4 meses); <b>Biggs 03, 04, 07/Açaí, 08 e 09, Isaías 02, Isaías 03 e Robs</b> (negativas em 3 dos 4 meses). CMV Teórico/Desvio/Impacto: fonte <code>Analise_CMV_Alimentar</code> (Biggs) e <code>Analise_CMV_Rede_Isaias</code> — CMV Teórico = custo de ficha técnica aplicado ao mix real de vendas do mês; Desvio = CMV Real − CMV Teórico; Impacto = quanto isso representou em R$ sobre o faturamento. Robs e Mapoli aparecem com "—" nessas três colunas — ainda não têm CMV Teórico calculado. *Faturamento: líquido de itens (convenção do DRE Voxel). Na Biggs 13 o líquido é igual ao bruto, porque a planilha dela informa descontos de R$ 0; seu CMV Teórico usa o proxy de Biggs 04.</p>
+    <p class="chart-note" style="margin-top:8px;">A tabela segue o filtro de mês no topo. Em vermelho: lojas com prejuízo em pelo menos 3 dos 4 meses até o mês selecionado — candidatas prioritárias a plano de recuperação individual. CMV Teórico/Desvio/Impacto: fonte <code>Analise_CMV_Alimentar</code> (Biggs) e <code>Analise_CMV_Rede_Isaias</code> — CMV Teórico = custo de ficha técnica aplicado ao mix de vendas (o mesmo % vale para todos os meses); Desvio = CMV Real − CMV Teórico; Impacto = quanto isso representou em R$ sobre o faturamento. Robs e Mapoli aparecem com "—" nessas três colunas — ainda não têm CMV Teórico calculado. *Faturamento: líquido de itens (convenção do DRE Voxel). Na Biggs 13 o líquido é igual ao bruto, porque a planilha dela informa descontos de R$ 0; seu CMV Teórico usa o proxy de Biggs 04.</p>
   </section>
 
   <section id="criticos">
@@ -3337,6 +3337,7 @@
     renderPrimeCost();
     renderPcResumo();
     renderSemanal();
+    if(lojasReady) renderLojasTab();
   }
   renderFiltered();
   renderClassif();
@@ -3650,285 +3651,324 @@
     if(window.ResizeObserver){ new ResizeObserver(function(){ drawLine(); }).observe(wrapLC); } else { window.addEventListener('resize', drawLine); }
   })();
 
-  // ---------------- lojas highlight kpis ----------------
-  (function(){
-    var positivos = stores.filter(function(s){ return s.lucro_operacional>0; });
-    var comEquilibrio = stores.filter(function(s){ return s.abaixo_equilibrio===false; });
-    var semCalculo = stores.filter(function(s){ return s.abaixo_equilibrio===null || s.abaixo_equilibrio===undefined; }).length;
-    function names(list){ return list.map(function(s){ return s.label + (s.dadosIncompletos?'*':''); }).join(', '); }
-    var html = '';
-    html += '<div class="card kpi"><div class="kpi-label">Lojas com resultado positivo</div>'+
-      '<div class="kpi-value tabular" style="color:var(--good)">'+positivos.length+' <span style="font-size:15px;color:var(--ink-muted);font-weight:600;">/ '+stores.length+'</span></div>'+
-      '<div class="kpi-sub">'+names(positivos)+'</div></div>';
-    html += '<div class="card kpi"><div class="kpi-label">Lojas com equilíbrio líquido atingido</div>'+
-      '<div class="kpi-value tabular" style="color:var(--good)">'+comEquilibrio.length+' <span style="font-size:15px;color:var(--ink-muted);font-weight:600;">/ '+(stores.length-semCalculo)+'</span></div>'+
-      '<div class="kpi-sub">'+names(comEquilibrio)+'</div></div>';
-    document.getElementById('lojasHighlightKpis').innerHTML = html;
-  })();
-
-  // ---------------- diverging store chart ----------------
-  (function(){
-    var svg = document.getElementById('divChart');
-    // ordenado do melhor para o pior resultado (%) — deixa o bloco positivo x negativo visível de cara;
-    // a tabela abaixo mantém a ordem fixa Biggs 01→13, Isaías, Robs, Mapoli para consulta.
-    var storesSorted = stores.slice().sort(function(a,b){ return b.pct_lucro_operacional - a.pct_lucro_operacional; });
-    var nPos = storesSorted.filter(function(s){ return s.lucro_operacional>0; }).length;
-    var W=760, rowH=32, gap=2, padL=170, padR=90, padT=22;
-    var H = padT + storesSorted.length*(rowH+gap);
-    svg.setAttribute('viewBox','0 0 '+W+' '+H);
-    var plotL = padL, plotR = W-padR;
-    var maxAbs = Math.max.apply(null, storesSorted.map(function(s){return Math.abs(s.pct_lucro_operacional);})) * 1.22; // headroom for value labels
-    var mid = plotL + (plotR-plotL)*0.46; // zero point, leaves more room for positive side labeling balance
-    function scale(v){ return (v/maxAbs) * (Math.min(mid-plotL, plotR-mid)); }
-
-    var ns='http://www.w3.org/2000/svg';
-    function el(tag, attrs){ var e=document.createElementNS(ns,tag); for(var k in attrs) e.setAttribute(k,attrs[k]); return e; }
-
-    svg.appendChild(el('line',{x1:mid,x2:mid,y1:padT,y2:H-4,class:'div-zero'}));
-    var zeroLbl = el('text',{x:mid, y:14, 'text-anchor':'middle', class:'div-row-sub'}); zeroLbl.textContent = '0%'; svg.appendChild(zeroLbl);
-    var metaX = mid + scale(SIG.lop.g);
-    svg.appendChild(el('line',{x1:metaX,x2:metaX,y1:padT-4,y2:H-4,class:'div-meta'}));
-    var metaLbl = el('text',{x:metaX, y:14, 'text-anchor':'middle', class:'div-meta-label'}); metaLbl.textContent = 'meta '+fmt1.format(SIG.lop.g).replace(',0','')+'%'; svg.appendChild(metaLbl);
-
-    var sigCount = {'sig-good':0,'sig-warn':0,'sig-bad':0};
-    storesSorted.forEach(function(s){ sigCount[sigClass('lop', s.pct_lucro_operacional)]++; });
-    document.getElementById('divLegend').innerHTML =
-      '<span><i class="sig-dot sig-good"></i><b style="color:var(--ink)">'+sigCount['sig-good']+'</b> na meta</span>'+
-      '<span><i class="sig-dot sig-warn"></i><b style="color:var(--ink)">'+sigCount['sig-warn']+'</b> com lucro abaixo da meta</span>'+
-      '<span><i class="sig-dot sig-bad"></i><b style="color:var(--ink)">'+sigCount['sig-bad']+'</b> no prejuízo</span>';
-    var SIG_FILL = {'sig-good':'var(--good)','sig-warn':'var(--warning)','sig-bad':'var(--critical)'};
-    var SIG_TXT = {'sig-good':'#ffffff','sig-warn':'#3a2900','sig-bad':'#ffffff'};
-    var SIG_NAME = {'sig-good':'Na meta','sig-warn':'Lucro abaixo da meta','sig-bad':'Prejuízo'};
-
-    // divisor entre o bloco positivo e o negativo (contagem já aparece nos cards acima e na nota do gráfico)
-    if(nPos>0 && nPos<storesSorted.length){
-      var divY = padT + nPos*(rowH+gap) - gap/2;
-      svg.appendChild(el('line',{x1:plotL-140, x2:plotR, y1:divY, y2:divY, stroke:'var(--grid)', 'stroke-width':1.5, 'stroke-dasharray':'3,3'}));
-    }
-
-    storesSorted.forEach(function(s,i){
-      var cy = padT + i*(rowH+gap);
-      var w = scale(s.pct_lucro_operacional);
-      var neg = s.pct_lucro_operacional < 0;
-      var x0 = neg ? mid+w : mid;
-      var barW = Math.abs(w);
-      var sc = sigClass('lop', s.pct_lucro_operacional);
-      var barColor = SIG_FILL[sc];
-      var rect = el('rect',{x:x0, y:cy+4, width:Math.max(barW,1.5), height:rowH-8, rx:4, fill: barColor, class:'div-bar'});
-      rect.addEventListener('mousemove', function(evt){
-        var fatTip = (s.fat_liquido!==null && s.fat_liquido!==undefined) ? s.fat_liquido : s.fat_bruto;
-        var fatTipLabel = (s.fat_liquido!==null && s.fat_liquido!==undefined) ? 'Faturamento líquido' : 'Faturamento bruto*';
-        var tip = '<b>'+s.label+'</b> ('+s.legal+')<br>Sinal: '+SIG_NAME[sc]+' (meta ≥ '+fmt1.format(SIG.lop.g)+'%)<br>'+fatTipLabel+': '+brl(fatTip)+'<br>Resultado: '+brl(s.lucro_operacional)+' ('+pct(s.pct_lucro_operacional)+')<br>CMV: '+fmt1.format(s.pct_cmv)+'% · Margem contrib.: '+fmt1.format(s.pct_margem_contrib)+'%'+(s.abaixo_equilibrio?'<br><b style="color:#ff9d9d;">Abaixo do ponto de equilíbrio</b>':'');
-        if(s.dadosIncompletos){ tip += '<br><b style="color:#ffd27a;">DRE sem descontos discriminados — resultado pode estar superestimado</b>'; }
-        showTip(evt, tip);
-      });
-      rect.addEventListener('mouseleave', hideTip);
-      svg.appendChild(rect);
-
-      var label = el('text',{x:plotL-16, y:cy+rowH/2+4, 'text-anchor':'end', class:'div-row-label'});
-      label.textContent = s.label;
-      svg.appendChild(label);
-
-      var inside = barW > 46; // enough room to set the value inside the bar, near its outer tip
-      var labelTxt = pct(s.pct_lucro_operacional) + (s.dadosIncompletos ? '*' : '');
-      var outColor = sc==='sig-warn' ? 'var(--warning)' : SIG_FILL[sc];
-      var valText;
-      if(inside){
-        valText = el('text',{
-          x: neg ? x0+6 : x0+barW-6,
-          y: cy+rowH/2+4,
-          'text-anchor': neg ? 'start' : 'end',
-          class:'div-val tabular',
-          fill: SIG_TXT[sc]
+  // ---------------- aba "As 17 lojas": segue o filtro de mês ----------------
+  // O CMV teórico (% de ficha técnica) de cada loja vale para todos os meses; o desvio e o impacto
+  // são recalculados com o CMV real e o faturamento líquido do mês selecionado.
+  function lojasRebuild(m){
+    stores.forEach(function(st){
+      var M = storeMetrics(st.label, m);
+      st.semDados = !M;
+      if(!M){ st.fat_bruto = 0; st.fat_liquido = 0; st.pct_cmv = 0; st.pct_margem_contrib = 0; st.lucro_operacional = 0; st.pct_lucro_operacional = 0; st.ponto_equilibrio = null; st.abaixo_equilibrio = null; return; }
+      st.fat_bruto = Math.round(M.fb); st.fat_liquido = Math.round(M.fli);
+      st.pct_cmv = Math.round(M.cmv/M.fli*1000)/10; st.pct_margem_contrib = Math.round(M.mc/M.flt*1000)/10;
+      st.lucro_operacional = Math.round(M.lop); st.pct_lucro_operacional = Math.round(M.lop/M.fli*1000)/10;
+      st.ponto_equilibrio = M.pe===null ? null : Math.round(M.pe); st.abaixo_equilibrio = M.pe===null ? null : M.lop < 0;
+    });
+    cmvPerf.forEach(function(d){
+      var M = storeMetrics(d.label, m);
+      if(!M || !(M.fli>0)){ d.fat = 0; d.real = 0; d.desvio = 0; d.impacto = 0; d.semDados = true; return; }
+      d.semDados = false; d.fat = Math.round(M.fli); d.real = Math.round(M.cmv/M.fli*10000)/100;
+      d.desvio = Math.round((d.real - d.ideal)*100)/100; d.impacto = Math.round(d.desvio/100*M.fli);
+    });
+    cmvPerf.sort(function(a, b){ return b.desvio - a.desvio; });
+    return {stores: stores.filter(function(x){ return !x.semDados; }), cmv: cmvPerf.filter(function(x){ return !x.semDados; })};
+  }
+  function renderLojasTab(){
+    var m = fState.month;
+    var LJ = lojasRebuild(m), stores = LJ.stores, cmvPerf = LJ.cmv;   // lojas sem DRE no mês ficam fora
+    var per = periodName(m);
+    var h2 = document.getElementById('lojasTitulo'); if(h2) h2.textContent = 'As 17 lojas da rede — resultado operacional · '+per;
+    var ct = document.getElementById('divChartTitulo'); if(ct) ct.textContent = 'Resultado operacional por loja, do melhor para o pior · '+per;
+    ['divChart','cmvChart'].forEach(function(id){ var e = document.getElementById(id); if(e) e.innerHTML = ''; });
+    ['#storeTable tbody','#cmvTable tbody'].forEach(function(q){ var e = document.querySelector(q); if(e) e.innerHTML = ''; });
+    var tf = document.querySelector('#storeTable tfoot'); if(tf) tf.parentNode.removeChild(tf);
+    var hk = document.getElementById('lojasHighlightKpis'); if(hk) hk.innerHTML = '';
+    // ---------------- lojas highlight kpis ----------------
+    (function(){
+      var positivos = stores.filter(function(s){ return s.lucro_operacional>0; });
+      var comEquilibrio = stores.filter(function(s){ return s.abaixo_equilibrio===false; });
+      var semCalculo = stores.filter(function(s){ return s.abaixo_equilibrio===null || s.abaixo_equilibrio===undefined; }).length;
+      function names(list){ return list.map(function(s){ return s.label + (s.dadosIncompletos?'*':''); }).join(', '); }
+      var html = '';
+      html += '<div class="card kpi"><div class="kpi-label">Lojas com resultado positivo</div>'+
+        '<div class="kpi-value tabular" style="color:var(--good)">'+positivos.length+' <span style="font-size:15px;color:var(--ink-muted);font-weight:600;">/ '+stores.length+'</span></div>'+
+        '<div class="kpi-sub">'+names(positivos)+'</div></div>';
+      html += '<div class="card kpi"><div class="kpi-label">Lojas com equilíbrio líquido atingido</div>'+
+        '<div class="kpi-value tabular" style="color:var(--good)">'+comEquilibrio.length+' <span style="font-size:15px;color:var(--ink-muted);font-weight:600;">/ '+(stores.length-semCalculo)+'</span></div>'+
+        '<div class="kpi-sub">'+names(comEquilibrio)+'</div></div>';
+      document.getElementById('lojasHighlightKpis').innerHTML = html;
+    })();
+  
+    // ---------------- diverging store chart ----------------
+    (function(){
+      var svg = document.getElementById('divChart');
+      // ordenado do melhor para o pior resultado (%) — deixa o bloco positivo x negativo visível de cara;
+      // a tabela abaixo mantém a ordem fixa Biggs 01→13, Isaías, Robs, Mapoli para consulta.
+      var storesSorted = stores.slice().sort(function(a,b){ return b.pct_lucro_operacional - a.pct_lucro_operacional; });
+      var nPos = storesSorted.filter(function(s){ return s.lucro_operacional>0; }).length;
+      var W=760, rowH=32, gap=2, padL=170, padR=90, padT=22;
+      var H = padT + storesSorted.length*(rowH+gap);
+      svg.setAttribute('viewBox','0 0 '+W+' '+H);
+      var plotL = padL, plotR = W-padR;
+      var maxAbs = Math.max.apply(null, storesSorted.map(function(s){return Math.abs(s.pct_lucro_operacional);})) * 1.22; // headroom for value labels
+      var mid = plotL + (plotR-plotL)*0.46; // zero point, leaves more room for positive side labeling balance
+      function scale(v){ return (v/maxAbs) * (Math.min(mid-plotL, plotR-mid)); }
+  
+      var ns='http://www.w3.org/2000/svg';
+      function el(tag, attrs){ var e=document.createElementNS(ns,tag); for(var k in attrs) e.setAttribute(k,attrs[k]); return e; }
+  
+      svg.appendChild(el('line',{x1:mid,x2:mid,y1:padT,y2:H-4,class:'div-zero'}));
+      var zeroLbl = el('text',{x:mid, y:14, 'text-anchor':'middle', class:'div-row-sub'}); zeroLbl.textContent = '0%'; svg.appendChild(zeroLbl);
+      var metaX = mid + scale(SIG.lop.g);
+      svg.appendChild(el('line',{x1:metaX,x2:metaX,y1:padT-4,y2:H-4,class:'div-meta'}));
+      var metaLbl = el('text',{x:metaX, y:14, 'text-anchor':'middle', class:'div-meta-label'}); metaLbl.textContent = 'meta '+fmt1.format(SIG.lop.g).replace(',0','')+'%'; svg.appendChild(metaLbl);
+  
+      var sigCount = {'sig-good':0,'sig-warn':0,'sig-bad':0};
+      storesSorted.forEach(function(s){ sigCount[sigClass('lop', s.pct_lucro_operacional)]++; });
+      document.getElementById('divLegend').innerHTML =
+        '<span><i class="sig-dot sig-good"></i><b style="color:var(--ink)">'+sigCount['sig-good']+'</b> na meta</span>'+
+        '<span><i class="sig-dot sig-warn"></i><b style="color:var(--ink)">'+sigCount['sig-warn']+'</b> com lucro abaixo da meta</span>'+
+        '<span><i class="sig-dot sig-bad"></i><b style="color:var(--ink)">'+sigCount['sig-bad']+'</b> no prejuízo</span>';
+      var SIG_FILL = {'sig-good':'var(--good)','sig-warn':'var(--warning)','sig-bad':'var(--critical)'};
+      var SIG_TXT = {'sig-good':'#ffffff','sig-warn':'#3a2900','sig-bad':'#ffffff'};
+      var SIG_NAME = {'sig-good':'Na meta','sig-warn':'Lucro abaixo da meta','sig-bad':'Prejuízo'};
+  
+      // divisor entre o bloco positivo e o negativo (contagem já aparece nos cards acima e na nota do gráfico)
+      if(nPos>0 && nPos<storesSorted.length){
+        var divY = padT + nPos*(rowH+gap) - gap/2;
+        svg.appendChild(el('line',{x1:plotL-140, x2:plotR, y1:divY, y2:divY, stroke:'var(--grid)', 'stroke-width':1.5, 'stroke-dasharray':'3,3'}));
+      }
+  
+      storesSorted.forEach(function(s,i){
+        var cy = padT + i*(rowH+gap);
+        var w = scale(s.pct_lucro_operacional);
+        var neg = s.pct_lucro_operacional < 0;
+        var x0 = neg ? mid+w : mid;
+        var barW = Math.abs(w);
+        var sc = sigClass('lop', s.pct_lucro_operacional);
+        var barColor = SIG_FILL[sc];
+        var rect = el('rect',{x:x0, y:cy+4, width:Math.max(barW,1.5), height:rowH-8, rx:4, fill: barColor, class:'div-bar'});
+        rect.addEventListener('mousemove', function(evt){
+          var fatTip = (s.fat_liquido!==null && s.fat_liquido!==undefined) ? s.fat_liquido : s.fat_bruto;
+          var fatTipLabel = (s.fat_liquido!==null && s.fat_liquido!==undefined) ? 'Faturamento líquido' : 'Faturamento bruto*';
+          var tip = '<b>'+s.label+'</b> ('+s.legal+')<br>Sinal: '+SIG_NAME[sc]+' (meta ≥ '+fmt1.format(SIG.lop.g)+'%)<br>'+fatTipLabel+': '+brl(fatTip)+'<br>Resultado: '+brl(s.lucro_operacional)+' ('+pct(s.pct_lucro_operacional)+')<br>CMV: '+fmt1.format(s.pct_cmv)+'% · Margem contrib.: '+fmt1.format(s.pct_margem_contrib)+'%'+(s.abaixo_equilibrio?'<br><b style="color:#ff9d9d;">Abaixo do ponto de equilíbrio</b>':'');
+          if(s.dadosIncompletos){ tip += '<br><b style="color:#ffd27a;">DRE sem descontos discriminados — resultado pode estar superestimado</b>'; }
+          showTip(evt, tip);
         });
-      } else {
-        valText = el('text',{
-          x: neg ? x0-8 : x0+barW+8,
-          y: cy+rowH/2+4,
-          'text-anchor': neg ? 'end' : 'start',
-          class:'div-val tabular',
-          fill: outColor
-        });
-      }
-      valText.textContent = labelTxt;
-      svg.appendChild(valText);
-    });
-  })();
-
-  // ---------------- store table ----------------
-  (function(){
-    // ordem fixa da tabela = ordem do array `stores` (Biggs 01→13, Isaías 01-03, Robs, Mapoli)
-    var chronic4 = ['Biggs 06','Biggs 10','Mapoli','Isaías 01'];
-    var chronic3 = ['Biggs 03','Biggs 04','Biggs 07 e Açaí','Biggs 08 e 09','Isaías 02','Isaías 03','Robs'];
-    var cmvByLabel = {};
-    cmvPerf.forEach(function(d){ cmvByLabel[d.label] = d; });
-    var tbody = document.querySelector('#storeTable tbody');
-    var maxImp = Math.max.apply(null, cmvPerf.map(function(d){ return Math.abs(d.impacto); }));
-    function dvClass(pp){ return pp<=0 ? 'sig-good' : (pp<=4 ? 'sig-warn' : 'sig-bad'); }
-    var DV_COLOR = {'sig-good':'var(--good)','sig-warn':'var(--warning)','sig-bad':'var(--critical)'};
-    stores.forEach(function(s){
-      var tr = document.createElement('tr');
-      var incomplete = !!s.dadosIncompletos;
-      tr.className = incomplete ? '' : (s.lucro_operacional<0 ? 'neg':'pos');
-      var flag = chronic4.indexOf(s.label)>-1 ? '<span class="flag">4/4 meses no prejuízo</span>' : (chronic3.indexOf(s.label)>-1 ? '<span class="flag" style="background:color-mix(in srgb, var(--warning) 20%, transparent); color:#8a5a00;">3/4 meses no prejuízo</span>' : (incomplete ? '<span class="flag" style="background:color-mix(in srgb, var(--warning) 20%, transparent); color:#8a5a00;">dados incompletos*</span>' : ''));
-      var peCell = s.ponto_equilibrio===null ? 'não calculado' : (s.abaixo_equilibrio?'<span class="flag">abaixo</span> ':'✓ atingido ');
-      var fatShown = s.fat_liquido!==null && s.fat_liquido!==undefined ? s.fat_liquido : s.fat_bruto;
-      var fatFlag = (s.fat_liquido===null || s.fat_liquido===undefined) ? '*' : '';
-      var cmv = cmvByLabel[s.label];
-      var cmvIdealCell, desvioImpactoCell;
-      if(cmv){
-        var dc = dvClass(cmv.desvio), desvioColor = DV_COLOR[dc];
-        cmvIdealCell = '<td class="num tabular">'+fmt1.format(cmv.ideal)+(incomplete?'*':'')+'%</td>';
-        desvioImpactoCell = '<td class="num tabular" style="color:'+desvioColor+'; font-weight:700;">'+(cmv.desvio>0?'+':'')+fmt1.format(cmv.desvio)+' pp</td>'+
-          '<td class="num tabular dv-cell" title="'+s.label+': CMV '+fmt1.format(cmv.real)+'% x ideal '+fmt1.format(cmv.ideal)+'% sobre '+brl(cmv.fat)+'">'+
-            '<div class="dv-val" style="color:'+desvioColor+';"><i class="sig-dot '+dc+'" style="margin-right:6px;"></i>'+(cmv.impacto>0?'+':'')+brl(cmv.impacto)+'</div>'+
-            '<div class="dv-bar"><span class="'+dc+'" style="width:'+(Math.abs(cmv.impacto)/maxImp*100).toFixed(1)+'%"></span></div></td>';
-      } else {
-        cmvIdealCell = '<td class="num tabular" style="color:var(--ink-muted);">—</td>';
-        desvioImpactoCell = '<td class="num tabular" style="color:var(--ink-muted);">—</td><td class="num tabular" style="color:var(--ink-muted);">sem CMV teórico</td>';
-      }
-      var resultadoCell = '<td class="num tabular res">'+
-        '<div>'+brl(s.lucro_operacional)+'</div>'+
-        '<div style="font-size:11px;">'+pct(s.pct_lucro_operacional)+(incomplete?'*':'')+'</div></td>';
-      // resultado se o CMV fosse o teórico = resultado atual + desvio financeiro (lojas sem CMV teórico ficam como estão)
-      var riCell;
-      if(cmv){
-        var ri = s.lucro_operacional + cmv.impacto, riPct = fatShown ? ri/fatShown*100 : 0;
-        riCell = '<td class="num tabular ri-cell" title="'+brl(s.lucro_operacional)+' + '+brl(cmv.impacto)+' de desvio do CMV">'+
-          '<div style="font-weight:800; color:'+(ri<0?'var(--critical)':'var(--good)')+';">'+brl(ri)+(s.lucro_operacional<0 && ri>=0 ? '<span class="ri-flip">vira positivo</span>' : '')+'</div>'+
-          '<div style="font-size:11px; color:'+(ri<0?'var(--critical)':'var(--good)')+';">'+pct(riPct)+'</div></td>';
-      } else {
-        riCell = '<td class="num tabular ri-cell" style="color:var(--ink-muted);">sem CMV teórico</td>';
-      }
-      tr.innerHTML = '<td><b>'+s.label+'</b></td>'+
-        '<td>'+s.legal+'</td>'+
-        '<td class="num tabular">'+brl(fatShown)+fatFlag+'</td>'+
-        '<td class="num tabular">'+fmt1.format(s.pct_cmv)+(incomplete?'*':'')+'%</td>'+
-        cmvIdealCell + desvioImpactoCell +
-        '<td class="num tabular">'+fmt1.format(s.pct_margem_contrib)+(incomplete?'*':'')+'%</td>'+
-        resultadoCell + riCell +
-        '<td>'+peCell+flag+'</td>';
-      tbody.appendChild(tr);
-    });
-
-    // totais do desvio financeiro (média ponderada pelo faturamento líquido)
-    function tot(list){
-      var fat=0, imp=0, real=0, ideal=0;
-      var lop = 0;
-      list.forEach(function(d){ fat+=d.fat; imp+=d.impacto; real+=d.fat*d.real/100; ideal+=d.fat*d.ideal/100;
-        var st = stores.filter(function(x){ return x.label===d.label; })[0]; if(st) lop += st.lucro_operacional; });
-      return {n:list.length, fat:fat, imp:imp, real:real/fat*100, ideal:ideal/fat*100, pp:(real-ideal)/fat*100, lop:lop, ri:lop+imp};
-    }
-    function totRow(label, t, cls){
-      var dc = dvClass(t.pp);
-      return '<tr class="'+(cls||'')+'"><td colspan="2">'+label+'</td>'+
-        '<td class="num tabular">'+brl(t.fat)+'</td>'+
-        '<td class="num tabular">'+fmt2.format(t.real)+'%</td>'+
-        '<td class="num tabular">'+fmt2.format(t.ideal)+'%</td>'+
-        '<td class="num tabular" style="color:'+DV_COLOR[dc]+';">+'+fmt2.format(t.pp)+' pp</td>'+
-        '<td class="num tabular" style="color:'+DV_COLOR[dc]+';">+'+brl(t.imp)+'</td>'+
-        '<td style="color:var(--ink-muted); font-weight:600;">'+t.n+' lojas</td>'+
-        '<td class="num tabular" style="color:'+(t.lop<0?'var(--critical)':'var(--good)')+';">'+brl(t.lop)+'</td>'+
-        '<td class="num tabular ri-cell" style="color:'+(t.ri<0?'var(--critical)':'var(--good)')+';">'+brl(t.ri)+'</td>'+
-        '<td style="color:var(--ink-muted); font-weight:600;">média ponderada</td></tr>';
-    }
-    var bgs = cmvPerf.filter(function(d){ return d.label.indexOf('Biggs')===0; });
-    var isa = cmvPerf.filter(function(d){ return d.label.indexOf('Isaías')===0; });
-    var tfoot = document.createElement('tfoot');
-    var TT = tot(cmvPerf), lopRede = stores.reduce(function(a, x){ return a + x.lucro_operacional; }, 0), riRede = lopRede + TT.imp;
-    tfoot.innerHTML = totRow('Total Biggs (01–13)', tot(bgs), 'sub') + totRow('Total Isaías (01–03)', tot(isa), 'sub') + totRow('Total geral com CMV teórico (sem Robs e Mapoli)', TT) +
-      '<tr><td colspan="8">Rede completa (17 lojas) — Robs e Mapoli entram com o resultado atual</td>'+
-      '<td class="num tabular" style="color:'+(lopRede<0?'var(--critical)':'var(--good)')+';">'+brl(lopRede)+'</td>'+
-      '<td class="num tabular ri-cell" style="color:'+(riRede<0?'var(--critical)':'var(--good)')+';">'+brl(riRede)+'</td><td></td></tr>';
-    document.getElementById('storeTable').appendChild(tfoot);
-
-    // card de destaque acima do gráfico de lojas
-    var T = tot(cmvPerf), top = cmvPerf.slice().sort(function(a,b){ return b.impacto-a.impacto; });
-    var acima = cmvPerf.filter(function(d){ return d.desvio>0; }).length;
-    var box = document.getElementById('lojasHighlightKpis');
-    if(box){
-      box.style.gridTemplateColumns = ''; box.classList.add('kpi3');
-      box.insertAdjacentHTML('beforeend',
-        '<div class="card kpi"><div class="kpi-label">Desvio financeiro do CMV (ago)</div>'+
-        '<div class="kpi-value tabular" style="color:var(--critical)">+'+brl(T.imp)+'</div>'+
-        '<div class="kpi-sub">'+acima+' de '+T.n+' lojas acima do CMV teórico · +'+fmt2.format(T.pp)+' pp na média · maiores: '+
-          top.slice(0,3).map(function(d){ return d.label+' '+brl(d.impacto); }).join(', ')+'</div>'+
-        '<div class="kpi-sub" style="margin-top:6px; color:var(--ink-2);">Com o CMV no teórico, o resultado da rede iria de <b style="color:'+(lopRede<0?'var(--critical)':'var(--good)')+'">'+brl(lopRede)+'</b> para <b style="color:'+(riRede<0?'var(--critical)':'var(--good)')+'">'+brl(riRede)+'</b>.</div></div>');
-    }
-  })();
-
-  // ---------------- CMV Real x Teórico chart ----------------
-  (function(){
-    var svg = document.getElementById('cmvChart');
-    var W=720, rowH=26, gap=3, padL=170, padR=90, padT=6;
-    var H = padT + cmvPerf.length*(rowH+gap);
-    svg.setAttribute('viewBox','0 0 '+W+' '+H);
-    var plotL = padL, plotR = W-padR;
-    var maxAbs = Math.max.apply(null, cmvPerf.map(function(d){return Math.abs(d.desvio);})) * 1.18;
-    var zero = plotL + 56; // gutter à esquerda p/ caber o rótulo de valor de barras negativas/quase-zero sem colidir com o nome da loja
-    var plotW = plotR - zero;
-    function scale(v){ return (v/maxAbs) * plotW; }
-
-    var ns='http://www.w3.org/2000/svg';
-    function el(tag, attrs){ var e=document.createElementNS(ns,tag); for(var k in attrs) e.setAttribute(k,attrs[k]); return e; }
-
-    svg.appendChild(el('line',{x1:zero,x2:zero,y1:padT,y2:H-4,class:'div-zero'}));
-
-    function tierColor(pp){
-      if(pp < 2) return 'var(--good)';
-      if(pp < 10) return 'var(--warning)';
-      if(pp < 16) return 'var(--serious)';
-      return 'var(--critical)';
-    }
-
-    cmvPerf.forEach(function(d,i){
-      var cy = padT + i*(rowH+gap);
-      var w = scale(d.desvio);
-      var neg = d.desvio < 0;
-      var x0 = neg ? zero+w : zero;
-      var barW = Math.abs(w);
-      var color = d.biggs13 ? 'var(--warning)' : tierColor(d.desvio);
-      var rect = el('rect',{x:x0, y:cy+3, width:Math.max(barW,1.5), height:rowH-6, rx:4, fill:color, class:'div-bar'});
-      rect.addEventListener('mousemove', function(evt){
-        var tip = '<b>'+d.label+'</b><br>CMV Real: '+fmt1.format(d.real)+'% · CMV Teórico: '+fmt1.format(d.ideal)+'%<br>Desvio: '+(d.desvio>0?'+':'')+fmt1.format(d.desvio)+' p.p.<br>Impacto: '+brl(d.impacto);
-        if(d.biggs13){ tip += '<br><b style="color:#ffd27a;">CMV Teórico = proxy do cardápio de Biggs 04; base = faturamento bruto (não líquido)</b>'; }
-        showTip(evt, tip);
+        rect.addEventListener('mouseleave', hideTip);
+        svg.appendChild(rect);
+  
+        var label = el('text',{x:plotL-16, y:cy+rowH/2+4, 'text-anchor':'end', class:'div-row-label'});
+        label.textContent = s.label;
+        svg.appendChild(label);
+  
+        var inside = barW > 46; // enough room to set the value inside the bar, near its outer tip
+        var labelTxt = pct(s.pct_lucro_operacional) + (s.dadosIncompletos ? '*' : '');
+        var outColor = sc==='sig-warn' ? 'var(--warning)' : SIG_FILL[sc];
+        var valText;
+        if(inside){
+          valText = el('text',{
+            x: neg ? x0+6 : x0+barW-6,
+            y: cy+rowH/2+4,
+            'text-anchor': neg ? 'start' : 'end',
+            class:'div-val tabular',
+            fill: SIG_TXT[sc]
+          });
+        } else {
+          valText = el('text',{
+            x: neg ? x0-8 : x0+barW+8,
+            y: cy+rowH/2+4,
+            'text-anchor': neg ? 'end' : 'start',
+            class:'div-val tabular',
+            fill: outColor
+          });
+        }
+        valText.textContent = labelTxt;
+        svg.appendChild(valText);
       });
-      rect.addEventListener('mouseleave', hideTip);
-      svg.appendChild(rect);
-
-      var label = el('text',{x:plotL-16, y:cy+rowH/2+4, 'text-anchor':'end', class:'div-row-label'});
-      label.textContent = d.label;
-      svg.appendChild(label);
-
-      var inside = barW > 44;
-      var labelTxt = (d.desvio>0?'+':'') + fmt1.format(d.desvio) + 'pp' + (d.biggs13?'*':'');
-      var valText;
-      if(inside){
-        valText = el('text',{ x: neg? x0+6 : x0+barW-6, y: cy+rowH/2+4, 'text-anchor': neg?'start':'end', class:'div-val tabular', fill:'#ffffff'});
-      } else {
-        valText = el('text',{ x: neg? x0-8 : x0+barW+8, y: cy+rowH/2+4, 'text-anchor': neg?'end':'start', class:'div-val tabular', fill: d.biggs13?'#8a5a00':(neg?'var(--good)':color)});
+    })();
+  
+    // ---------------- store table ----------------
+    (function(){
+      // ordem fixa da tabela = ordem do array `stores` (Biggs 01→13, Isaías 01-03, Robs, Mapoli)
+      var mFim = fState.month===-1 ? VOXEL_NM-1 : fState.month, chronic4 = [], chronic3 = [];
+      stores.forEach(function(s){
+        var n = 0, k = 0; for(var mm = Math.max(0, mFim-3); mm<=mFim; mm++){ var M = storeMetrics(s.label, mm); if(M){ k++; if(M.lop<0) n++; } }
+        if(k===4 && n===4) chronic4.push(s.label); else if(k===4 && n===3) chronic3.push(s.label);
+      });
+      var cmvByLabel = {};
+      cmvPerf.forEach(function(d){ cmvByLabel[d.label] = d; });
+      var tbody = document.querySelector('#storeTable tbody');
+      var maxImp = Math.max.apply(null, cmvPerf.map(function(d){ return Math.abs(d.impacto); }));
+      function dvClass(pp){ return pp<=0 ? 'sig-good' : (pp<=4 ? 'sig-warn' : 'sig-bad'); }
+      var DV_COLOR = {'sig-good':'var(--good)','sig-warn':'var(--warning)','sig-bad':'var(--critical)'};
+      stores.forEach(function(s){
+        var tr = document.createElement('tr');
+        var incomplete = !!s.dadosIncompletos;
+        tr.className = incomplete ? '' : (s.lucro_operacional<0 ? 'neg':'pos');
+        var flag = chronic4.indexOf(s.label)>-1 ? '<span class="flag">4/4 meses no prejuízo</span>' : (chronic3.indexOf(s.label)>-1 ? '<span class="flag" style="background:color-mix(in srgb, var(--warning) 20%, transparent); color:#8a5a00;">3/4 meses no prejuízo</span>' : (incomplete ? '<span class="flag" style="background:color-mix(in srgb, var(--warning) 20%, transparent); color:#8a5a00;">dados incompletos*</span>' : ''));
+        var peCell = s.ponto_equilibrio===null ? 'não calculado' : (s.abaixo_equilibrio?'<span class="flag">abaixo</span> ':'✓ atingido ');
+        var fatShown = s.fat_liquido!==null && s.fat_liquido!==undefined ? s.fat_liquido : s.fat_bruto;
+        var fatFlag = (s.fat_liquido===null || s.fat_liquido===undefined) ? '*' : '';
+        var cmv = cmvByLabel[s.label];
+        var cmvIdealCell, desvioImpactoCell;
+        if(cmv){
+          var dc = dvClass(cmv.desvio), desvioColor = DV_COLOR[dc];
+          cmvIdealCell = '<td class="num tabular">'+fmt1.format(cmv.ideal)+(incomplete?'*':'')+'%</td>';
+          desvioImpactoCell = '<td class="num tabular" style="color:'+desvioColor+'; font-weight:700;">'+(cmv.desvio>0?'+':'')+fmt1.format(cmv.desvio)+' pp</td>'+
+            '<td class="num tabular dv-cell" title="'+s.label+': CMV '+fmt1.format(cmv.real)+'% x ideal '+fmt1.format(cmv.ideal)+'% sobre '+brl(cmv.fat)+'">'+
+              '<div class="dv-val" style="color:'+desvioColor+';"><i class="sig-dot '+dc+'" style="margin-right:6px;"></i>'+(cmv.impacto>0?'+':'')+brl(cmv.impacto)+'</div>'+
+              '<div class="dv-bar"><span class="'+dc+'" style="width:'+(Math.abs(cmv.impacto)/maxImp*100).toFixed(1)+'%"></span></div></td>';
+        } else {
+          cmvIdealCell = '<td class="num tabular" style="color:var(--ink-muted);">—</td>';
+          desvioImpactoCell = '<td class="num tabular" style="color:var(--ink-muted);">—</td><td class="num tabular" style="color:var(--ink-muted);">sem CMV teórico</td>';
+        }
+        var resultadoCell = '<td class="num tabular res">'+
+          '<div>'+brl(s.lucro_operacional)+'</div>'+
+          '<div style="font-size:11px;">'+pct(s.pct_lucro_operacional)+(incomplete?'*':'')+'</div></td>';
+        // resultado se o CMV fosse o teórico = resultado atual + desvio financeiro (lojas sem CMV teórico ficam como estão)
+        var riCell;
+        if(cmv){
+          var ri = s.lucro_operacional + cmv.impacto, riPct = fatShown ? ri/fatShown*100 : 0;
+          riCell = '<td class="num tabular ri-cell" title="'+brl(s.lucro_operacional)+' + '+brl(cmv.impacto)+' de desvio do CMV">'+
+            '<div style="font-weight:800; color:'+(ri<0?'var(--critical)':'var(--good)')+';">'+brl(ri)+(s.lucro_operacional<0 && ri>=0 ? '<span class="ri-flip">vira positivo</span>' : '')+'</div>'+
+            '<div style="font-size:11px; color:'+(ri<0?'var(--critical)':'var(--good)')+';">'+pct(riPct)+'</div></td>';
+        } else {
+          riCell = '<td class="num tabular ri-cell" style="color:var(--ink-muted);">sem CMV teórico</td>';
+        }
+        tr.innerHTML = '<td><b>'+s.label+'</b></td>'+
+          '<td>'+s.legal+'</td>'+
+          '<td class="num tabular">'+brl(fatShown)+fatFlag+'</td>'+
+          '<td class="num tabular">'+fmt1.format(s.pct_cmv)+(incomplete?'*':'')+'%</td>'+
+          cmvIdealCell + desvioImpactoCell +
+          '<td class="num tabular">'+fmt1.format(s.pct_margem_contrib)+(incomplete?'*':'')+'%</td>'+
+          resultadoCell + riCell +
+          '<td>'+peCell+flag+'</td>';
+        tbody.appendChild(tr);
+      });
+  
+      // totais do desvio financeiro (média ponderada pelo faturamento líquido)
+      function tot(list){
+        var fat=0, imp=0, real=0, ideal=0;
+        var lop = 0;
+        list.forEach(function(d){ fat+=d.fat; imp+=d.impacto; real+=d.fat*d.real/100; ideal+=d.fat*d.ideal/100;
+          var st = stores.filter(function(x){ return x.label===d.label; })[0]; if(st) lop += st.lucro_operacional; });
+        return {n:list.length, fat:fat, imp:imp, real:real/fat*100, ideal:ideal/fat*100, pp:(real-ideal)/fat*100, lop:lop, ri:lop+imp};
       }
-      valText.textContent = labelTxt;
-      svg.appendChild(valText);
-    });
-  })();
-
-  // ---------------- CMV Real x Teórico table ----------------
-  (function(){
-    var tbody = document.querySelector('#cmvTable tbody');
-    cmvPerf.slice().sort(function(a, b){ return voxelTabsList.indexOf(a.label) - voxelTabsList.indexOf(b.label); }).forEach(function(d){
-      var tr = document.createElement('tr');
-      tr.className = d.desvio > 0 ? 'neg' : 'pos';
-      tr.innerHTML = '<td><b>'+d.label+'</b>'+(d.biggs13?' <span class="flag" style="background:color-mix(in srgb, var(--warning) 20%, transparent); color:#8a5a00;">proxy*</span>':'')+'</td>'+
-        '<td class="num tabular">'+brl(d.fat)+(d.biggs13?'†':'')+'</td>'+
-        '<td class="num tabular">'+fmt1.format(d.real)+'%</td>'+
-        '<td class="num tabular">'+fmt1.format(d.ideal)+'%</td>'+
-        '<td class="num tabular res">'+(d.desvio>0?'+':'')+fmt1.format(d.desvio)+' p.p.</td>'+
-        '<td class="num tabular res">'+brl(d.impacto)+'</td>';
-      tbody.appendChild(tr);
-    });
-  })();
+      function totRow(label, t, cls){
+        var dc = dvClass(t.pp);
+        return '<tr class="'+(cls||'')+'"><td colspan="2">'+label+'</td>'+
+          '<td class="num tabular">'+brl(t.fat)+'</td>'+
+          '<td class="num tabular">'+fmt2.format(t.real)+'%</td>'+
+          '<td class="num tabular">'+fmt2.format(t.ideal)+'%</td>'+
+          '<td class="num tabular" style="color:'+DV_COLOR[dc]+';">+'+fmt2.format(t.pp)+' pp</td>'+
+          '<td class="num tabular" style="color:'+DV_COLOR[dc]+';">+'+brl(t.imp)+'</td>'+
+          '<td style="color:var(--ink-muted); font-weight:600;">'+t.n+' lojas</td>'+
+          '<td class="num tabular" style="color:'+(t.lop<0?'var(--critical)':'var(--good)')+';">'+brl(t.lop)+'</td>'+
+          '<td class="num tabular ri-cell" style="color:'+(t.ri<0?'var(--critical)':'var(--good)')+';">'+brl(t.ri)+'</td>'+
+          '<td style="color:var(--ink-muted); font-weight:600;">média ponderada</td></tr>';
+      }
+      var bgs = cmvPerf.filter(function(d){ return d.label.indexOf('Biggs')===0; });
+      var isa = cmvPerf.filter(function(d){ return d.label.indexOf('Isaías')===0; });
+      var tfoot = document.createElement('tfoot');
+      var TT = tot(cmvPerf), lopRede = stores.reduce(function(a, x){ return a + x.lucro_operacional; }, 0), riRede = lopRede + TT.imp;
+      tfoot.innerHTML = totRow('Total Biggs (01–13)', tot(bgs), 'sub') + totRow('Total Isaías (01–03)', tot(isa), 'sub') + totRow('Total geral com CMV teórico (sem Robs e Mapoli)', TT) +
+        '<tr><td colspan="8">Rede completa (17 lojas) — Robs e Mapoli entram com o resultado atual</td>'+
+        '<td class="num tabular" style="color:'+(lopRede<0?'var(--critical)':'var(--good)')+';">'+brl(lopRede)+'</td>'+
+        '<td class="num tabular ri-cell" style="color:'+(riRede<0?'var(--critical)':'var(--good)')+';">'+brl(riRede)+'</td><td></td></tr>';
+      document.getElementById('storeTable').appendChild(tfoot);
+  
+      // card de destaque acima do gráfico de lojas
+      var T = tot(cmvPerf), top = cmvPerf.slice().sort(function(a,b){ return b.impacto-a.impacto; });
+      var acima = cmvPerf.filter(function(d){ return d.desvio>0; }).length;
+      var box = document.getElementById('lojasHighlightKpis');
+      if(box){
+        box.style.gridTemplateColumns = ''; box.classList.add('kpi3');
+        box.insertAdjacentHTML('beforeend',
+          '<div class="card kpi"><div class="kpi-label">Desvio financeiro do CMV ('+periodShort(fState.month)+')</div>'+
+          '<div class="kpi-value tabular" style="color:var(--critical)">+'+brl(T.imp)+'</div>'+
+          '<div class="kpi-sub">'+acima+' de '+T.n+' lojas acima do CMV teórico · +'+fmt2.format(T.pp)+' pp na média · maiores: '+
+            top.slice(0,3).map(function(d){ return d.label+' '+brl(d.impacto); }).join(', ')+'</div>'+
+          '<div class="kpi-sub" style="margin-top:6px; color:var(--ink-2);">Com o CMV no teórico, o resultado da rede iria de <b style="color:'+(lopRede<0?'var(--critical)':'var(--good)')+'">'+brl(lopRede)+'</b> para <b style="color:'+(riRede<0?'var(--critical)':'var(--good)')+'">'+brl(riRede)+'</b>.</div></div>');
+      }
+    })();
+  
+    // ---------------- CMV Real x Teórico chart ----------------
+    (function(){
+      var svg = document.getElementById('cmvChart');
+      var W=720, rowH=26, gap=3, padL=170, padR=90, padT=6;
+      var H = padT + cmvPerf.length*(rowH+gap);
+      svg.setAttribute('viewBox','0 0 '+W+' '+H);
+      var plotL = padL, plotR = W-padR;
+      var maxAbs = Math.max.apply(null, cmvPerf.map(function(d){return Math.abs(d.desvio);})) * 1.18;
+      var zero = plotL + 56; // gutter à esquerda p/ caber o rótulo de valor de barras negativas/quase-zero sem colidir com o nome da loja
+      var plotW = plotR - zero;
+      function scale(v){ return (v/maxAbs) * plotW; }
+  
+      var ns='http://www.w3.org/2000/svg';
+      function el(tag, attrs){ var e=document.createElementNS(ns,tag); for(var k in attrs) e.setAttribute(k,attrs[k]); return e; }
+  
+      svg.appendChild(el('line',{x1:zero,x2:zero,y1:padT,y2:H-4,class:'div-zero'}));
+  
+      function tierColor(pp){
+        if(pp < 2) return 'var(--good)';
+        if(pp < 10) return 'var(--warning)';
+        if(pp < 16) return 'var(--serious)';
+        return 'var(--critical)';
+      }
+  
+      cmvPerf.forEach(function(d,i){
+        var cy = padT + i*(rowH+gap);
+        var w = scale(d.desvio);
+        var neg = d.desvio < 0;
+        var x0 = neg ? zero+w : zero;
+        var barW = Math.abs(w);
+        var color = d.biggs13 ? 'var(--warning)' : tierColor(d.desvio);
+        var rect = el('rect',{x:x0, y:cy+3, width:Math.max(barW,1.5), height:rowH-6, rx:4, fill:color, class:'div-bar'});
+        rect.addEventListener('mousemove', function(evt){
+          var tip = '<b>'+d.label+'</b><br>CMV Real: '+fmt1.format(d.real)+'% · CMV Teórico: '+fmt1.format(d.ideal)+'%<br>Desvio: '+(d.desvio>0?'+':'')+fmt1.format(d.desvio)+' p.p.<br>Impacto: '+brl(d.impacto);
+          if(d.biggs13){ tip += '<br><b style="color:#ffd27a;">CMV Teórico = proxy do cardápio de Biggs 04; base = faturamento bruto (não líquido)</b>'; }
+          showTip(evt, tip);
+        });
+        rect.addEventListener('mouseleave', hideTip);
+        svg.appendChild(rect);
+  
+        var label = el('text',{x:plotL-16, y:cy+rowH/2+4, 'text-anchor':'end', class:'div-row-label'});
+        label.textContent = d.label;
+        svg.appendChild(label);
+  
+        var inside = barW > 44;
+        var labelTxt = (d.desvio>0?'+':'') + fmt1.format(d.desvio) + 'pp' + (d.biggs13?'*':'');
+        var valText;
+        if(inside){
+          valText = el('text',{ x: neg? x0+6 : x0+barW-6, y: cy+rowH/2+4, 'text-anchor': neg?'start':'end', class:'div-val tabular', fill:'#ffffff'});
+        } else {
+          valText = el('text',{ x: neg? x0-8 : x0+barW+8, y: cy+rowH/2+4, 'text-anchor': neg?'end':'start', class:'div-val tabular', fill: d.biggs13?'#8a5a00':(neg?'var(--good)':color)});
+        }
+        valText.textContent = labelTxt;
+        svg.appendChild(valText);
+      });
+    })();
+  
+    // ---------------- CMV Real x Teórico table ----------------
+    (function(){
+      var tbody = document.querySelector('#cmvTable tbody');
+      cmvPerf.slice().sort(function(a, b){ return voxelTabsList.indexOf(a.label) - voxelTabsList.indexOf(b.label); }).forEach(function(d){
+        var tr = document.createElement('tr');
+        tr.className = d.desvio > 0 ? 'neg' : 'pos';
+        tr.innerHTML = '<td><b>'+d.label+'</b>'+(d.biggs13?' <span class="flag" style="background:color-mix(in srgb, var(--warning) 20%, transparent); color:#8a5a00;">proxy*</span>':'')+'</td>'+
+          '<td class="num tabular">'+brl(d.fat)+(d.biggs13?'†':'')+'</td>'+
+          '<td class="num tabular">'+fmt1.format(d.real)+'%</td>'+
+          '<td class="num tabular">'+fmt1.format(d.ideal)+'%</td>'+
+          '<td class="num tabular res">'+(d.desvio>0?'+':'')+fmt1.format(d.desvio)+' p.p.</td>'+
+          '<td class="num tabular res">'+brl(d.impacto)+'</td>';
+        tbody.appendChild(tr);
+      });
+    })();
+  
+    }
+  var lojasReady = false;
+  renderLojasTab(); lojasReady = true;
 
   // ---------------- critical points / improvements / action plan ----------------
   var criticals = [

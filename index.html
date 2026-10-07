@@ -726,6 +726,13 @@
     100%{transform:translate(8px,18px) rotate(calc(var(--r,0deg) + 4deg));}
   }
   @media (prefers-reduced-motion: reduce){ .bg-folhas svg{animation:none;} }
+
+  /* comparação automática com o mês anterior */
+  .vs-prev{display:flex; align-items:center; gap:4px; flex-wrap:wrap; font-size:11.5px; font-weight:700; margin-top:5px; color:var(--ink-muted);}
+  .vs-prev b{font-weight:800;}
+  .vs-prev.better b{color:var(--good);}
+  .vs-prev.worse b{color:var(--critical);}
+  .vs-prev .vs-was{font-weight:500;}
 </style>
 
 <div class="page">
@@ -1766,8 +1773,18 @@
   function sigMeta(k){ var d = SIG[k]; return d.dir==='low' ? 'meta ≤'+fmt1.format(d.g)+'%' : 'meta ≥'+fmt1.format(d.g)+'%'; }
   function sigBaseName(k){ var b = SIG[k].base; return b==='fli' ? 'fat. líquido' : (b==='flt' ? 'fat. líquido total' : 'fat. bruto'); }
 
+  // comparação com o mês anterior: cur/prev = valores; dir 'low' (menor é melhor) ou 'high'; unit 'pp' | 'brl' | 'n' | 'pct'
+  function vsPrevHtml(cur, prev, dir, unit, m, wasTxt){
+    if(m===undefined || m<=0 || cur===null || cur===undefined || prev===null || prev===undefined || isNaN(prev)) return '';
+    var d = cur - prev, eps = unit==='brl' ? 0.5 : (unit==='n' ? 0 : 0.05);
+    var cls = Math.abs(d)<=eps ? '' : ((dir==='low' ? d<0 : d>0) ? 'better' : 'worse');
+    var arrow = Math.abs(d)<=eps ? '＝' : (d>0 ? '▲' : '▼'), sg = d>0 ? '+' : (d<0 ? '−' : '');
+    var txt = unit==='brl' ? sg+brl0(Math.abs(d)).replace('-','') : (unit==='n' ? sg+Math.abs(d) : (unit==='pct' ? sg+fmt1.format(Math.abs(prev ? d/Math.abs(prev)*100 : 0))+'%' : sg+fmt1.format(Math.abs(d))+' pp'));
+    return '<div class="vs-prev '+cls+'" title="Comparação com '+MONTH_FULL[m-1].toLowerCase()+'"><b>'+arrow+' '+txt+'</b> vs. '+VOXEL_MONTH_LABELS[m-1].toLowerCase()+(wasTxt ? ' <span class="vs-was">('+wasTxt+')</span>' : '')+'</div>';
+  }
   function renderSigPanel(){
     var s = voxelActiveScope, m = voxelActiveMonth, M = storeMetrics(s, m);
+    var MP = (m>0 && scopeHasData(s, m-1)) ? storeMetrics(s, m-1) : null;
     document.getElementById('sigTitle').textContent = 'Sinaleiro da DRE · realizado x meta · '+scopeName(s)+' · '+periodName(m);
     var html = '';
     SIG_ORDER.forEach(function(k){
@@ -1797,7 +1814,8 @@
       }
       html += '<div class="sig-card" style="--sig-c:'+d.color+'" data-go="'+k+'" role="button" tabindex="0" title="'+d.label+(p!==null ? ': '+fmt1.format(p)+'% · '+(rsTxt||'') : '')+' — clique para ver na DRE">'+
         '<div class="sig-name"><span class="cat-dot" style="background:'+d.color+'"></span>'+d.label+'</div>'+
-        '<div class="sig-val tabular">'+(p===null?'—':fmt1.format(p)+'%')+' <span style="font-size:11.5px;font-weight:600;color:var(--ink-muted);">realizado</span></div>'+body+'<div class="go-hint">Ver na DRE ↓</div></div>';
+        '<div class="sig-val tabular">'+(p===null?'—':fmt1.format(p)+'%')+' <span style="font-size:11.5px;font-weight:600;color:var(--ink-muted);">realizado</span></div>'+
+        (MP && p!==null ? (function(){ var pp = sigPct(k, MP); return pp===null ? '' : vsPrevHtml(p, pp, d.dir, 'pp', m, fmt1.format(pp)+'%'); })() : '')+body+'<div class="go-hint">Ver na DRE ↓</div></div>';
     });
     document.getElementById('sigPanel').innerHTML = html;
   }
@@ -2058,9 +2076,11 @@
     if(!M){ box.innerHTML = '<div class="card kpi" style="grid-column:1/-1;">Sem dados de '+scopeName(s)+' em '+periodName(m)+'.</div>'; return; }
     var grupo = scopeStores(s);
     var lojas = grupo.map(function(t){ return storeMetrics(t, m); }).filter(Boolean);
+    var MP = (m>0 && scopeHasData(s, m-1)) ? storeMetrics(s, m-1) : null;
     var html = '';
     html += kpiCard('Faturamento bruto', brl0(M.fb), null,
-      isRede ? 'soma '+(lojas.length>1?'das '+lojas.length+' lojas':'da loja')+(lojas.length<grupo.length?' (Biggs 13 só a partir de agosto)':'') : 'faturamento líquido: '+brl0(M.fli));
+      (isRede ? 'soma '+(lojas.length>1?'das '+lojas.length+' lojas':'da loja')+(lojas.length<grupo.length?' (Biggs 13 só a partir de agosto)':'') : 'faturamento líquido: '+brl0(M.fli))+
+      (MP ? vsPrevHtml(M.fb, MP.fb, 'high', 'pct', m, brl0(MP.fb)) : ''));
     var chip = '';
     if(m>0){
       var P = storeMetrics(s, m-1);
@@ -2074,11 +2094,15 @@
     var despTip = 'Descontos '+brl0(M.desc)+' + custos variáveis '+brl0(varT)+' + custos fixos '+brl0(M.cf)+' = '+brl0(despT);
     html += kpiCard('Resultado operacional', brl0(M.lop), M.lop<0?'var(--critical)':'var(--good)',
       pct(M.pctLop)+' do faturamento bruto'+
+      (MP ? vsPrevHtml(M.lop, MP.lop, 'high', 'brl', m, brl0(MP.lop)) : '')+
       '<div class="kpi-desp" title="'+despTip+'">Faturamento '+brl0(M.fb)+' − despesas <b>'+brl0(despT)+'</b> ('+fmt1.format(despT/M.fb*100)+'%)</div>', chip);
     if(isRede){
       var neg = lojas.filter(function(x){ return x.lop<0; }).length;
       var abaixo = lojas.filter(function(x){ return !x.peOk; }).length;
-      html += kpiCard('Lojas no prejuízo', neg+' <span class="kpi-of">/ '+lojas.length+'</span>', null, abaixo+' abaixo do equilíbrio líquido (DRE atual)',
+      var negP = null;
+      if(m>0){ var lojasP = grupo.map(function(t){ return storeMetrics(t, m-1); }).filter(Boolean); if(lojasP.length) negP = lojasP.filter(function(x){ return x.lop<0; }).length; }
+      html += kpiCard('Lojas no prejuízo', neg+' <span class="kpi-of">/ '+lojas.length+'</span>', null, abaixo+' abaixo do equilíbrio líquido (DRE atual)'+
+        (negP!==null ? vsPrevHtml(neg, negP, 'low', 'n', m, negP+' lojas') : ''),
         '<div class="kpi-hint">'+(lossOpen ? 'Ocultar lojas ▴' : 'Ver lojas no prejuízo e com resultado positivo ▾')+'</div>').replace('<div class="card kpi">', '<div class="card kpi kpi-click" id="lossCard" role="button" tabindex="0" aria-expanded="'+lossOpen+'" aria-controls="lossPanel">');
     } else {
       var peSub = M.pe===null ? 'margem de contribuição negativa — a loja não se paga' :
@@ -2091,7 +2115,8 @@
     if(PCa){
       var dpc = PCa.pc - PC_META, pcl = pcCls(PCa.pc);
       html += kpiCard((s==='Consolidado' ? 'Prime Cost da rede' : (isBrandScope(s) ? 'Prime Cost da marca' : 'Prime Cost'))+' (CMV + CMO)', fmt1.format(PCa.pc)+'%', pcColor(PCa.pc),
-        'CMV '+fmt1.format(PCa.cmvP)+'% + CMO '+fmt1.format(PCa.cmoP)+'% · meta ≤'+PC_META+'% · sobre faturamento líquido',
+        'CMV '+fmt1.format(PCa.cmvP)+'% + CMO '+fmt1.format(PCa.cmoP)+'% · meta ≤'+PC_META+'% · sobre faturamento líquido'+
+        (function(){ if(!(m>0)) return ''; var pl = grupo.map(function(t){ return pcData(t, m-1); }).filter(Boolean); var PP = pl.length>1 ? pcAgg(pl) : pl[0]; return PP ? vsPrevHtml(PCa.pc, PP.pc, 'low', 'pp', m, fmt1.format(PP.pc)+'%') : ''; })(),
         '<span class="chip '+(pcl==='sig-good'?'good':(pcl==='sig-warn'?'warning':'critical'))+'">'+(dpc>0.05 ? '+'+fmt1.format(dpc)+'pp acima da meta' : 'dentro da meta')+'</span>'+
         '<div class="kpi-hint">'+(pcTopOpen ? 'Ocultar composição ▴' : 'Ver composição do CMV e do CMO ▾')+'</div>')
         .replace('<div class="card kpi">', '<div class="card kpi kpi-click" id="pcTopCard" role="button" tabindex="0" aria-expanded="'+pcTopOpen+'" aria-controls="pcTopPanel">');
@@ -2927,6 +2952,8 @@
     document.getElementById('pcrTitle').textContent = 'Prime Cost (CMV + CMO) · realizado x meta · '+scopeName(s)+' · '+periodName(m);
     if(!list.length){ row.innerHTML = '<div class="sig-card"><div class="sig-name">Prime Cost</div><div class="sub">Dados insuficientes</div></div>'; return; }
     var A = list.length>1 || isGroupScope(s) ? pcAgg(list) : list[0];
+    var listP = m>0 ? scopeStores(s).map(function(t){ return pcData(t, m-1); }).filter(Boolean) : [];
+    var AP = listP.length ? (listP.length>1 || isGroupScope(s) ? pcAgg(listP) : listP[0]) : null;
     var cls = pcCls(A.pc), col = pcColor(A.pc);
     var hi = Math.max(A.pc, PC_ALERTA, 1)*1.15, px = A.pc/hi*100, mk = PC_META/hi*100;
     var diff = A.pc - PC_META;
@@ -2935,16 +2962,16 @@
     var nG = list.filter(function(d){ return pcCls(d.pc)==='sig-good'; }).length, nY = list.filter(function(d){ return pcCls(d.pc)==='sig-warn'; }).length, nR = list.length - nG - nY;
     var h = '';
     h += '<div class="sig-card'+(pcrOpen==='pc'?' pcr-on':'')+'" style="--sig-c:var(--accent)"'+go('pc')+'><div class="sig-name"><span class="cat-dot" style="background:var(--accent)"></span>Prime Cost</div>'+
-      '<div class="sig-val tabular">'+fmt1.format(A.pc)+'%</div>'+
+      '<div class="sig-val tabular">'+fmt1.format(A.pc)+'%</div>'+(AP ? vsPrevHtml(A.pc, AP.pc, 'low', 'pp', m, fmt1.format(AP.pc)+'%') : '')+
       '<div class="sig-bar"><span class="fill '+cls+'" style="left:0; width:'+px.toFixed(1)+'%"></span><span class="mark" style="left:calc('+mk.toFixed(1)+'% - 1px)"></span></div>'+
       '<div class="sig-rm"><span>Meta</span><b>≤ '+PC_META+',0%</b></div>'+
       '<span class="sig-gap '+cls+'"><i class="sig-dot '+cls+'"></i>'+gapTxt+'</span></div>';
     h += '<div class="sig-card'+(pcrOpen==='cmv'?' pcr-on':'')+'" style="--sig-c:var(--cat-1)"'+go('cmv')+'><div class="sig-name"><span class="cat-dot" style="background:var(--cat-1)"></span>CMV no Prime Cost</div>'+
-      '<div class="sig-val tabular">'+fmt1.format(A.cmvP)+'%</div><div class="sub">'+brl0(A.cmv)+'<br>'+fmt1.format(A.cmvP/A.pc*100)+'% do Prime Cost</div></div>';
+      '<div class="sig-val tabular">'+fmt1.format(A.cmvP)+'%</div>'+(AP ? vsPrevHtml(A.cmvP, AP.cmvP, 'low', 'pp', m, fmt1.format(AP.cmvP)+'%') : '')+'<div class="sub">'+brl0(A.cmv)+'<br>'+fmt1.format(A.cmvP/A.pc*100)+'% do Prime Cost</div></div>';
     h += '<div class="sig-card'+(pcrOpen==='cmo'?' pcr-on':'')+'" style="--sig-c:var(--ink-muted)"'+go('cmo')+'><div class="sig-name"><span class="cat-dot" style="background:var(--ink-muted)"></span>CMO no Prime Cost</div>'+
-      '<div class="sig-val tabular">'+fmt1.format(A.cmoP)+'%</div><div class="sub">'+brl0(A.cmo)+'<br>'+fmt1.format(A.cmoP/A.pc*100)+'% do Prime Cost</div></div>';
+      '<div class="sig-val tabular">'+fmt1.format(A.cmoP)+'%</div>'+(AP ? vsPrevHtml(A.cmoP, AP.cmoP, 'low', 'pp', m, fmt1.format(AP.cmoP)+'%') : '')+'<div class="sub">'+brl0(A.cmo)+'<br>'+fmt1.format(A.cmoP/A.pc*100)+'% do Prime Cost</div></div>';
     h += '<div class="sig-card'+(pcrOpen==='exc'?' pcr-on':'')+'" style="--sig-c:var(--critical)"'+go('exc')+'><div class="sig-name"><span class="cat-dot" style="background:var(--critical)"></span>Excesso sobre a meta</div>'+
-      '<div class="sig-val tabular" style="color:'+(A.exc>0?'var(--critical)':'var(--good)')+'">'+(A.exc>0 ? brl0(A.exc) : '✓ R$ 0')+'</div><div class="sub">CMV + CMO acima de '+PC_META+'% da receita-base</div></div>';
+      '<div class="sig-val tabular" style="color:'+(A.exc>0?'var(--critical)':'var(--good)')+'">'+(A.exc>0 ? brl0(A.exc) : '✓ R$ 0')+'</div>'+(AP ? vsPrevHtml(A.exc, AP.exc, 'low', 'brl', m, brl0(AP.exc)) : '')+'<div class="sub">CMV + CMO acima de '+PC_META+'% da receita-base</div></div>';
     if(list.length>1){
       h += '<div class="sig-card'+(pcrOpen==='faixa'?' pcr-on':'')+'" style="--sig-c:var(--baseline)"'+go('faixa')+'><div class="sig-name"><span class="cat-dot" style="background:var(--baseline)"></span>Lojas por faixa</div>'+
         '<div class="sig-val tabular">'+list.length+'</div><div class="pcr-faixas"><span class="sig-good">🟢 '+nG+'</span><span class="sig-warn">🟡 '+nY+'</span><span class="sig-bad">🔴 '+nR+'</span></div></div>';

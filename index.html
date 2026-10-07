@@ -2239,7 +2239,8 @@
       cf: -g('Custos Fixos'),
       mc: g('Margem de Contribuição'),
       lop: g('Lucro/Prejuízo Operacional'),
-      ll: g('Lucro/Prejuízo Líquido')
+      ll: g('Lucro/Prejuízo Líquido'),
+      estAdj: g('Estoque Final') + g('Estoque Inicial')   // variação de estoque já incluída no CMV (0 sem contagem)
     };
     o.pe = (o.mc>0 && o.flt) ? o.cf/(o.mc/o.flt) : null;
     o.peOk = o.pe!==null && o.flt>=o.pe;                 // mesma base: líquido x equilíbrio líquido (Voxel)
@@ -3417,6 +3418,12 @@
     L.push('* CMV: '+pct2(M.pctCmv));
     L.push('* CMO: '+pct2(M.pctCmo));
     L.push('* Resultado operacional: '+brl2s(M.lop)+' | '+pct2s(rgPctRes(M)));
+    if(M.estAdj && Math.abs(M.estAdj) >= 0.5){
+      var semEst = M.lop - M.estAdj, vtxt = (M.estAdj>0 ? 'aumento' : 'redução')+' do estoque de '+brl2(Math.abs(M.estAdj));
+      if(semEst<0 && M.lop>=0) L.push('* ⚖️ Estoque: sem o estoque inicial e final, o resultado seria NEGATIVO em '+brl2(Math.abs(semEst))+'; considerando o '+vtxt+', fecha POSITIVO em '+brl2(M.lop)+'.');
+      else if(semEst>=0 && M.lop<0) L.push('* ⚖️ Estoque: sem o estoque inicial e final, o resultado seria POSITIVO em '+brl2(semEst)+'; com a '+vtxt+', fecha NEGATIVO em '+brl2(Math.abs(M.lop))+'.');
+      else L.push('* ⚖️ Estoque: sem o estoque inicial e final, o resultado seria '+brl2s(semEst)+'; com '+(M.estAdj>0?'o ':'a ')+vtxt+', fica em '+brl2s(M.lop)+'.');
+    }
     var obs = [];
     if(P){
       var prevName = MONTH_FULL[m-1].toLowerCase();
@@ -3480,7 +3487,6 @@
       if(t===bestCombo && t!==best) ex.push('Apresentou a melhor combinação entre CMV e CMO');
       L = L.concat(rgBlock(title, M, P, m, ex));
       if(t==='Biggs 08 e 09'){ L.push(''); L.push('⚠️ O arquivo Voxel apresenta Biggs 08 e 09 juntas, sem separação dos resultados.'); }
-      if(t==='Biggs 13'){ L.push(''); L.push('⚠️ DRE da Biggs 13 enviada à parte (planilha): cartão/apps e devoluções informados separadamente e descontos de R$ 0 — sem histórico antes de agosto.'); }
       L.push(RG_SEP);
     });
     if(L[L.length-1]===RG_SEP) L.pop();

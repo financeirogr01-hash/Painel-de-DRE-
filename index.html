@@ -3466,10 +3466,14 @@
   }
   function rgBlock(title, M, P, m, extras){
     var L = [title, ''];
-    L.push('* Faturamento bruto: '+brl2(M.fb));
-    L.push('* CMV: '+pct2(M.pctCmv));
-    L.push('* CMO: '+pct2(M.pctCmo));
-    L.push('* Resultado operacional: '+brl2s(M.lop)+' | '+pct2s(rgPctRes(M)));
+    // variação vs. mês anterior em cada indicador (valor do mês anterior entre parênteses)
+    var ab = P ? MONTH_FULL[m-1].slice(0,3).toLowerCase() : '';
+    function ppv(cur, prev){ var d = cur - prev; return (d>0?'▲ +':(d<0?'▼ −':'= '))+fmt2.format(Math.abs(d))+' p.p.'; }
+    var vFb = P && P.fb ? (M.fb/P.fb - 1)*100 : null;
+    L.push('* Faturamento bruto: '+brl2(M.fb)+(P ? ' ('+ab+': '+brl2(P.fb)+' · '+(vFb>0?'▲ +':(vFb<0?'▼ −':'= '))+fmt2.format(Math.abs(vFb))+'%)' : ''));
+    L.push('* CMV: '+pct2(M.pctCmv)+(P ? ' ('+ab+': '+pct2(P.pctCmv)+' · '+ppv(M.pctCmv, P.pctCmv)+')' : ''));
+    L.push('* CMO: '+pct2(M.pctCmo)+(P ? ' ('+ab+': '+pct2(P.pctCmo)+' · '+ppv(M.pctCmo, P.pctCmo)+')' : ''));
+    L.push('* Resultado operacional: '+brl2s(M.lop)+' | '+pct2s(rgPctRes(M))+(P ? ' ('+ab+': '+brl2s(P.lop)+' | '+pct2s(rgPctRes(P))+' · '+(M.lop-P.lop>=0?'▲ +':'▼ −')+brl2(Math.abs(M.lop-P.lop))+' · '+ppv(rgPctRes(M), rgPctRes(P))+')' : ''));
     if(M.estAdj && Math.abs(M.estAdj) >= 0.5){
       var semEst = M.lop - M.estAdj, vtxt = (M.estAdj>0 ? 'aumento' : 'redução')+' do estoque de '+brl2(Math.abs(M.estAdj));
       if(semEst<0 && M.lop>=0) L.push('* ⚖️ Estoque: sem o estoque inicial e final, o resultado seria NEGATIVO em '+brl2(Math.abs(semEst))+'; considerando o '+vtxt+', fecha POSITIVO em '+brl2(M.lop)+'.');

@@ -1002,7 +1002,6 @@
       <h2 id="smTitle">DRE semanal</h2>
       <span class="section-sub">Semanas de segunda a domingo · use o filtro de marca/loja no topo · as semanas somam exatamente o mês da DRE</span>
     </div>
-    <div class="pc-warn" id="smAviso" style="margin:0 0 12px;"></div>
     <div class="sm-weeks" id="smWeeks"></div>
     <div class="dre-tools" style="margin-top:16px;">
       <span class="dre-tools-hint">Clique num plano de contas para ver o que o compõe</span>
@@ -1812,9 +1811,6 @@
     if(typeof DRE_SEMANAL==='undefined' || !document.getElementById('smTable')) return;
     var S = DRE_SEMANAL, scope = fState.scope, W = S.semanas;
     document.getElementById('smTitle').textContent = 'DRE semanal · '+scopeName(scope)+' · '+S.mes;
-    document.getElementById('smAviso').innerHTML = S.faturamentoProvisorio ?
-      '⚠ <b>Faturamento por semana provisório:</b> enquanto o relatório de cupons por semana não chega, o faturamento do mês (R$ do relatório de cupons) está rateado pelos dias de cada semana. CMV, entregas e devoluções já estão pela data real dos lançamentos.' : '';
-    document.getElementById('smAviso').hidden = !S.faturamentoProvisorio;
     var fb = smVals(scope,'Faturamento Bruto Total'), fli = smVals(scope,'Faturamento Líquido de Itens'), lop = smVals(scope,'Lucro/Prejuízo Operacional'),
         cmv = smVals(scope,'CMV - Custo da Mercadoria Vendida'), cmo = smVals(scope,'Despesas com Pessoal');
     function dlt(cur, prev, dirLow, unit){

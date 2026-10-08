@@ -3558,55 +3558,166 @@
     return L;
   }
   function buildResumoGerencial(){
-    var s = fState.scope, m = fState.month;
-    var perUp = m===-1 ? 'ACUMULADO JAN–SET/2026' : MONTH_FULL[m].toUpperCase()+'/2026';
+    var s = fState.scope, m = fState.month, SEP = '━━━━━━━━━━━━━━';
+    var semEst = cmpNoEst(m), temP = m>0;
+    var prevNome = temP ? MONTH_FULL[m-1].toLowerCase() : '', prevCap = temP ? MONTH_FULL[m-1] : '', mesNome = m===-1 ? 'o acumulado' : MONTH_FULL[m].toLowerCase();
+    // formatação: sinal de menos tipográfico e "+" nos positivos
+    function sg(v){ return v<0 ? '−' : '+'; }
+    function rs(v){ return sg(v)+'R$ '+fmt2.format(Math.abs(v)); }
+    function rsAbs(v){ return 'R$ '+fmt2.format(Math.abs(v)); }
+    function pc(v){ return fmt2.format(v)+'%'; }
+    function pcs(v){ return sg(v)+fmt2.format(Math.abs(v))+'%'; }
+    var meta = SIG.lop.g;
     var L = [];
-    L.push('📊 RESUMO GERENCIAL — DRE DE '+perUp+' POR UNIDADE (VOXEL)');
+    L.push('📊 RESUMO GERENCIAL — DRE '+(m===-1 ? 'ACUMULADO JAN–'+VOXEL_MONTH_LABELS[VOXEL_ACC_FIM].toUpperCase()+'/2026' : MONTH_FULL[m].toUpperCase()+'/2026')+(s==='Consolidado' ? '' : ' · '+scopeName(s).toUpperCase()));
+    L.push('Base: Financeiro Voxel e Cloudfy'+(temP ? ' | Comparativo com '+prevNome : ''));
     L.push('');
-    L.push('Resumo analítico das DREs de '+periodName(m)+(s==='Consolidado' ? '' : ' — '+scopeName(s))+', organizado por unidade com base nos dados do Painel de DRE (estrutura Voxel).');
-    L.push('Bases: CMV, CMO e resultado % sobre o faturamento líquido; descontos sobre o faturamento bruto.'+(m>0?' Comparações com '+MONTH_FULL[m-1].toLowerCase()+'/2026.':''));
+    L.push('🔗https://painel-de-dre.vercel.app/#resumo');
     L.push('');
-    L.push(RG_SEP);
+    L.push('📌 Critério de comparação');
+    if(semEst){
+      L.push('Os indicadores principais de '+mesNome+' estão sem o ajuste dos estoques inicial e final, para manter a mesma base de '+prevNome+', que não possui contagem.');
+      L.push('');
+      L.push('O resultado com estoque aparece separado em cada unidade. CMV, CMO e margem são calculados sobre o faturamento líquido; descontos, sobre o bruto.');
+    } else {
+      L.push('CMV, CMO e margem são calculados sobre o faturamento líquido; descontos, sobre o bruto.'+(temP ? ' Comparações com '+prevNome+'.' : ''));
+    }
+    L.push('');
+    L.push(SEP);
 
-    // universo para rankings: todas as lojas com dados no período
-    var all = voxelTabsList.map(function(t){ return {t:t, M:storeMetrics(t, m)}; }).filter(function(x){ return x.M; });
-    function argBest(f, dir){ var b = null; all.forEach(function(x){ var v = f(x.M); if(b===null || (dir>0 ? v>b.v : v<b.v)) b = {t:x.t, v:v}; }); return b ? b.t : null; }
-    var best = argBest(rgPctRes, 1), worst = argBest(rgPctRes, -1), maxCmo = argBest(function(M){ return M.pctCmo; }, 1),
-        bestCombo = argBest(function(M){ return M.pctCmv + M.pctCmo; }, -1), maxDesc = argBest(rgDescPct, 1);
-
-    // bloco do grupo (rede ou marca)
-    if(isGroupScope(s) && scopeStores(s).length>1){
-      var G = storeMetrics(s, m), GP = m>0 ? storeMetrics(s, m-1) : null;
-      if(G){
-        var gl = scopeStores(s).map(function(t){ return storeMetrics(t, m); }).filter(Boolean);
-        var neg = gl.filter(function(x){ return cmpM(x, m).lop<0; }).length, neg0 = gl.filter(function(x){ return x.lop<0; }).length;
-        var ttl = s==='Consolidado' ? '🌐 REDE CONSOLIDADA ('+gl.length+' lojas)' : brandIcon(s.slice(6))+' MARCA '+s.slice(6).toUpperCase()+' ('+gl.length+' lojas)';
-        L = L.concat(rgBlock(ttl, G, GP, m, [neg+' de '+gl.length+' lojas fecharam no prejuízo'+(cmpNoEst(m) && neg0!==neg ? ' ('+neg0+' com estoque inicial e final)' : '')]));
-        L.push(RG_SEP);
+    // dados de cada unidade: C = comparável (sem estoque quando só este mês tem contagem), M0 = com estoque, P = mês anterior
+    function dados(t){
+      var M0 = storeMetrics(t, m); if(!M0) return null;
+      var C = cmpM(M0, m), P = temP ? storeMetrics(t, m-1) : null;
+      return {t:t, M0:M0, C:C, P:P, res:rgPctRes(C), res0:rgPctRes(M0), dp:rgDescPct(C), adj:(C!==M0 ? M0.lop - C.lop : 0)};
+    }
+    function linhaRes(d){
+      var ic = d.C.lop<0 ? '📉' : '📈';
+      var out = [ic+' '+(semEst ? 'Resultado sem ajuste de estoque: ' : 'Resultado operacional: ')+rs(d.C.lop)+' | '+pcs(d.res)];
+      if(d.P) out.push(prevCap+': '+rs(d.P.lop)+' | '+pcs(rgPctRes(d.P)));
+      if(semEst) out.push('📦 Com estoque: '+rs(d.M0.lop)+' | '+pcs(d.res0));
+      return out;
+    }
+    // narrativa e classificação (✅ 🟠 🔴)
+    function avaliar(d, grupo){
+      var C = d.C, P = d.P, dif = P ? C.lop - P.lop : 0, vf = P && P.fb ? (C.fb/P.fb - 1)*100 : 0;
+      var vendas = Math.abs(vf)<1.5 ? 'vendas praticamente estáveis' : (vf>0 ? 'alta nas vendas' : 'queda nas vendas');
+      var adjTxt = '';
+      if(semEst && Math.abs(d.adj)>=0.5){
+        if(C.lop<0 && d.M0.lop>=0) adjTxt = ' O ajuste de estoque de '+rsAbs(d.adj)+' levou o fechamento ao positivo.';
+        else if(C.lop>=0 && d.M0.lop<0) adjTxt = ' Porém, a redução do estoque de '+rsAbs(d.adj)+' levou o fechamento ao negativo.';
+        else if(d.adj<0 && C.lop<0) adjTxt = ' A redução do estoque diminuiu o resultado em mais '+rsAbs(d.adj)+'.';
+        else if(d.adj>=Math.max(20000, Math.abs(C.lop)*0.5)) adjTxt = ' O ajuste acrescentou '+rsAbs(d.adj)+' ao fechamento.';
       }
+      var maxima = C.lop<0 && d.res < -15;
+      if(!P) return {cls: C.lop>=0 ? (d.res>=meta ? 'ok' : 'atencao') : (maxima ? 'max' : 'critico'), txt:(C.lop>=0 ? 'Resultado positivo.' : 'Resultado negativo.')+adjTxt};
+      if(C.lop>=0 && P.lop<0){
+        if(semEst && d.M0.lop<0) return {cls:'atencao', txt:'Saiu do prejuízo na base comparável, com melhora de '+rsAbs(dif)+'.'+adjTxt};
+        return {cls:'ok', txt:'Saiu do prejuízo'+(semEst ? ' mesmo sem o ajuste de estoque' : '')+'. Melhora de '+rsAbs(dif)+(vf<-1.5 ? ', apesar da queda nas vendas.' : '.')+adjTxt};
+      }
+      if(C.lop>=0 && P.lop>=0){
+        if(dif>=0){
+          var t1 = vf>1.5 ? 'Vendas e resultado cresceram. Melhora de '+rsAbs(dif)+' na comparação com '+prevNome+'.' : 'O resultado cresceu '+rsAbs(dif)+', com '+vendas+'.';
+          return {cls: d.res>=meta ? 'ok' : 'atencao', txt:t1+(d.res>=meta ? ' Margem acima da meta de '+fmt1.format(meta).replace(',0','')+'%.' : ' A margem ainda está abaixo da meta de '+fmt1.format(meta).replace(',0','')+'%.')+adjTxt};
+        }
+        return {cls:'atencao', txt:'As vendas '+(vf>1.5 ? 'cresceram' : (vf<-1.5 ? 'caíram' : 'ficaram estáveis'))+', mas o resultado caiu '+rsAbs(dif)+(semEst ? ' na base comparável' : '')+'.'+(d.res<meta ? ' A margem'+(semEst ? ' sem ajuste' : '')+' ficou abaixo da meta de '+fmt1.format(meta).replace(',0','')+'%.' : '')+adjTxt};
+      }
+      if(C.lop<0 && P.lop>=0) return {cls: (maxima || d.t===grupo.maxCmo) ? 'max' : 'critico', txt:(maxima || d.t===grupo.maxCmo ? 'Prioridade máxima. ' : '')+'Passou de lucro para prejuízo'+(semEst ? ' na base comparável' : '')+', com piora de '+rsAbs(dif)+'.'+(d.t===grupo.maxCmo ? ' Maior CMO da análise.' : '')+adjTxt};
+      // negativo nos dois meses
+      if(dif>=0){
+        if(maxima){
+          var piorou = d.res < rgPctRes(P);
+          var dest = [];
+          if(d.t===grupo.maxQueda) dest.push('maior queda de faturamento');
+          if(d.t===grupo.maxDesc) dest.push('maior percentual de descontos');
+          return {cls:'max', txt:'Prioridade máxima. O prejuízo'+(piorou ? ' em reais diminuiu apenas '+rsAbs(dif)+', enquanto a margem piorou.' : ' diminuiu '+rsAbs(dif)+', mas a unidade mantém margem de '+pcs(d.res)+(d.t===grupo.worst ? ', a pior da análise' : '')+(C.pctCmv>45 ? ', e CMV crítico' : '')+'.')+
+            (dest.length ? ' '+dest.join(' e ').replace(/^./, function(c){ return c.toUpperCase(); })+' da análise.' : '')};
+        }
+        if(semEst && d.M0.lop>=0){
+          if(grupo.isGroup) return {cls:'atencao', txt:'O prejuízo diminuiu '+rsAbs(dif)+(vf<-1.5 ? ', mesmo com a queda nas vendas' : '')+'. O ajuste de estoque acrescentou '+rsAbs(d.adj)+' e levou o fechamento ao positivo.'};
+          if(d.res > -2) return {cls:'atencao', txt:'O prejuízo diminuiu '+rsAbs(dif)+'. A unidade está próxima do equilíbrio na base comparável, mas o fechamento positivo depende do ajuste de estoque.'};
+          return {cls:'atencao', txt:'O prejuízo diminuiu '+rsAbs(dif)+'.'+adjTxt};
+        }
+        return {cls:'atencao', txt:(dif>Math.abs(P.lop)*0.5 ? 'Recuperação expressiva: o prejuízo diminuiu '+rsAbs(dif)+', mas a unidade continua negativa.' : 'O prejuízo diminuiu '+rsAbs(dif)+', mas a unidade permanece negativa'+(semEst && d.M0.lop<0 ? ' nas duas visões' : '')+'.')+(semEst ? '' : adjTxt)};
+      }
+      return {cls: maxima ? 'max' : 'critico', txt:(maxima ? 'Prioridade máxima. ' : '')+'O prejuízo aumentou '+rsAbs(-dif)+'.'+(C.pctCmo>SIG.cmo.g && P && C.pctCmo>P.pctCmo+2 ? ' O CMO subiu' : '')+(vf<-1.5 ? (C.pctCmo>SIG.cmo.g && P && C.pctCmo>P.pctCmo+2 ? ' e as vendas caíram.' : ' As vendas caíram.') : (C.pctCmo>SIG.cmo.g && P && C.pctCmo>P.pctCmo+2 ? '.' : ''))+adjTxt};
+    }
+    function foco(d, av){
+      var C = d.C, P = d.P, it = [];
+      var cmvAlto = C.pctCmv > SIG.cmv.g, cmoAlto = C.pctCmo > SIG.cmo.g, descAlto = d.dp > SIG.desc.y;
+      var cmvSubiu = P && C.pctCmv > P.pctCmv + 2;
+      if(av.cls==='max') return 'revisar '+[cmvAlto?'CMV':null, descAlto?'descontos':null, 'quadro de pessoal', 'operação por turno'].filter(Boolean).join(', ').replace(/, ([^,]*)$/, ' e $1')+'.';
+      if(C.lop>=0 && d.res>=meta) return cmvSubiu ? 'reduzir o CMV, que aumentou em relação a '+prevNome+', e preservar o controle de pessoal.' : 'manter o controle dos custos e sustentar o desempenho.';
+      if(cmoAlto && P && C.pctCmo > P.pctCmo + 3) it.push('adequar o custo de pessoal ao faturamento');
+      else if(cmoAlto) it.push('reduzir o CMO');
+      if(cmvAlto) it.push('reduzir o CMV');
+      if(descAlto) it.push('revisar descontos');
+      if(!it.length) it.push('reduzir custos fixos');
+      if(semEst && d.adj<0) it.push('acompanhar o consumo de estoque');
+      var txt = it.join(', ').replace(/, ([^,]*)$/, ' e $1');
+      return txt + (C.lop<0 ? ' para alcançar o equilíbrio.' : ' para elevar a margem'+(semEst ? ' comparável' : '')+' à meta de '+fmt1.format(meta).replace(',0','')+'%.');
+    }
+    var ICON = {ok:'✅', atencao:'🟠', critico:'🔴', max:'🔴'};
+    function bloco(titulo, d, grupo, extra){
+      var C = d.C, P = d.P, B = [titulo, ''];
+      var vf = P && P.fb ? (C.fb/P.fb - 1)*100 : null;
+      B.push('💰 Faturamento: '+rsAbs(C.fb)+(vf!==null ? ' | '+pcs(vf) : ''));
+      B.push('📦 CMV: '+pc(C.pctCmv)+(P ? ' | '+prevCap+': '+pc(P.pctCmv) : ''));
+      B.push('👥 CMO: '+pc(C.pctCmo)+(P ? ' | '+prevCap+': '+pc(P.pctCmo) : ''));
+      if(!extra && d.dp > SIG.desc.y) B.push('🏷️ Descontos: '+pc(d.dp));
+      B.push('');
+      B = B.concat(linhaRes(d));
+      B.push('');
+      var av = avaliar(d, grupo); d.av = av;
+      B.push(ICON[av.cls]+' '+av.txt);
+      if(extra){ B.push(''); B.push(extra); }
+      B.push('');
+      B.push('🎯 Foco: '+(extra ? (d.C.lop>=0 || (d.P && d.C.lop>d.P.lop) ? 'reduzir CMV e CMO e consolidar a recuperação.' : 'reduzir CMV e CMO para voltar ao equilíbrio.') : foco(d, av)));
+      return B;
     }
 
-    scopeStores(s).forEach(function(t){
-      var M = storeMetrics(t, m), P = (m>0 && M) ? storeMetrics(t, m-1) : null;
-      var title = brandIcon(storeBrand(t))+' '+t.toUpperCase()+(t==='Biggs 08 e 09' ? ' — RESULTADO CONSOLIDADO' : '');
-      if(!M){
-        L.push(title); L.push('');
-        L.push(t==='Biggs 13' ? '⚠️ A Biggs 13 só tem DRE a partir de agosto/2026 — sem dados em '+periodName(m)+'.' : '⚠️ Sem DRE da unidade em '+periodName(m)+'.');
-        L.push(RG_SEP); return;
+    var lojas = scopeStores(s).map(dados).filter(Boolean);
+    function arg(f, dir){ var b = null; lojas.forEach(function(x){ var v = f(x); if(b===null || (dir>0 ? v>b.v : v<b.v)) b = {t:x.t, v:v}; }); return b ? b.t : null; }
+    var grupo = {worst: arg(function(x){ return x.res; }, -1), maxCmo: arg(function(x){ return x.C.pctCmo; }, 1),
+      maxQueda: arg(function(x){ return x.P && x.P.fb ? x.C.fb/x.P.fb : 9; }, -1), maxDesc: arg(function(x){ return x.dp; }, 1)};
+
+    if(isGroupScope(s) && scopeStores(s).length>1){
+      var G = dados(s);
+      if(G){
+        var neg = lojas.filter(function(x){ return x.C.lop<0; }).length, neg0 = lojas.filter(function(x){ return x.M0.lop<0; }).length;
+        var ttl = s==='Consolidado' ? '🌐 REDE CONSOLIDADA' : brandIcon(s.slice(6))+' MARCA '+s.slice(6).toUpperCase();
+        L = L.concat(bloco(ttl, G, {isGroup:true}, '⚠️ '+neg+' dos '+lojas.length+' grupos analisados apresentam prejuízo'+(semEst ? ' sem o ajuste de estoque; com o ajuste, são '+neg0+'.' : '.')));
+        L.push('');
+        L.push(SEP);
       }
-      var ex = [];
-      var dp = rgDescPct(M);
-      if(dp > SIG.desc.y) ex.push('Descontos representaram '+pct2(dp)+' do faturamento bruto'+(t===maxDesc?', o maior percentual entre as unidades analisadas':''));
-      if(M.pctCmv > 45) ex.push('O CMV está em nível crítico');
-      if(t===best) ex.push('Apresentou o melhor resultado entre as unidades analisadas');
-      if(t===worst) ex.push('Apresentou o pior percentual de resultado operacional');
-      if(t===maxCmo) ex.push('Apresenta o maior CMO entre as unidades analisadas');
-      if(t===bestCombo && t!==best) ex.push('Apresentou a melhor combinação entre CMV e CMO');
-      L = L.concat(rgBlock(title, M, P, m, ex));
-      if(t==='Biggs 08 e 09'){ L.push(''); L.push('⚠️ O arquivo Voxel apresenta Biggs 08 e 09 juntas, sem separação dos resultados.'); }
-      L.push(RG_SEP);
+    }
+    scopeStores(s).forEach(function(t){
+      var d = lojas.filter(function(x){ return x.t===t; })[0];
+      var titulo = brandIcon(storeBrand(t))+' '+t.toUpperCase()+(t==='Biggs 08 e 09' ? ' — CONSOLIDADO' : '');
+      if(!d){ L.push(titulo); L.push(''); L.push('⚠️ Sem DRE da unidade em '+periodName(m)+'.'); L.push(''); L.push(SEP); return; }
+      L = L.concat(bloco(titulo, d, grupo));
+      if(t==='Biggs 08 e 09'){ L.push(''); L.push('📌 A Voxel apresenta as duas unidades juntas, sem separar os resultados.'); }
+      L.push('');
+      L.push(SEP);
     });
-    if(L[L.length-1]===RG_SEP) L.pop();
+
+    // prioridades de gestão (quando há mais de uma loja)
+    if(lojas.length>1){
+      function nomes(list){ var n = list.map(function(x){ return x.t; }); return n.length>1 ? n.slice(0,-1).join(', ')+' e '+n[n.length-1] : n[0]; }
+      var red = lojas.filter(function(x){ return x.av && (x.av.cls==='max' || x.av.cls==='critico'); }).sort(function(a, b){ return a.res - b.res; }).slice(0,4);
+      var cmo = lojas.filter(function(x){ return x.C.pctCmo > SIG.cmo.g; }).sort(function(a, b){ return b.C.pctCmo - a.C.pctCmo; }).slice(0,3);
+      var viraPos = semEst ? lojas.filter(function(x){ return x.C.lop<0 && x.M0.lop>=0; }) : [], viraNeg = semEst ? lojas.filter(function(x){ return x.C.lop>=0 && x.M0.lop<0; }) : [];
+      var recup = lojas.filter(function(x){ return x.P && x.P.lop<0 && x.C.lop>=0 && x.M0.lop>=0; });
+      var perda = lojas.filter(function(x){ return x.P && x.C.fb>x.P.fb*1.015 && x.C.lop<x.P.lop; }), virouPrej = lojas.filter(function(x){ return x.P && x.P.lop>=0 && x.C.lop<0; });
+      L.push('🎯 PRIORIDADES DE GESTÃO');
+      L.push('');
+      if(red.length){ L.push('🔴 Ação imediata: '+nomes(red)+'.'); L.push(''); }
+      if(cmo.length){ L.push('👥 Revisão de pessoal e escalas: unidades com CMO elevado, especialmente '+nomes(cmo)+'.'); L.push(''); }
+      if(viraPos.length || viraNeg.length){ L.push('📦 Atenção ao efeito do estoque: '+(viraPos.length ? nomes(viraPos)+(viraPos.length>1 ? ' ficam positivas' : ' fica positiva')+' após o ajuste' : '')+(viraPos.length && viraNeg.length ? '; ' : '')+(viraNeg.length ? nomes(viraNeg)+(viraPos.length ? ' faz o movimento contrário' : (viraNeg.length>1 ? ' ficam negativas' : ' fica negativa')+' após o ajuste') : '')+'.'); L.push(''); }
+      if(recup.length){ L.push('📈 Consolidar a recuperação: '+nomes(recup)+(recup.length>1 ? ' saíram' : ' saiu')+' do prejuízo'+(semEst ? ' mesmo sem o ajuste de estoque' : '')+'.'); L.push(''); }
+      if(perda.length || virouPrej.length){ L.push('🔎 Investigar a perda de rentabilidade: '+(perda.length ? nomes(perda)+(perda.length>1 ? ' venderam mais, mas tiveram' : ' vendeu mais, mas teve')+' redução do resultado' : '')+(perda.length && virouPrej.length ? '; ' : '')+(virouPrej.length ? nomes(virouPrej)+(virouPrej.length>1 ? ' passaram' : ' passou')+' de lucro para prejuízo' : '')+'.'); }
+    }
+    while(L.length && (L[L.length-1]==='' || L[L.length-1]===SEP)) L.pop();
     return L.join('\n');
   }
   function buildResumoPlano(){

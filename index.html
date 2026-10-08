@@ -787,6 +787,9 @@
   #voxelTable thead th.num{white-space:normal;}
   #voxelTable thead th .thsub{display:block; font-size:9.5px; font-weight:600; color:var(--ink-muted); text-transform:none; letter-spacing:0; line-height:1.25;}
   sup.parc{font-size:8.5px; font-weight:800; margin-left:3px; color:var(--warning); text-transform:uppercase; letter-spacing:.03em;}
+  .kpi-side{display:inline-flex; flex-direction:column; align-items:flex-end; margin-left:12px; padding-left:12px; border-left:1px solid var(--border); vertical-align:middle; line-height:1.15;}
+  .kpi-side small{font-size:10.5px; font-weight:600; color:var(--ink-muted); letter-spacing:0;}
+  .kpi-side b{font-size:17px; font-weight:800;}
 </style>
 
 <div class="page">
@@ -898,7 +901,7 @@
     <div class="voxel-tabs" id="voxelTabs" style="margin-top:14px;"></div>
 
     <div class="dre-tools">
-      <span class="dre-tools-hint">Em cada mês: <b>valor em R$</b> · <b>% do faturamento</b> (bruto do mês) · <b>vs. mês anterior</b> — nas margens: margem % e <b>Δ margem (p.p.)</b>. Seta = aumento/redução; cor = melhora (verde) ou piora (vermelho). Clique num plano de contas para ver o que o compõe.</span>
+      <span class="dre-tools-hint">Em cada mês: <b>valor em R$</b> · <b>% do faturamento</b> (bruto do mês) · <b>vs. mês anterior</b> — nas margens: margem % e <b>Δ margem (p.p.)</b>. *Setembro x agosto no CMV e nos resultados: comparação sem o estoque inicial e final (agosto não tem contagem). Seta = aumento/redução; cor = melhora (verde) ou piora (vermelho). Clique num plano de contas para ver o que o compõe.</span>
       <button type="button" class="dre-tool-btn" id="dreExpandAll">Expandir tudo</button>
       <button type="button" class="dre-tool-btn" id="dreCollapseAll">Recolher tudo</button>
     </div>
@@ -2067,7 +2070,7 @@
       html += '<div class="sig-card" style="--sig-c:'+d.color+'" data-go="'+k+'" role="button" tabindex="0" title="'+d.label+(p!==null ? ': '+fmt1.format(p)+'% · '+(rsTxt||'') : '')+' — clique para ver na DRE">'+
         '<div class="sig-name"><span class="cat-dot" style="background:'+d.color+'"></span>'+d.label+'</div>'+
         '<div class="sig-val tabular">'+(p===null?'—':fmt1.format(p)+'%')+' <span style="font-size:11.5px;font-weight:600;color:var(--ink-muted);">realizado</span></div>'+
-        (MP && p!==null ? (function(){ var pp = sigPct(k, MP); return pp===null ? '' : vsPrevHtml(p, pp, d.dir, 'pp', m, fmt1.format(pp)+'%'); })() : '')+body+'<div class="go-hint">Ver na DRE ↓</div></div>';
+        (MP && p!==null ? (function(){ var pp = sigPct(k, MP); return pp===null ? '' : vsPrevHtml(sigPct(k, cmpM(M, m)), pp, d.dir, 'pp', m, fmt1.format(pp)+'%'+(cmpNoEst(m)?' · set sem estoque':'')); })() : '')+body+'<div class="go-hint">Ver na DRE ↓</div></div>';
     });
     document.getElementById('sigPanel').innerHTML = html;
   }
@@ -2079,8 +2082,11 @@
     'Resultado Líquido de Empréstimos, Aportes e Retiradas':1,'Outras Entradas e Saídas':1,'Transferências de Saída':1,'Transferências de Entrada':1,'Saldo Inicial':1,'Ajuste de Caixa':1,
     'Estoque Inicial':1,'Estoque Final':1};
   // célula do mês: valor em R$; abaixo, % do faturamento bruto e comparação com o mês calendário anterior
-  function dreCell(v, prev, fb, fbPrev, kind, node, i){
+  var DRE_AFETA_EST = {'CMV - Custo da Mercadoria Vendida':1,'Custos Variáveis':1,'Margem de Contribuição':1,'Lucro/Prejuízo Operacional':1,'Lucro/Prejuízo Líquido':1,'Resultado Líquido de Empréstimos, Aportes e Retiradas':1};
+  function dreCell(v, prev, fb, fbPrev, kind, node, i, est){
     if(v===null || v===undefined) return '—';
+    // valor usado na comparação: sem o estoque quando o mês anterior não tem contagem
+    var vc = (i>0 && est && cmpNoEst(i) && DRE_AFETA_EST[node.l]) ? v - est : v;
     var h = voxelBRL(v);
     if(node.ind) return h;                                   // indicador (equilíbrio): sem % e sem variação
     var mesAnt = i>0 ? VOXEL_MONTH_LABELS[i-1].toLowerCase() : '';
@@ -2092,27 +2098,27 @@
       if(i<0) return h;
       var temP = prev!==null && prev!==undefined && fbPrev!==null && fbPrev!==undefined && Math.abs(fbPrev)>0.5;
       if(!temP || mg===null){ return h + '<small class="dc" title="Δ margem (p.p.) vs. mês anterior">Δ —</small>'; }
-      var mp = prev/fbPrev*100, d = mg - mp;
+      var mgc = vc/fb*100, mp = prev/fbPrev*100, d = mgc - mp;
       var cls = Math.abs(d)<0.05 ? '' : (d>0 ? ' good' : ' bad');
-      h += '<small class="dc'+cls+'" title="Δ margem (p.p.) vs. '+mesAnt+': '+fmt1.format(mp)+'% → '+fmt1.format(mg)+'%">'+(Math.abs(d)<0.05 ? '＝ 0,0 p.p.' : (d>0?'▲ +':'▼ −')+fmt1.format(Math.abs(d))+' p.p.')+'</small>';
-      if(prev<0 && v>=0) h += '<small class="dflip good">Virada para lucro</small>';
-      else if(prev>=0 && v<0) h += '<small class="dflip bad">Virada para prejuízo</small>';
+      h += '<small class="dc'+cls+'" title="Δ margem (p.p.) vs. '+mesAnt+': '+fmt1.format(mp)+'% → '+fmt1.format(mg)+'%">'+(Math.abs(d)<0.05 ? '＝ 0,0 p.p.' : (d>0?'▲ +':'▼ −')+fmt1.format(Math.abs(d))+' p.p.')+(vc!==v ? '*' : '')+'</small>';
+      if(prev<0 && vc>=0) h += '<small class="dflip good">Virada para lucro'+(vc!==v?'*':'')+'</small>';
+      else if(prev>=0 && vc<0) h += '<small class="dflip bad">Virada para prejuízo'+(vc!==v?'*':'')+'</small>';
       return h;
     }
     h += '<small class="dc" title="% do faturamento bruto">'+(temFb ? fmt1.format(v/fb*100)+'%' : '—')+'</small>';
     if(i<0) return h;
     var vs = '—', cls2 = '', tip = 'vs. mês anterior';
-    if(prev!==null && prev!==undefined && Math.abs(prev)>=0.5 && (v<=0)===(prev<=0)){
-      var desp = v<=0 && prev<=0 && !(v===0 && prev===0);    // despesas (negativas): compara o valor absoluto
-      var ch = (Math.abs(v)/Math.abs(prev) - 1)*100;
+    if(prev!==null && prev!==undefined && Math.abs(prev)>=0.5 && (vc<=0)===(prev<=0)){
+      var desp = vc<=0 && prev<=0 && !(vc===0 && prev===0);    // despesas (negativas): compara o valor absoluto
+      var ch = (Math.abs(vc)/Math.abs(prev) - 1)*100;
       if(Math.abs(ch)<0.05) vs = '＝ 0,0%';
       else {
         vs = (ch>0?'▲ +':'▼ −')+fmt1.format(Math.abs(ch))+'%';
         if(kind!=='neutro') cls2 = (desp ? ch<0 : ch>0) ? ' good' : ' bad';
       }
-      tip = 'vs. '+mesAnt+': '+voxelBRL(prev)+' → '+voxelBRL(v);
+      tip = 'vs. '+mesAnt+': '+voxelBRL(prev)+' → '+voxelBRL(vc)+(vc!==v ? ' (sem estoque inicial/final)' : '');
     }
-    return h + '<small class="dc'+cls2+'" title="'+tip+'">'+vs+'</small>';
+    return h + '<small class="dc'+cls2+'" title="'+tip+'">'+vs+(vc!==v && vs!=='—' ? '*' : '')+'</small>';
   }
   function voxelRenderTable(){
     var flat = voxelFlatten(voxelHierarchy, 0, null, []);
@@ -2131,6 +2137,8 @@
     var pctHeader = document.getElementById('voxelPctHeader');
     if(pctHeader){ pctHeader.textContent = baseLabel; pctHeader.title = 'Acumulado da linha ÷ faturamento bruto acumulado do período'; }
     var mesesN = fbVals.filter(function(v){ return v!==null && v!==undefined; }).length;
+    var eF = voxelGetVals(voxelActiveScope,'Estoque Final'), eI = voxelGetVals(voxelActiveScope,'Estoque Inicial');
+    var estVals = eF.map(function(v, i){ return (v||0) + (eI[i]||0); });
 
     var hc = document.getElementById('voxelHeadCtx');
     if(hc) hc.innerHTML = '<b>'+scopeName(voxelActiveScope)+'</b><span>Plano de contas · em destaque: '+periodName(voxelActiveMonth)+'</span>';
@@ -2184,7 +2192,7 @@
         if(node.l==='Estoque Inicial' || node.l==='Estoque Final') vals = vals.map(function(v, i){ return ESTOQUE[i] ? v : null; });   // só há contagem nos meses de ESTOQUE
         var sgn = (node.res && node.res!=='cost' && node.res!=='rev') ? function(v){ return v===null ? '' : (v<0 ? ' neg' : ' pos'); } : function(){ return ''; };
         var kind = DRE_MARGEM[node.l] ? 'margem' : (DRE_NEUTRO[node.l] ? 'neutro' : 'conta');
-        vals.forEach(function(v, i){ cells += '<td class="num tabular'+sgn(v)+'">'+dreCell(v, i>0 ? vals[i-1] : null, fbVals[i], i>0 ? fbVals[i-1] : null, kind, node, i)+'</td>'; });
+        vals.forEach(function(v, i){ cells += '<td class="num tabular'+sgn(v)+'">'+dreCell(v, i>0 ? vals[i-1] : null, fbVals[i], i>0 ? fbVals[i-1] : null, kind, node, i, estVals[i])+'</td>'; });
         var rowAcc = voxelAcc(vals);
         cells += '<td class="num tabular'+sgn(rowAcc)+'">'+dreCell(rowAcc, null, baseAcc, null, kind, node, -1)+'</td>';
         // média mensal = acumulado ÷ meses com dados (Biggs 13 só a partir de agosto); % = acumulado ÷ faturamento acumulado
@@ -2308,6 +2316,20 @@
     return o;
   }
 
+  // métricas sem o ajuste de estoque (estoque inicial e final fora do CMV)
+  function semEstM(M){
+    if(!M || !M.estAdj) return M;
+    var o = {}, a = M.estAdj; for(var k in M) o[k] = M[k];
+    o.cmv = M.cmv + a; o.mc = M.mc - a; o.lop = M.lop - a; o.ll = M.ll - a; o.estAdj = 0;
+    o.pctLop = o.lop/o.fb*100; o.pctCmv = o.fli ? o.cmv/o.fli*100 : null; o.pctMc = o.flt ? o.mc/o.flt*100 : null; o.markup = o.cmv ? o.flt/o.cmv : null;
+    o.pe = (o.mc>0 && o.flt) ? o.cf/(o.mc/o.flt) : null; o.peOk = o.pe!==null && o.flt>=o.pe;
+    return o;
+  }
+  // o mês tem contagem de estoque e o anterior não: compara sem o estoque
+  function cmpNoEst(m){ return m>0 && !!ESTOQUE[m] && !ESTOQUE[m-1]; }
+  function cmpM(M, m){ return cmpNoEst(m) ? semEstM(M) : M; }
+  function pcAggOf(list){ return list.length>1 ? pcAgg(list) : list[0]; }
+
   function setFilter(scope, month){
     if(scope==='Biggs 13' && month!==-1 && !b13Has(month)){ month = VOXEL_B13_M; }
     fState.scope = scope; fState.month = month;
@@ -2379,16 +2401,19 @@
     if(m>0){
       var P = storeMetrics(s, m-1);
       if(P){
-        var d = M.pctLop - P.pctLop;
+        var d = cmpM(M, m).pctLop - P.pctLop;
         chip = '<span class="chip '+(d>=0?'good':'critical')+'">'+(d>=0?'+':'−')+fmt1.format(Math.abs(d))+' pp vs. '+VOXEL_MONTH_LABELS[m-1].toLowerCase()+'</span>';
       }
     }
     // despesas totais = faturamento bruto − resultado (descontos + custos variáveis + custos fixos)
     var despT = M.fb - M.lop, varT = M.flt - M.mc;
     var despTip = 'Descontos '+brl0(M.desc)+' + custos variáveis '+brl0(varT)+' + custos fixos '+brl0(M.cf)+' = '+brl0(despT);
-    html += kpiCard('Resultado operacional', brl0(M.lop), M.lop<0?'var(--critical)':'var(--good)',
-      pct(M.pctLop)+' do faturamento bruto'+
-      (MP ? vsPrevHtml(M.lop, MP.lop, 'high', 'brl', m, brl0(MP.lop)) : '')+
+    var semE = (M.estAdj && Math.abs(M.estAdj)>=0.5) ? M.lop - M.estAdj : null;
+    html += kpiCard('Resultado operacional', brl0(M.lop)+(semE===null ? '' :
+        '<span class="kpi-side" title="Resultado sem o estoque inicial e final (CMV só pelas compras)"><small>sem estoque inicial/final</small><b style="color:'+(semE<0?'var(--critical)':'var(--good)')+'">'+brl0(semE)+'</b><small>'+pct(semE/M.fb*100)+'</small></span>'),
+      M.lop<0?'var(--critical)':'var(--good)',
+      pct(M.pctLop)+' do faturamento bruto'+(semE!==null ? ' · com estoque inicial e final' : '')+
+      (MP ? vsPrevHtml(cmpM(M, m).lop, MP.lop, 'high', 'brl', m, brl0(MP.lop)+(cmpNoEst(m)?' · comparação sem estoque':'')) : '')+
       '<div class="kpi-desp" title="'+despTip+'">Faturamento '+brl0(M.fb)+' − despesas <b>'+brl0(despT)+'</b> ('+fmt1.format(despT/M.fb*100)+'%)</div>', chip);
     if(isRede){
       var neg = lojas.filter(function(x){ return x.lop<0; }).length;
@@ -2396,7 +2421,7 @@
       var negP = null;
       if(m>0){ var lojasP = grupo.map(function(t){ return storeMetrics(t, m-1); }).filter(Boolean); if(lojasP.length) negP = lojasP.filter(function(x){ return x.lop<0; }).length; }
       html += kpiCard('Lojas no prejuízo', neg+' <span class="kpi-of">/ '+lojas.length+'</span>', null, abaixo+' abaixo do equilíbrio líquido (DRE atual)'+
-        (negP!==null ? vsPrevHtml(neg, negP, 'low', 'n', m, negP+' lojas') : ''),
+        (negP!==null ? vsPrevHtml(lojas.filter(function(x){ return cmpM(x, m).lop<0; }).length, negP, 'low', 'n', m, negP+' lojas'+(cmpNoEst(m)?' · comparação sem estoque':'')) : ''),
         '<div class="kpi-hint">'+(lossOpen ? 'Ocultar lojas ▴' : 'Ver lojas no prejuízo e com resultado positivo ▾')+'</div>').replace('<div class="card kpi">', '<div class="card kpi kpi-click" id="lossCard" role="button" tabindex="0" aria-expanded="'+lossOpen+'" aria-controls="lossPanel">');
     } else {
       var peSub = M.pe===null ? 'margem de contribuição negativa — a loja não se paga' :
@@ -2410,7 +2435,7 @@
       var dpc = PCa.pc - PC_META, pcl = pcCls(PCa.pc);
       html += kpiCard((s==='Consolidado' ? 'Prime Cost da rede' : (isBrandScope(s) ? 'Prime Cost da marca' : 'Prime Cost'))+' (CMV + CMO)', fmt1.format(PCa.pc)+'%', pcColor(PCa.pc),
         'CMV '+fmt1.format(PCa.cmvP)+'% + CMO '+fmt1.format(PCa.cmoP)+'% · meta ≤'+PC_META+'% · sobre faturamento líquido'+
-        (function(){ if(!(m>0)) return ''; var pl = grupo.map(function(t){ return pcData(t, m-1); }).filter(Boolean); var PP = pl.length>1 ? pcAgg(pl) : pl[0]; return PP ? vsPrevHtml(PCa.pc, PP.pc, 'low', 'pp', m, fmt1.format(PP.pc)+'%') : ''; })(),
+        (function(){ if(!(m>0)) return ''; var pl = grupo.map(function(t){ return pcData(t, m-1); }).filter(Boolean); var PP = pl.length>1 ? pcAgg(pl) : pl[0]; var PCc = cmpNoEst(m) ? pcAggOf(grupo.map(function(t){ return pcData(t, m, true); }).filter(Boolean)) : PCa; return PP ? vsPrevHtml(PCc.pc, PP.pc, 'low', 'pp', m, fmt1.format(PP.pc)+'%'+(cmpNoEst(m)?' · set sem estoque':'')) : ''; })(),
         '<span class="chip '+(pcl==='sig-good'?'good':(pcl==='sig-warn'?'warning':'critical'))+'">'+(dpc>0.05 ? '+'+fmt1.format(dpc)+'pp acima da meta' : 'dentro da meta')+'</span>'+
         '<div class="kpi-hint">'+(pcTopOpen ? 'Ocultar composição ▴' : 'Ver composição do CMV e do CMO ▾')+'</div>')
         .replace('<div class="card kpi">', '<div class="card kpi kpi-click" id="pcTopCard" role="button" tabindex="0" aria-expanded="'+pcTopOpen+'" aria-controls="pcTopPanel">');
@@ -2430,13 +2455,13 @@
   function renderLossPanel(grupo){
     var p = document.getElementById('lossPanel'); if(!p) return;
     var m = fState.month;
-    var L = grupo.map(function(t){ var M = storeMetrics(t, m), P = (M && m>0) ? storeMetrics(t, m-1) : null; return M ? {t:t, lop:M.lop, pct:M.lop/M.fb*100, prev:P ? P.lop : null} : null; }).filter(Boolean);
+    var L = grupo.map(function(t){ var M = storeMetrics(t, m), P = (M && m>0) ? storeMetrics(t, m-1) : null; return M ? {t:t, lop:M.lop, cl:cmpM(M, m).lop, pct:M.lop/M.fb*100, prev:P ? P.lop : null} : null; }).filter(Boolean);
     var prevLbl = m>0 ? VOXEL_MONTH_LABELS[m-1].toLowerCase() : '';
     // lojas que trocaram de lado em relação ao mês anterior
     function virou(x){
       if(x.prev===null) return '';
-      if(x.prev<0 && x.lop>=0) return '<span class="loss-flip up" title="Em '+prevLbl+': '+brl0(x.prev)+'">↑ virou positivo vs. '+prevLbl+'</span>';
-      if(x.prev>=0 && x.lop<0) return '<span class="loss-flip down" title="Em '+prevLbl+': '+brl0(x.prev)+'">↓ virou negativo vs. '+prevLbl+'</span>';
+      if(x.prev<0 && x.cl>=0) return '<span class="loss-flip up" title="Em '+prevLbl+': '+brl0(x.prev)+'">↑ virou positivo vs. '+prevLbl+(cmpNoEst(m)?' (sem estoque)':'')+'</span>';
+      if(x.prev>=0 && x.cl<0) return '<span class="loss-flip down" title="Em '+prevLbl+': '+brl0(x.prev)+'">↓ virou negativo vs. '+prevLbl+(cmpNoEst(m)?' (sem estoque)':'')+'</span>';
       return '';
     }
     if(!lossOpen || !L.length){ p.hidden = true; p.innerHTML = ''; return; }
@@ -2486,16 +2511,16 @@
       return '<div class="vs-prev '+(eq?'':(good?'better':'worse'))+'"><b>'+(eq?'＝':(d>0?'▲ +':'▼ −'))+'R$ '+fmt2.format(Math.abs(d))+'</b> vs. '+VOXEL_MONTH_LABELS[m-1].toLowerCase()+' <span class="vs-was">('+(prev<0?'-':'')+'R$ '+fmt2.format(Math.abs(prev))+')</span></div>';
     }
     BN_CATS.forEach(function(c){
-      var v = M[c.k] || 0, per = (v/M.fb*100) || 0, perP = MP ? ((MP[c.k]||0)/MP.fb*100) : null;
+      var v = M[c.k] || 0, per = (v/M.fb*100) || 0, perP = MP ? ((MP[c.k]||0)/MP.fb*100) : null, perC = ((cmpM(M, m)[c.k]||0)/M.fb*100) || 0;
       html += '<div class="bn" data-go="'+(c.k==='cf' ? 'cfTotal' : c.k)+'" role="button" tabindex="0" title="Ver '+c.label+' na DRE"><div class="bn-label"><span class="swatch" style="background:'+c.color+'"></span>'+c.label+'</div>'+
-        '<div class="bn-value tabular">R$ '+fmt2.format(per)+'</div>'+bnVs(per, perP, true)+
+        '<div class="bn-value tabular">R$ '+fmt2.format(per)+'</div>'+bnVs(perC, perP, true)+
         '<span class="sig-pill '+sigClass(c.k, sigPct(c.k, M))+'"'+(c.k==='cf'?' title="Custos fixos sem pessoal, sobre o faturamento líquido"':'')+'><i class="sig-dot '+sigClass(c.k, sigPct(c.k, M))+'"></i><span class="tabular">'+fmt1.format(c.k==='cf' ? sigPct('cf', M) : per)+'%</span><span class="sig-meta">'+(c.k==='cf'?'sem pessoal · ':'')+sigMeta(c.k)+'</span></span>'+
         '<div class="bn-sub tabular">'+brl0(-v)+' no período</div></div>';
     });
     var perRes = M.lop/M.fb*100;
     var rc = sigClass('lop', perRes);
     html += '<div class="bn result" data-go="lop" role="button" tabindex="0" title="Ver resultado operacional na DRE"><div><div class="bn-label">Resultado operacional</div><div class="bn-sub tabular">'+brl0(M.lop)+' no período</div>'+
-      '<span class="sig-pill '+rc+'"><i class="sig-dot '+rc+'"></i><span class="tabular">'+pct(perRes)+'</span><span class="sig-meta">'+sigMeta('lop')+'</span></span>'+(MP ? bnVs(perRes, MP.lop/MP.fb*100, false) : '')+'</div>'+
+      '<span class="sig-pill '+rc+'"><i class="sig-dot '+rc+'"></i><span class="tabular">'+pct(perRes)+'</span><span class="sig-meta">'+sigMeta('lop')+'</span></span>'+(MP ? bnVs(cmpM(M, m).lop/M.fb*100, MP.lop/MP.fb*100, false) : '')+'</div>'+
       '<div class="bn-value tabular" style="color:'+(perRes<0?'var(--critical)':'var(--good)')+'">'+(perRes<0?'-':'+')+'R$ '+fmt2.format(Math.abs(perRes))+' <span class="bn-sub" style="font-weight:600;">a cada R$ 100</span></div></div>';
     grid.innerHTML = html;
     foot.textContent = '';
@@ -3206,8 +3231,8 @@
   var PC_CMO_LINES = ['Salários','Bonificações','Impostos Sobre Salários','Vale Alimentação','Vale Transporte','Rescisões','Freelancers e Terceirizados','Outros Encargos com Funcionários','Férias','13º Salário'];
   var pcSort = {k:'ordem', dir:1}, pcOpen = {};   // padrão: ordem fixa das lojas
   function pcLine(t, line, m){ var v = voxelGetVals(t, line); var x = m===-1 ? voxelAcc(v) : v[m]; return (x===null||x===undefined) ? null : -x; }
-  function pcData(t, m){
-    var M = storeMetrics(t, m);
+  function pcData(t, m, semEst){
+    var M = storeMetrics(t, m); if(semEst) M = semEstM(M);
     if(!M || !(M.fli>0)) return null;
     var base = M.fli, cmv = M.cmv, cmo = M.cmo, tot = cmv + cmo;
     // conferência: soma das contas de detalhe = linhas de CMV e de pessoal da DRE
@@ -3260,6 +3285,7 @@
     var A = list.length>1 || isGroupScope(s) ? pcAgg(list) : list[0];
     var listP = m>0 ? scopeStores(s).map(function(t){ return pcData(t, m-1); }).filter(Boolean) : [];
     var AP = listP.length ? (listP.length>1 || isGroupScope(s) ? pcAgg(listP) : listP[0]) : null;
+    var Ac = cmpNoEst(m) ? (function(){ var l = scopeStores(s).map(function(t){ return pcData(t, m, true); }).filter(Boolean); return l.length>1 || isGroupScope(s) ? pcAgg(l) : l[0]; })() : A;
     var cls = pcCls(A.pc), col = pcColor(A.pc);
     var hi = Math.max(A.pc, PC_ALERTA, 1)*1.15, px = A.pc/hi*100, mk = PC_META/hi*100;
     var diff = A.pc - PC_META;
@@ -3268,16 +3294,16 @@
     var nG = list.filter(function(d){ return pcCls(d.pc)==='sig-good'; }).length, nY = list.filter(function(d){ return pcCls(d.pc)==='sig-warn'; }).length, nR = list.length - nG - nY;
     var h = '';
     h += '<div class="sig-card'+(pcrOpen==='pc'?' pcr-on':'')+'" style="--sig-c:var(--accent)"'+go('pc')+'><div class="sig-name"><span class="cat-dot" style="background:var(--accent)"></span>Prime Cost</div>'+
-      '<div class="sig-val tabular">'+fmt1.format(A.pc)+'%</div>'+(AP ? vsPrevHtml(A.pc, AP.pc, 'low', 'pp', m, fmt1.format(AP.pc)+'%') : '')+
+      '<div class="sig-val tabular">'+fmt1.format(A.pc)+'%</div>'+(AP ? vsPrevHtml(Ac.pc, AP.pc, 'low', 'pp', m, fmt1.format(AP.pc)+'%') : '')+
       '<div class="sig-bar"><span class="fill '+cls+'" style="left:0; width:'+px.toFixed(1)+'%"></span><span class="mark" style="left:calc('+mk.toFixed(1)+'% - 1px)"></span></div>'+
       '<div class="sig-rm"><span>Meta</span><b>≤ '+PC_META+',0%</b></div>'+
       '<span class="sig-gap '+cls+'"><i class="sig-dot '+cls+'"></i>'+gapTxt+'</span></div>';
     h += '<div class="sig-card'+(pcrOpen==='cmv'?' pcr-on':'')+'" style="--sig-c:var(--cat-1)"'+go('cmv')+'><div class="sig-name"><span class="cat-dot" style="background:var(--cat-1)"></span>CMV no Prime Cost</div>'+
-      '<div class="sig-val tabular">'+fmt1.format(A.cmvP)+'%</div>'+(AP ? vsPrevHtml(A.cmvP, AP.cmvP, 'low', 'pp', m, fmt1.format(AP.cmvP)+'%') : '')+'<div class="sub">'+brl0(A.cmv)+'<br>'+fmt1.format(A.cmvP/A.pc*100)+'% do Prime Cost</div></div>';
+      '<div class="sig-val tabular">'+fmt1.format(A.cmvP)+'%</div>'+(AP ? vsPrevHtml(Ac.cmvP, AP.cmvP, 'low', 'pp', m, fmt1.format(AP.cmvP)+'%') : '')+'<div class="sub">'+brl0(A.cmv)+'<br>'+fmt1.format(A.cmvP/A.pc*100)+'% do Prime Cost</div></div>';
     h += '<div class="sig-card'+(pcrOpen==='cmo'?' pcr-on':'')+'" style="--sig-c:var(--ink-muted)"'+go('cmo')+'><div class="sig-name"><span class="cat-dot" style="background:var(--ink-muted)"></span>CMO no Prime Cost</div>'+
-      '<div class="sig-val tabular">'+fmt1.format(A.cmoP)+'%</div>'+(AP ? vsPrevHtml(A.cmoP, AP.cmoP, 'low', 'pp', m, fmt1.format(AP.cmoP)+'%') : '')+'<div class="sub">'+brl0(A.cmo)+'<br>'+fmt1.format(A.cmoP/A.pc*100)+'% do Prime Cost</div></div>';
+      '<div class="sig-val tabular">'+fmt1.format(A.cmoP)+'%</div>'+(AP ? vsPrevHtml(Ac.cmoP, AP.cmoP, 'low', 'pp', m, fmt1.format(AP.cmoP)+'%') : '')+'<div class="sub">'+brl0(A.cmo)+'<br>'+fmt1.format(A.cmoP/A.pc*100)+'% do Prime Cost</div></div>';
     h += '<div class="sig-card'+(pcrOpen==='exc'?' pcr-on':'')+'" style="--sig-c:var(--critical)"'+go('exc')+'><div class="sig-name"><span class="cat-dot" style="background:var(--critical)"></span>Excesso sobre a meta</div>'+
-      '<div class="sig-val tabular" style="color:'+(A.exc>0?'var(--critical)':'var(--good)')+'">'+(A.exc>0 ? brl0(A.exc) : '✓ R$ 0')+'</div>'+(AP ? vsPrevHtml(A.exc, AP.exc, 'low', 'brl', m, brl0(AP.exc)) : '')+'<div class="sub">CMV + CMO acima de '+PC_META+'% da receita-base</div></div>';
+      '<div class="sig-val tabular" style="color:'+(A.exc>0?'var(--critical)':'var(--good)')+'">'+(A.exc>0 ? brl0(A.exc) : '✓ R$ 0')+'</div>'+(AP ? vsPrevHtml(Ac.exc, AP.exc, 'low', 'brl', m, brl0(AP.exc)) : '')+'<div class="sub">CMV + CMO acima de '+PC_META+'% da receita-base</div></div>';
     if(list.length>1){
       h += '<div class="sig-card'+(pcrOpen==='faixa'?' pcr-on':'')+'" style="--sig-c:var(--baseline)"'+go('faixa')+'><div class="sig-name"><span class="cat-dot" style="background:var(--baseline)"></span>Lojas por faixa</div>'+
         '<div class="sig-val tabular">'+list.length+'</div><div class="pcr-faixas"><span class="sig-good">🟢 '+nG+'</span><span class="sig-warn">🟡 '+nY+'</span><span class="sig-bad">🔴 '+nR+'</span></div></div>';
@@ -3478,12 +3504,14 @@
     var L = [title, ''];
     // variação vs. mês anterior em cada indicador (valor do mês anterior entre parênteses)
     var ab = P ? MONTH_FULL[m-1].slice(0,3).toLowerCase() : '';
+    var C = P ? cmpM(M, m) : M;   // comparação com o mês anterior sem o estoque, quando só este mês tem contagem
     function ppv(cur, prev){ var d = cur - prev; return (d>0?'▲ +':(d<0?'▼ −':'= '))+fmt2.format(Math.abs(d))+' p.p.'; }
     var vFb = P && P.fb ? (M.fb/P.fb - 1)*100 : null;
     L.push('* Faturamento bruto: '+brl2(M.fb)+(P ? ' ('+ab+': '+brl2(P.fb)+' · '+(vFb>0?'▲ +':(vFb<0?'▼ −':'= '))+fmt2.format(Math.abs(vFb))+'%)' : ''));
-    L.push('* CMV: '+pct2(M.pctCmv)+(P ? ' ('+ab+': '+pct2(P.pctCmv)+' · '+ppv(M.pctCmv, P.pctCmv)+')' : ''));
+    L.push('* CMV: '+pct2(M.pctCmv)+(P ? ' ('+ab+': '+pct2(P.pctCmv)+' · '+ppv(C.pctCmv, P.pctCmv)+')' : ''));
     L.push('* CMO: '+pct2(M.pctCmo)+(P ? ' ('+ab+': '+pct2(P.pctCmo)+' · '+ppv(M.pctCmo, P.pctCmo)+')' : ''));
-    L.push('* Resultado operacional: '+brl2s(M.lop)+' | '+pct2s(rgPctRes(M))+(P ? ' ('+ab+': '+brl2s(P.lop)+' | '+pct2s(rgPctRes(P))+' · '+(M.lop-P.lop>=0?'▲ +':'▼ −')+brl2(Math.abs(M.lop-P.lop))+' · '+ppv(rgPctRes(M), rgPctRes(P))+')' : ''));
+    L.push('* Resultado operacional: '+brl2s(M.lop)+' | '+pct2s(rgPctRes(M))+(P ? ' ('+ab+': '+brl2s(P.lop)+' | '+pct2s(rgPctRes(P))+' · '+(C.lop-P.lop>=0?'▲ +':'▼ −')+brl2(Math.abs(C.lop-P.lop))+' · '+ppv(rgPctRes(C), rgPctRes(P))+')' : ''));
+    if(P && C!==M) L.push('* ↔️ As comparações com '+MONTH_FULL[m-1].toLowerCase()+' usam '+MONTH_FULL[m].toLowerCase()+' sem o estoque inicial e final ('+MONTH_FULL[m-1].toLowerCase()+' não tem contagem): CMV '+pct2(C.pctCmv)+' e resultado '+brl2s(C.lop)+'.');
     if(M.estAdj && Math.abs(M.estAdj) >= 0.5){
       var semEst = M.lop - M.estAdj, vtxt = (M.estAdj>0 ? 'aumento' : 'redução')+' do estoque de '+brl2(Math.abs(M.estAdj));
       if(semEst<0 && M.lop>=0) L.push('* ⚖️ Estoque: sem o estoque inicial e final, o resultado seria NEGATIVO em '+brl2(Math.abs(semEst))+'; considerando o '+vtxt+', fecha POSITIVO em '+brl2(M.lop)+'.');
@@ -3495,10 +3523,11 @@
       var prevName = MONTH_FULL[m-1].toLowerCase();
       var vf = (M.fb/P.fb - 1)*100;
       obs.push(Math.abs(vf)<1 ? 'O faturamento ficou praticamente estável em relação a '+prevName : 'O faturamento '+(vf>0?'cresceu ':'caiu ')+fmt2.format(Math.abs(vf))+'% sobre '+prevName);
-      if(P.lop<0 && M.lop>=0) obs.push('A unidade saiu de '+(P.lop<0?'-':'+')+mil(P.lop)+' para resultado positivo');
-      else if(P.lop>=0 && M.lop<0) obs.push('A unidade saiu de +'+mil(P.lop)+' em '+prevName+' para resultado negativo');
-      else if(P.lop<0 && M.lop<0) obs.push('O prejuízo '+(M.lop>P.lop?'diminuiu':'aumentou')+' aproximadamente '+mil(M.lop-P.lop)+' em relação a '+prevName);
-      else obs.push('O resultado '+(M.lop>=P.lop?'subiu':'caiu')+' aproximadamente '+mil(M.lop-P.lop)+' em relação a '+prevName);
+      var semTxt = C!==M ? ' (sem estoque)' : '';
+      if(P.lop<0 && C.lop>=0) obs.push('A unidade saiu de '+(P.lop<0?'-':'+')+mil(P.lop)+' para resultado positivo'+semTxt);
+      else if(P.lop>=0 && C.lop<0) obs.push('A unidade saiu de +'+mil(P.lop)+' em '+prevName+' para resultado negativo'+semTxt);
+      else if(P.lop<0 && C.lop<0) obs.push('O prejuízo '+(C.lop>P.lop?'diminuiu':'aumentou')+' aproximadamente '+mil(C.lop-P.lop)+' em relação a '+prevName+semTxt);
+      else obs.push('O resultado '+(C.lop>=P.lop?'subiu':'caiu')+' aproximadamente '+mil(C.lop-P.lop)+' em relação a '+prevName+semTxt);
     }
     (extras||[]).forEach(function(x){ obs.push(x); });
     obs.forEach(function(o, i){ L.push('* '+o+(i===obs.length-1?'.':';')); });

@@ -787,9 +787,20 @@
   #voxelTable thead th.num{white-space:normal;}
   #voxelTable thead th .thsub{display:block; font-size:9.5px; font-weight:600; color:var(--ink-muted); text-transform:none; letter-spacing:0; line-height:1.25;}
   sup.parc{font-size:8.5px; font-weight:800; margin-left:3px; color:var(--warning); text-transform:uppercase; letter-spacing:.03em;}
-  .kpi-side{display:inline-flex; flex-direction:column; align-items:flex-end; margin-left:12px; padding-left:12px; border-left:1px solid var(--border); vertical-align:middle; line-height:1.15;}
-  .kpi-side small{font-size:10.5px; font-weight:600; color:var(--ink-muted); letter-spacing:0;}
-  .kpi-side b{font-size:17px; font-weight:800;}
+  /* cards do resumo: compactos, alinhados e com a mesma altura na linha */
+  #resumoKpis{align-items:stretch;}
+  #resumoKpis .card.kpi{padding:12px 14px; display:flex; flex-direction:column;}
+  #resumoKpis .kpi .kpi-value{display:flex; flex-wrap:wrap; align-items:baseline; column-gap:10px; row-gap:2px; margin-top:4px; line-height:1.15;}
+  #resumoKpis .kpi .kpi-sub{margin-top:3px; line-height:1.35;}
+  #resumoKpis .vs-prev{margin-top:3px; row-gap:0;}
+  #resumoKpis .kpi-desp{margin-top:3px;}
+  #resumoKpis .chip{margin-top:6px; align-self:flex-start;}
+  #resumoKpis .kpi-click .kpi-hint{margin-top:auto; padding-top:6px;}
+  /* "sem estoque inicial e final" ao lado do valor, na mesma linha (quebra só se faltar espaço) */
+  .kpi-side{display:inline-flex; align-items:baseline; gap:6px; white-space:nowrap; letter-spacing:0;}
+  .kpi-side b{font-size:18px; font-weight:800;}
+  .kpi-side small{font-size:11px; font-weight:600; color:var(--ink-muted);}
+  @media (max-width:420px){ .kpi-side{white-space:normal; flex-wrap:wrap;} }
 </style>
 
 <div class="page">
@@ -2410,7 +2421,7 @@
     var despTip = 'Descontos '+brl0(M.desc)+' + custos variáveis '+brl0(varT)+' + custos fixos '+brl0(M.cf)+' = '+brl0(despT);
     var semE = (M.estAdj && Math.abs(M.estAdj)>=0.5) ? M.lop - M.estAdj : null;
     html += kpiCard('Resultado operacional', brl0(M.lop)+(semE===null ? '' :
-        '<span class="kpi-side" title="Resultado sem o estoque inicial e final (CMV só pelas compras)"><small>sem estoque inicial/final</small><b style="color:'+(semE<0?'var(--critical)':'var(--good)')+'">'+brl0(semE)+'</b><small>'+pct(semE/M.fb*100)+'</small></span>'),
+        '<span class="kpi-side" title="Resultado sem o estoque inicial e final (CMV só pelas compras)"><b style="color:'+(semE<0?'var(--critical)':'var(--good)')+'">'+brl0(semE)+'</b><small>sem estoque inicial e final · '+pct(semE/M.fb*100)+'</small></span>'),
       M.lop<0?'var(--critical)':'var(--good)',
       pct(M.pctLop)+' do faturamento bruto'+(semE!==null ? ' · com estoque inicial e final' : '')+
       (MP ? vsPrevHtml(cmpM(M, m).lop, MP.lop, 'high', 'brl', m, brl0(MP.lop)+(cmpNoEst(m)?' · comparação sem estoque':'')) : '')+

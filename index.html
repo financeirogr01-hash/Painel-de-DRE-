@@ -801,6 +801,9 @@
   .kpi-side b{font-size:18px; font-weight:800;}
   .kpi-side small{font-size:11px; font-weight:600; color:var(--ink-muted);}
   @media (max-width:420px){ .kpi-side{white-space:normal; flex-wrap:wrap;} }
+  .est-note{font-size:11px; font-weight:600; color:var(--ink-muted); margin-top:3px; line-height:1.3;}
+  .est-note b{color:var(--ink-2); font-weight:800;}
+  .loss-com{display:block; font-size:10.5px; font-weight:600; color:var(--ink-muted);}
 </style>
 
 <div class="page">
@@ -2049,7 +2052,7 @@
     return '<div class="vs-prev '+cls+'" title="Comparação com '+MONTH_FULL[m-1].toLowerCase()+'"><b>'+arrow+' '+txt+'</b> vs. '+VOXEL_MONTH_LABELS[m-1].toLowerCase()+(wasTxt ? ' <span class="vs-was">('+wasTxt+')</span>' : '')+'</div>';
   }
   function renderSigPanel(){
-    var s = voxelActiveScope, m = voxelActiveMonth, M = storeMetrics(s, m);
+    var s = voxelActiveScope, m = voxelActiveMonth, M0 = storeMetrics(s, m), M = cmpM(M0, m);
     var MP = (m>0 && scopeHasData(s, m-1)) ? storeMetrics(s, m-1) : null;
     document.getElementById('sigTitle').textContent = 'Sinaleiro da DRE · realizado x meta · '+scopeName(s)+' · '+periodName(m);
     var html = '';
@@ -2081,7 +2084,8 @@
       html += '<div class="sig-card" style="--sig-c:'+d.color+'" data-go="'+k+'" role="button" tabindex="0" title="'+d.label+(p!==null ? ': '+fmt1.format(p)+'% · '+(rsTxt||'') : '')+' — clique para ver na DRE">'+
         '<div class="sig-name"><span class="cat-dot" style="background:'+d.color+'"></span>'+d.label+'</div>'+
         '<div class="sig-val tabular">'+(p===null?'—':fmt1.format(p)+'%')+' <span style="font-size:11.5px;font-weight:600;color:var(--ink-muted);">realizado</span></div>'+
-        (MP && p!==null ? (function(){ var pp = sigPct(k, MP); return pp===null ? '' : vsPrevHtml(sigPct(k, cmpM(M, m)), pp, d.dir, 'pp', m, fmt1.format(pp)+'%'+(cmpNoEst(m)?' · set sem estoque':'')); })() : '')+body+'<div class="go-hint">Ver na DRE ↓</div></div>';
+        (function(){ if(!M0 || M0===M || p===null) return ''; var p0 = sigPct(k, M0); return (p0===null || Math.abs(p0-p)<0.05) ? '' : estNote(fmt1.format(p0)+'%'); })()+
+        (MP && p!==null ? (function(){ var pp = sigPct(k, MP); return pp===null ? '' : vsPrevHtml(sigPct(k, cmpM(M, m)), pp, d.dir, 'pp', m, fmt1.format(pp)+'%'+''); })() : '')+body+'<div class="go-hint">Ver na DRE ↓</div></div>';
     });
     document.getElementById('sigPanel').innerHTML = html;
   }
@@ -2340,6 +2344,8 @@
   function cmpNoEst(m){ return m>0 && !!ESTOQUE[m] && !ESTOQUE[m-1]; }
   function cmpM(M, m){ return cmpNoEst(m) ? semEstM(M) : M; }
   function pcAggOf(list){ return list.length>1 ? pcAgg(list) : list[0]; }
+  // observação "com estoque inicial e final" nos cards (só quando o valor muda)
+  function estNote(txt){ return '<div class="est-note" title="Setembro considerando o estoque inicial (31/08) e final (01/10) no CMV">⚖️ com estoque inicial e final: <b>'+txt+'</b></div>'; }
 
   function setFilter(scope, month){
     if(scope==='Biggs 13' && month!==-1 && !b13Has(month)){ month = VOXEL_B13_M; }
@@ -2397,12 +2403,13 @@
   }
 
   function renderResumo(){
-    var s = fState.scope, m = fState.month, M = storeMetrics(s, m), isRede = isGroupScope(s);
+    var s = fState.scope, m = fState.month, M0 = storeMetrics(s, m), M = cmpM(M0, m), isRede = isGroupScope(s), comEst = M0 && M0!==M;
     document.getElementById('resumoTitle').textContent = (s==='Consolidado' ? 'Resumo da rede' : 'Resumo — '+scopeName(s)) + ' · ' + periodName(m);
     var box = document.getElementById('resumoKpis');
     if(!M){ box.innerHTML = '<div class="card kpi" style="grid-column:1/-1;">Sem dados de '+scopeName(s)+' em '+periodName(m)+'.</div>'; return; }
     var grupo = scopeStores(s);
-    var lojas = grupo.map(function(t){ return storeMetrics(t, m); }).filter(Boolean);
+    var lojas0 = grupo.map(function(t){ return storeMetrics(t, m); }).filter(Boolean);
+    var lojas = lojas0.map(function(x){ return cmpM(x, m); });
     var MP = (m>0 && scopeHasData(s, m-1)) ? storeMetrics(s, m-1) : null;
     var html = '';
     html += kpiCard('Faturamento bruto', brl0(M.fb), null,
@@ -2419,12 +2426,11 @@
     // despesas totais = faturamento bruto − resultado (descontos + custos variáveis + custos fixos)
     var despT = M.fb - M.lop, varT = M.flt - M.mc;
     var despTip = 'Descontos '+brl0(M.desc)+' + custos variáveis '+brl0(varT)+' + custos fixos '+brl0(M.cf)+' = '+brl0(despT);
-    var semE = (M.estAdj && Math.abs(M.estAdj)>=0.5) ? M.lop - M.estAdj : null;
-    html += kpiCard('Resultado operacional', brl0(M.lop)+(semE===null ? '' :
-        '<span class="kpi-side" title="Resultado sem o estoque inicial e final (CMV só pelas compras)"><b style="color:'+(semE<0?'var(--critical)':'var(--good)')+'">'+brl0(semE)+'</b><small>sem estoque inicial e final · '+pct(semE/M.fb*100)+'</small></span>'),
+    html += kpiCard('Resultado operacional', brl0(M.lop)+(!comEst ? '' :
+        '<span class="kpi-side" title="Setembro considerando o estoque inicial (31/08) e final (01/10) no CMV"><b style="color:'+(M0.lop<0?'var(--critical)':'var(--good)')+'">'+brl0(M0.lop)+'</b><small>com estoque inicial e final · '+pct(M0.pctLop)+'</small></span>'),
       M.lop<0?'var(--critical)':'var(--good)',
-      pct(M.pctLop)+' do faturamento bruto'+(semE!==null ? ' · com estoque inicial e final' : '')+
-      (MP ? vsPrevHtml(cmpM(M, m).lop, MP.lop, 'high', 'brl', m, brl0(MP.lop)+(cmpNoEst(m)?' · comparação sem estoque':'')) : '')+
+      pct(M.pctLop)+' do faturamento bruto'+(comEst ? ' · sem estoque inicial e final' : '')+
+      (MP ? vsPrevHtml(cmpM(M, m).lop, MP.lop, 'high', 'brl', m, brl0(MP.lop)+'') : '')+
       '<div class="kpi-desp" title="'+despTip+'">Faturamento '+brl0(M.fb)+' − despesas <b>'+brl0(despT)+'</b> ('+fmt1.format(despT/M.fb*100)+'%)</div>', chip);
     if(isRede){
       var neg = lojas.filter(function(x){ return x.lop<0; }).length;
@@ -2432,7 +2438,8 @@
       var negP = null;
       if(m>0){ var lojasP = grupo.map(function(t){ return storeMetrics(t, m-1); }).filter(Boolean); if(lojasP.length) negP = lojasP.filter(function(x){ return x.lop<0; }).length; }
       html += kpiCard('Lojas no prejuízo', neg+' <span class="kpi-of">/ '+lojas.length+'</span>', null, abaixo+' abaixo do equilíbrio líquido (DRE atual)'+
-        (negP!==null ? vsPrevHtml(lojas.filter(function(x){ return cmpM(x, m).lop<0; }).length, negP, 'low', 'n', m, negP+' lojas'+(cmpNoEst(m)?' · comparação sem estoque':'')) : ''),
+        (comEst ? estNote(lojas0.filter(function(x){ return x.lop<0; }).length+' lojas no prejuízo') : '')+
+        (negP!==null ? vsPrevHtml(lojas.filter(function(x){ return cmpM(x, m).lop<0; }).length, negP, 'low', 'n', m, negP+' lojas'+'') : ''),
         '<div class="kpi-hint">'+(lossOpen ? 'Ocultar lojas ▴' : 'Ver lojas no prejuízo e com resultado positivo ▾')+'</div>').replace('<div class="card kpi">', '<div class="card kpi kpi-click" id="lossCard" role="button" tabindex="0" aria-expanded="'+lossOpen+'" aria-controls="lossPanel">');
     } else {
       var peSub = M.pe===null ? 'margem de contribuição negativa — a loja não se paga' :
@@ -2441,12 +2448,14 @@
         '<span class="chip '+(M.peOk?'good':'critical')+'">'+(M.peOk?'atingido':'não atingido')+'</span>');
     }
     // Prime Cost (CMV + CMO) no lugar do card de CMV — mesma conta da seção Prime Cost (soma ÷ soma, base fat. líquido)
-    var pcL = grupo.map(function(t){ return pcData(t, m); }).filter(Boolean), PCa = pcL.length>1 ? pcAgg(pcL) : pcL[0];
+    var pcL0 = grupo.map(function(t){ return pcData(t, m); }).filter(Boolean), PCa0 = pcL0.length>1 ? pcAgg(pcL0) : pcL0[0];
+    var pcL = cmpNoEst(m) ? grupo.map(function(t){ return pcData(t, m, true); }).filter(Boolean) : pcL0, PCa = pcL.length>1 ? pcAgg(pcL) : pcL[0];
     if(PCa){
       var dpc = PCa.pc - PC_META, pcl = pcCls(PCa.pc);
       html += kpiCard((s==='Consolidado' ? 'Prime Cost da rede' : (isBrandScope(s) ? 'Prime Cost da marca' : 'Prime Cost'))+' (CMV + CMO)', fmt1.format(PCa.pc)+'%', pcColor(PCa.pc),
         'CMV '+fmt1.format(PCa.cmvP)+'% + CMO '+fmt1.format(PCa.cmoP)+'% · meta ≤'+PC_META+'% · sobre faturamento líquido'+
-        (function(){ if(!(m>0)) return ''; var pl = grupo.map(function(t){ return pcData(t, m-1); }).filter(Boolean); var PP = pl.length>1 ? pcAgg(pl) : pl[0]; var PCc = cmpNoEst(m) ? pcAggOf(grupo.map(function(t){ return pcData(t, m, true); }).filter(Boolean)) : PCa; return PP ? vsPrevHtml(PCc.pc, PP.pc, 'low', 'pp', m, fmt1.format(PP.pc)+'%'+(cmpNoEst(m)?' · set sem estoque':'')) : ''; })(),
+        (comEst && PCa0 ? estNote(fmt1.format(PCa0.pc)+'% (CMV '+fmt1.format(PCa0.cmvP)+'%)') : '')+
+        (function(){ if(!(m>0)) return ''; var pl = grupo.map(function(t){ return pcData(t, m-1); }).filter(Boolean); var PP = pl.length>1 ? pcAgg(pl) : pl[0]; var PCc = cmpNoEst(m) ? pcAggOf(grupo.map(function(t){ return pcData(t, m, true); }).filter(Boolean)) : PCa; return PP ? vsPrevHtml(PCc.pc, PP.pc, 'low', 'pp', m, fmt1.format(PP.pc)+'%'+'') : ''; })(),
         '<span class="chip '+(pcl==='sig-good'?'good':(pcl==='sig-warn'?'warning':'critical'))+'">'+(dpc>0.05 ? '+'+fmt1.format(dpc)+'pp acima da meta' : 'dentro da meta')+'</span>'+
         '<div class="kpi-hint">'+(pcTopOpen ? 'Ocultar composição ▴' : 'Ver composição do CMV e do CMO ▾')+'</div>')
         .replace('<div class="card kpi">', '<div class="card kpi kpi-click" id="pcTopCard" role="button" tabindex="0" aria-expanded="'+pcTopOpen+'" aria-controls="pcTopPanel">');
@@ -2466,7 +2475,7 @@
   function renderLossPanel(grupo){
     var p = document.getElementById('lossPanel'); if(!p) return;
     var m = fState.month;
-    var L = grupo.map(function(t){ var M = storeMetrics(t, m), P = (M && m>0) ? storeMetrics(t, m-1) : null; return M ? {t:t, lop:M.lop, cl:cmpM(M, m).lop, pct:M.lop/M.fb*100, prev:P ? P.lop : null} : null; }).filter(Boolean);
+    var L = grupo.map(function(t){ var M = storeMetrics(t, m), P = (M && m>0) ? storeMetrics(t, m-1) : null; var C = cmpM(M, m); return M ? {t:t, lop:C ? C.lop : M.lop, cl:C ? C.lop : M.lop, com:M.lop, pct:(C ? C.lop : M.lop)/M.fb*100, prev:P ? P.lop : null} : null; }).filter(Boolean);
     var prevLbl = m>0 ? VOXEL_MONTH_LABELS[m-1].toLowerCase() : '';
     // lojas que trocaram de lado em relação ao mês anterior
     function virou(x){
@@ -2482,7 +2491,7 @@
       var tot = list.reduce(function(a, x){ return a + x.lop; }, 0);
       return '<div class="loss-col" style="--c:'+color+'"><h4>'+title+' <span>'+list.length+(list.length===1?' loja':' lojas')+'</span></h4>'+
         (list.length ? list.map(function(x){
-          return '<div class="loss-row" data-loss-store="'+x.t+'" title="Ver o resumo de '+x.t+'"><span>'+x.t+virou(x)+'</span><b style="color:'+color+'">'+brl0(x.lop)+'</b><small>'+pct(x.pct)+'</small></div>';
+          return '<div class="loss-row" data-loss-store="'+x.t+'" title="Ver o resumo de '+x.t+'"><span>'+x.t+virou(x)+(Math.abs(x.com-x.lop)>=0.5 ? '<small class="loss-com" title="Com estoque inicial e final">c/ estoque '+brl0(x.com)+'</small>' : '')+'</span><b style="color:'+color+'">'+brl0(x.lop)+'</b><small>'+pct(x.pct)+'</small></div>';
         }).join('') : '<p class="rd-hint">Nenhuma loja.</p>')+
         '<div class="loss-tot"><span>Total</span><span style="color:'+color+'">'+brl0(tot)+'</span></div></div>';
     }
@@ -2508,7 +2517,7 @@
     {k:'entregas', label:'Entregas + devoluções', color:'var(--cat-6)'}
   ];
   function renderBigNumbers(){
-    var s = fState.scope, m = fState.month, M = storeMetrics(s, m);
+    var s = fState.scope, m = fState.month, M0 = storeMetrics(s, m), M = cmpM(M0, m);
     document.getElementById('bnTitle').textContent = 'Para onde foi cada R$ 100 faturados ('+periodShort(m)+')';
     var grid = document.getElementById('bnGrid'), foot = document.getElementById('bnFoot'), note = document.getElementById('bnNote');
     if(!M){ grid.innerHTML = '<div class="bn">Sem dados neste período.</div>'; foot.textContent = ''; note.textContent = ''; return; }
@@ -2524,14 +2533,14 @@
     BN_CATS.forEach(function(c){
       var v = M[c.k] || 0, per = (v/M.fb*100) || 0, perP = MP ? ((MP[c.k]||0)/MP.fb*100) : null, perC = ((cmpM(M, m)[c.k]||0)/M.fb*100) || 0;
       html += '<div class="bn" data-go="'+(c.k==='cf' ? 'cfTotal' : c.k)+'" role="button" tabindex="0" title="Ver '+c.label+' na DRE"><div class="bn-label"><span class="swatch" style="background:'+c.color+'"></span>'+c.label+'</div>'+
-        '<div class="bn-value tabular">R$ '+fmt2.format(per)+'</div>'+bnVs(perC, perP, true)+
+        '<div class="bn-value tabular">R$ '+fmt2.format(per)+'</div>'+((M0 && M0!==M && Math.abs((M0[c.k]||0)-(M[c.k]||0))>=0.5) ? estNote('R$ '+fmt2.format((M0[c.k]||0)/M0.fb*100)) : '')+bnVs(perC, perP, true)+
         '<span class="sig-pill '+sigClass(c.k, sigPct(c.k, M))+'"'+(c.k==='cf'?' title="Custos fixos sem pessoal, sobre o faturamento líquido"':'')+'><i class="sig-dot '+sigClass(c.k, sigPct(c.k, M))+'"></i><span class="tabular">'+fmt1.format(c.k==='cf' ? sigPct('cf', M) : per)+'%</span><span class="sig-meta">'+(c.k==='cf'?'sem pessoal · ':'')+sigMeta(c.k)+'</span></span>'+
         '<div class="bn-sub tabular">'+brl0(-v)+' no período</div></div>';
     });
     var perRes = M.lop/M.fb*100;
     var rc = sigClass('lop', perRes);
     html += '<div class="bn result" data-go="lop" role="button" tabindex="0" title="Ver resultado operacional na DRE"><div><div class="bn-label">Resultado operacional</div><div class="bn-sub tabular">'+brl0(M.lop)+' no período</div>'+
-      '<span class="sig-pill '+rc+'"><i class="sig-dot '+rc+'"></i><span class="tabular">'+pct(perRes)+'</span><span class="sig-meta">'+sigMeta('lop')+'</span></span>'+(MP ? bnVs(cmpM(M, m).lop/M.fb*100, MP.lop/MP.fb*100, false) : '')+'</div>'+
+      '<span class="sig-pill '+rc+'"><i class="sig-dot '+rc+'"></i><span class="tabular">'+pct(perRes)+'</span><span class="sig-meta">'+sigMeta('lop')+'</span></span>'+(MP ? bnVs(cmpM(M, m).lop/M.fb*100, MP.lop/MP.fb*100, false) : '')+((M0 && M0!==M) ? estNote(brl0(M0.lop)+' · '+(M0.lop<0?'-':'+')+'R$ '+fmt2.format(Math.abs(M0.lop/M0.fb*100))+' a cada R$ 100') : '')+'</div>'+
       '<div class="bn-value tabular" style="color:'+(perRes<0?'var(--critical)':'var(--good)')+'">'+(perRes<0?'-':'+')+'R$ '+fmt2.format(Math.abs(perRes))+' <span class="bn-sub" style="font-weight:600;">a cada R$ 100</span></div></div>';
     grid.innerHTML = html;
     foot.textContent = '';
@@ -3290,7 +3299,9 @@
   function renderPcResumo(){
     var row = document.getElementById('pcrRow'); if(!row) return;
     var s = fState.scope, m = fState.month;
-    var list = scopeStores(s).map(function(t){ return pcData(t, m); }).filter(Boolean);
+    var list0 = scopeStores(s).map(function(t){ return pcData(t, m); }).filter(Boolean);
+    var list = cmpNoEst(m) ? scopeStores(s).map(function(t){ return pcData(t, m, true); }).filter(Boolean) : list0;
+    var A0 = cmpNoEst(m) && list0.length ? (list0.length>1 || isGroupScope(s) ? pcAgg(list0) : list0[0]) : null;
     document.getElementById('pcrTitle').textContent = 'Prime Cost (CMV + CMO) · realizado x meta · '+scopeName(s)+' · '+periodName(m);
     if(!list.length){ row.innerHTML = '<div class="sig-card"><div class="sig-name">Prime Cost</div><div class="sub">Dados insuficientes</div></div>'; return; }
     var A = list.length>1 || isGroupScope(s) ? pcAgg(list) : list[0];
@@ -3305,16 +3316,16 @@
     var nG = list.filter(function(d){ return pcCls(d.pc)==='sig-good'; }).length, nY = list.filter(function(d){ return pcCls(d.pc)==='sig-warn'; }).length, nR = list.length - nG - nY;
     var h = '';
     h += '<div class="sig-card'+(pcrOpen==='pc'?' pcr-on':'')+'" style="--sig-c:var(--accent)"'+go('pc')+'><div class="sig-name"><span class="cat-dot" style="background:var(--accent)"></span>Prime Cost</div>'+
-      '<div class="sig-val tabular">'+fmt1.format(A.pc)+'%</div>'+(AP ? vsPrevHtml(Ac.pc, AP.pc, 'low', 'pp', m, fmt1.format(AP.pc)+'%') : '')+
+      '<div class="sig-val tabular">'+fmt1.format(A.pc)+'%</div>'+(A0 ? estNote(fmt1.format(A0.pc)+'%') : '')+(AP ? vsPrevHtml(Ac.pc, AP.pc, 'low', 'pp', m, fmt1.format(AP.pc)+'%') : '')+
       '<div class="sig-bar"><span class="fill '+cls+'" style="left:0; width:'+px.toFixed(1)+'%"></span><span class="mark" style="left:calc('+mk.toFixed(1)+'% - 1px)"></span></div>'+
       '<div class="sig-rm"><span>Meta</span><b>≤ '+PC_META+',0%</b></div>'+
       '<span class="sig-gap '+cls+'"><i class="sig-dot '+cls+'"></i>'+gapTxt+'</span></div>';
     h += '<div class="sig-card'+(pcrOpen==='cmv'?' pcr-on':'')+'" style="--sig-c:var(--cat-1)"'+go('cmv')+'><div class="sig-name"><span class="cat-dot" style="background:var(--cat-1)"></span>CMV no Prime Cost</div>'+
-      '<div class="sig-val tabular">'+fmt1.format(A.cmvP)+'%</div>'+(AP ? vsPrevHtml(Ac.cmvP, AP.cmvP, 'low', 'pp', m, fmt1.format(AP.cmvP)+'%') : '')+'<div class="sub">'+brl0(A.cmv)+'<br>'+fmt1.format(A.cmvP/A.pc*100)+'% do Prime Cost</div></div>';
+      '<div class="sig-val tabular">'+fmt1.format(A.cmvP)+'%</div>'+(A0 ? estNote(fmt1.format(A0.cmvP)+'%') : '')+(AP ? vsPrevHtml(Ac.cmvP, AP.cmvP, 'low', 'pp', m, fmt1.format(AP.cmvP)+'%') : '')+'<div class="sub">'+brl0(A.cmv)+'<br>'+fmt1.format(A.cmvP/A.pc*100)+'% do Prime Cost</div></div>';
     h += '<div class="sig-card'+(pcrOpen==='cmo'?' pcr-on':'')+'" style="--sig-c:var(--ink-muted)"'+go('cmo')+'><div class="sig-name"><span class="cat-dot" style="background:var(--ink-muted)"></span>CMO no Prime Cost</div>'+
       '<div class="sig-val tabular">'+fmt1.format(A.cmoP)+'%</div>'+(AP ? vsPrevHtml(Ac.cmoP, AP.cmoP, 'low', 'pp', m, fmt1.format(AP.cmoP)+'%') : '')+'<div class="sub">'+brl0(A.cmo)+'<br>'+fmt1.format(A.cmoP/A.pc*100)+'% do Prime Cost</div></div>';
     h += '<div class="sig-card'+(pcrOpen==='exc'?' pcr-on':'')+'" style="--sig-c:var(--critical)"'+go('exc')+'><div class="sig-name"><span class="cat-dot" style="background:var(--critical)"></span>Excesso sobre a meta</div>'+
-      '<div class="sig-val tabular" style="color:'+(A.exc>0?'var(--critical)':'var(--good)')+'">'+(A.exc>0 ? brl0(A.exc) : '✓ R$ 0')+'</div>'+(AP ? vsPrevHtml(Ac.exc, AP.exc, 'low', 'brl', m, brl0(AP.exc)) : '')+'<div class="sub">CMV + CMO acima de '+PC_META+'% da receita-base</div></div>';
+      '<div class="sig-val tabular" style="color:'+(A.exc>0?'var(--critical)':'var(--good)')+'">'+(A.exc>0 ? brl0(A.exc) : '✓ R$ 0')+'</div>'+(A0 ? estNote(A0.exc>0 ? brl0(A0.exc) : 'R$ 0') : '')+(AP ? vsPrevHtml(Ac.exc, AP.exc, 'low', 'brl', m, brl0(AP.exc)) : '')+'<div class="sub">CMV + CMO acima de '+PC_META+'% da receita-base</div></div>';
     if(list.length>1){
       h += '<div class="sig-card'+(pcrOpen==='faixa'?' pcr-on':'')+'" style="--sig-c:var(--baseline)"'+go('faixa')+'><div class="sig-name"><span class="cat-dot" style="background:var(--baseline)"></span>Lojas por faixa</div>'+
         '<div class="sig-val tabular">'+list.length+'</div><div class="pcr-faixas"><span class="sig-good">🟢 '+nG+'</span><span class="sig-warn">🟡 '+nY+'</span><span class="sig-bad">🔴 '+nR+'</span></div></div>';
@@ -3519,10 +3530,10 @@
     function ppv(cur, prev){ var d = cur - prev; return (d>0?'▲ +':(d<0?'▼ −':'= '))+fmt2.format(Math.abs(d))+' p.p.'; }
     var vFb = P && P.fb ? (M.fb/P.fb - 1)*100 : null;
     L.push('* Faturamento bruto: '+brl2(M.fb)+(P ? ' ('+ab+': '+brl2(P.fb)+' · '+(vFb>0?'▲ +':(vFb<0?'▼ −':'= '))+fmt2.format(Math.abs(vFb))+'%)' : ''));
-    L.push('* CMV: '+pct2(M.pctCmv)+(P ? ' ('+ab+': '+pct2(P.pctCmv)+' · '+ppv(C.pctCmv, P.pctCmv)+')' : ''));
+    L.push('* CMV: '+pct2(C.pctCmv)+(P ? ' ('+ab+': '+pct2(P.pctCmv)+' · '+ppv(C.pctCmv, P.pctCmv)+')' : '')+(C!==M ? ' — com estoque inicial e final: '+pct2(M.pctCmv) : ''));
     L.push('* CMO: '+pct2(M.pctCmo)+(P ? ' ('+ab+': '+pct2(P.pctCmo)+' · '+ppv(M.pctCmo, P.pctCmo)+')' : ''));
-    L.push('* Resultado operacional: '+brl2s(M.lop)+' | '+pct2s(rgPctRes(M))+(P ? ' ('+ab+': '+brl2s(P.lop)+' | '+pct2s(rgPctRes(P))+' · '+(C.lop-P.lop>=0?'▲ +':'▼ −')+brl2(Math.abs(C.lop-P.lop))+' · '+ppv(rgPctRes(C), rgPctRes(P))+')' : ''));
-    if(P && C!==M) L.push('* ↔️ As comparações com '+MONTH_FULL[m-1].toLowerCase()+' usam '+MONTH_FULL[m].toLowerCase()+' sem o estoque inicial e final ('+MONTH_FULL[m-1].toLowerCase()+' não tem contagem): CMV '+pct2(C.pctCmv)+' e resultado '+brl2s(C.lop)+'.');
+    L.push('* Resultado operacional: '+brl2s(C.lop)+' | '+pct2s(rgPctRes(C))+(P ? ' ('+ab+': '+brl2s(P.lop)+' | '+pct2s(rgPctRes(P))+' · '+(C.lop-P.lop>=0?'▲ +':'▼ −')+brl2(Math.abs(C.lop-P.lop))+' · '+ppv(rgPctRes(C), rgPctRes(P))+')' : '')+(C!==M ? ' — com estoque inicial e final: '+brl2s(M.lop)+' | '+pct2s(rgPctRes(M)) : ''));
+    if(P && C!==M) L.push('* ↔️ Valores de '+MONTH_FULL[m].toLowerCase()+' sem o estoque inicial e final, para comparar com '+MONTH_FULL[m-1].toLowerCase()+' (que não tem contagem).');
     if(M.estAdj && Math.abs(M.estAdj) >= 0.5){
       var semEst = M.lop - M.estAdj, vtxt = (M.estAdj>0 ? 'aumento' : 'redução')+' do estoque de '+brl2(Math.abs(M.estAdj));
       if(semEst<0 && M.lop>=0) L.push('* ⚖️ Estoque: sem o estoque inicial e final, o resultado seria NEGATIVO em '+brl2(Math.abs(semEst))+'; considerando o '+vtxt+', fecha POSITIVO em '+brl2(M.lop)+'.');
@@ -3543,7 +3554,7 @@
     (extras||[]).forEach(function(x){ obs.push(x); });
     obs.forEach(function(o, i){ L.push('* '+o+(i===obs.length-1?'.':';')); });
     L.push('');
-    L.push(rgStatus(M, P));
+    L.push(rgStatus(C, P));
     return L;
   }
   function buildResumoGerencial(){
@@ -3568,9 +3579,9 @@
       var G = storeMetrics(s, m), GP = m>0 ? storeMetrics(s, m-1) : null;
       if(G){
         var gl = scopeStores(s).map(function(t){ return storeMetrics(t, m); }).filter(Boolean);
-        var neg = gl.filter(function(x){ return x.lop<0; }).length;
+        var neg = gl.filter(function(x){ return cmpM(x, m).lop<0; }).length, neg0 = gl.filter(function(x){ return x.lop<0; }).length;
         var ttl = s==='Consolidado' ? '🌐 REDE CONSOLIDADA ('+gl.length+' lojas)' : brandIcon(s.slice(6))+' MARCA '+s.slice(6).toUpperCase()+' ('+gl.length+' lojas)';
-        L = L.concat(rgBlock(ttl, G, GP, m, [neg+' de '+gl.length+' lojas fecharam no prejuízo']));
+        L = L.concat(rgBlock(ttl, G, GP, m, [neg+' de '+gl.length+' lojas fecharam no prejuízo'+(cmpNoEst(m) && neg0!==neg ? ' ('+neg0+' com estoque inicial e final)' : '')]));
         L.push(RG_SEP);
       }
     }

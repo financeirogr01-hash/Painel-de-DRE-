@@ -901,7 +901,6 @@
     <div class="grid kpi-row" id="resumoKpis"></div>
     <div class="loss-panel" id="lossPanel" hidden></div>
     <div class="pctop-panel" id="pcTopPanel" hidden></div>
-    <div id="ifoodBox"></div>
 
 
     <div class="chart-title" style="margin-top:18px;" id="sigTitle">Sinaleiro da DRE</div>
@@ -1897,10 +1896,11 @@
     var box = document.getElementById('smOut'), P = IFOOD.periodos;
     document.getElementById('smTitle').textContent = 'DRE semanal · iFood · Outubro/2026';
     document.getElementById('smSub').textContent = 'Semanas de apuração do iFood (28/09 a 25/10) com a data de pagamento de cada repasse · dados da rede (o filtro de loja não se aplica)';
+    var topo = ifIndicadores();
     var fat = P.map(function(p){ return p.op.fat; }), rep = P.map(function(p){ return p.op.repasse; });
     function d(cur, prev, low, pp){ if(prev===null || prev===undefined) return ''; var x = cur - prev; if(Math.abs(x) < (pp?0.005:0.5)) return '<span style="color:var(--ink-muted)">＝</span>';
       var good = low ? x<0 : x>0; return '<span class="'+(good?'sm-down':'sm-up')+'">'+(x>0?'▲ +':'▼ −')+(pp ? fmt2.format(Math.abs(x))+' pp' : brl0(Math.abs(x)).replace('-',''))+'</span>'; }
-    var h = '<div class="sm-weeks" style="margin-top:12px;">';
+    var h = topo + '<div class="sm-weeks" style="margin-top:14px;">';
     P.forEach(function(p, i){
       var pr = rep[i]/fat[i]*100, prp = i ? rep[i-1]/fat[i-1]*100 : null;
       h += '<div class="sm-week"><h4>S'+(i+1)+' · '+p.apuracao+'</h4><div class="sm-sub">pago em '+p.pagamento+'</div>'+
@@ -2042,6 +2042,19 @@
   function ifSum(list, grp, k){ var vals = list.map(function(p){ return p[grp][k]; }).filter(function(v){ return v!==null && v!==undefined; }); return vals.length ? vals.reduce(function(a, b){ return a + b; }, 0) : null; }
   function ifBrl(v){ return v===null ? null : (v<0?'-R$ ':'R$ ')+fmt2.format(Math.abs(v)); }
   function ifBrl0(v){ return v===null ? null : (v<0?'-R$ ':'R$ ')+fmt0.format(Math.abs(Math.round(v))); }
+  function ifIndicadores(){
+    var P = IFOOD.periodos;
+    var fat = ifSum(P,'op','fat'), rop = ifSum(P,'op','repasse'), prev = ifSum(P,'fin','previsto'), ret = ifSum(P,'fin','santander') + ifSum(P,'fin','safra'), caiu = ifSum(P,'fin','caiu'), disp = ifSum(P,'fin','disponivel');
+    function k(l, v, sub){ return '<div class="if-k"><div class="l">'+l+'</div><div class="v tabular">'+(v===null ? '<span style="font-size:13px;color:var(--warning)">Aguardando dados</span>' : v)+'</div>'+(sub?'<div class="s">'+sub+'</div>':'')+'</div>'; }
+    return '<div class="if-card" style="margin-top:12px;"><div class="if-head" style="cursor:default;"><h3>DRE iFood</h3><span class="if-sub">'+IFOOD.titulo+'</span><span class="chip warning">'+IFOOD.status+'</span></div>'+
+      '<div class="if-kpis">'+
+      k('Faturamento', ifBrl0(fat), P.length+' semanas de apuração')+
+      k('Repasse operacional', ifBrl0(rop), fat ? fmt2.format(rop/fat*100)+'% do faturamento' : '')+
+      k('Repasse previsto p/ pagamento', ifBrl(prev), 'soma dos repasses pagos')+
+      k('Retenções Santander/Safra', ifBrl(ret), 'retido nos repasses')+
+      k('Caiu na conta', ifBrl(caiu), 'crédito real no extrato')+
+      k('Disponível para uso', ifBrl(disp), 'após antecipação, empréstimos, subsídios e bloqueio')+'</div>'+ifCaminho()+'</div>';
+  }
   function renderIfood(){
     var box = document.getElementById('ifoodBox'); if(!box) return;
     var P = IFOOD.periodos, all = P;
@@ -3711,7 +3724,6 @@
     renderPrimeCost();
     renderPcResumo();
     renderSemanal();
-    renderIfood();
     if(lojasReady) renderLojasTab();
   }
   renderFiltered();

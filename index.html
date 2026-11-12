@@ -1911,7 +1911,8 @@
     });
     h += '<div class="sm-week" style="border-color:var(--accent);"><h4>Outubro · 4 semanas</h4><div class="sm-sub">pagos de 07/10 a 28/10</div>'+
       '<div class="sm-res tabular">'+ifBrl0(ifSum(P,'op','repasse'))+'</div>'+
-      '<div class="sm-line"><span>Faturamento</span><span>'+ifBrl0(ifSum(P,'op','fat'))+'</span></div>'+
+      '<div class="sm-line"><span>Total bruto iFood</span><span>'+ifBrl0(IFOOD.caminho.totalIfood)+'</span></div>'+
+      '<div class="sm-line"><span>Soma das 4 semanas</span><span>'+ifBrl0(ifSum(P,'op','fat'))+'</span></div>'+
       '<div class="sm-line"><span>Repasse / fat.</span><span>'+fmt2.format(ifSum(P,'op','repasse')/ifSum(P,'op','fat')*100)+'%</span></div>'+
       '<div class="sm-line"><span>Disponível</span><span>'+ifBrl0(ifSum(P,'fin','disponivel'))+'</span></div></div></div>';
     var MOD = [['rs','R$'],['pct','% do faturamento'],['var','Variação vs. semana anterior']];
@@ -1927,7 +1928,11 @@
     var totFat = ifSum(P,'op','fat');
     var t1 = '<table class="voxel-table sm-table if-t">'+head+'<tbody>';
     IF_OP.forEach(function(x){ var vals = P.map(function(p){ return p.op[x[0]]; });
-      t1 += '<tr class="voxel-row '+(x[2]==='tot' ? 'res tone-lop' : (x[2]==='fat' ? 'res tone-rev' : 'child'))+'"><td>'+x[1]+'</td>'+vals.map(function(v, i){ return cellv(v, i, vals, totFat, false); }).join('')+cellv(ifSum(P,'op',x[0]), 0, vals, totFat, true)+'</tr>'; });
+      var totCell = cellv(ifSum(P,'op',x[0]), 0, vals, totFat, true);
+      // faturamento do mês: total bruto do iFood (a soma das semanas fica logo abaixo, para conferência)
+      if(x[0]==='fat' && smOutModo==='rs') totCell = '<td class="num tabular" title="Total bruto iFood de outubro">'+ifBrl0(IFOOD.caminho.totalIfood)+
+        '<small class="dc">total bruto iFood · soma das semanas '+ifBrl0(totFat)+'</small></td>';
+      t1 += '<tr class="voxel-row '+(x[2]==='tot' ? 'res tone-lop' : (x[2]==='fat' ? 'res tone-rev' : 'child'))+'"><td>'+x[1]+'</td>'+vals.map(function(v, i){ return cellv(v, i, vals, totFat, false); }).join('')+totCell+'</tr>'; });
     t1 += '</tbody></table>';
     var FIN = [['apurado','Repasse apurado na semana'],['previsto','(=) Repasse previsto para pagamento','tot'],['santander','(−) Retenção Santander',1],['safra','(−) Retenção Safra',1],['caiu','(=) Crédito em conta','tot'],
       ['antecipacao','(−) Antecipação líquida (calculado por diferença — validar)',1],['emprestimo','(−) Empréstimos iFood',1],['subsidio','(+) Subsídios'],['bloqueio','(−) Bloqueio judicial',1],['disponivel','(=) Disponível para uso','tot']];

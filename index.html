@@ -1899,21 +1899,21 @@
     var topo = ifIndicadores();
     var fat = P.map(function(p){ return p.op.fat; }), rep = P.map(function(p){ return p.op.repasse; });
     function d(cur, prev, low, pp){ if(prev===null || prev===undefined) return ''; var x = cur - prev; if(Math.abs(x) < (pp?0.005:0.5)) return '<span style="color:var(--ink-muted)">＝</span>';
-      var good = low ? x<0 : x>0; return '<span class="'+(good?'sm-down':'sm-up')+'">'+(x>0?'▲ +':'▼ −')+(pp ? fmt2.format(Math.abs(x))+' pp' : brl0(Math.abs(x)).replace('-',''))+'</span>'; }
+      var good = low ? x<0 : x>0; return '<span class="'+(good?'sm-down':'sm-up')+'">'+(x>0?'▲ +':'▼ −')+(pp ? fmt2.format(Math.abs(x))+' pp' : ifBrl0(Math.abs(x)).replace('-',''))+'</span>'; }
     var h = topo + '<div class="sm-weeks" style="margin-top:14px;">';
     P.forEach(function(p, i){
       var pr = rep[i]/fat[i]*100, prp = i ? rep[i-1]/fat[i-1]*100 : null;
       h += '<div class="sm-week"><h4>S'+(i+1)+' · '+p.apuracao+'</h4><div class="sm-sub">pago em '+p.pagamento+'</div>'+
-        '<div class="sm-res tabular">'+brl0(p.op.repasse)+'</div>'+
-        '<div class="sm-line"><span>Faturamento</span><span>'+brl0(p.op.fat)+' '+(i ? d(fat[i], fat[i-1], false, false) : '')+'</span></div>'+
+        '<div class="sm-res tabular">'+ifBrl0(p.op.repasse)+'</div>'+
+        '<div class="sm-line"><span>Faturamento</span><span>'+ifBrl0(p.op.fat)+' '+(i ? d(fat[i], fat[i-1], false, false) : '')+'</span></div>'+
         '<div class="sm-line"><span>Repasse / fat.</span><span>'+fmt2.format(pr)+'% '+(i ? d(pr, prp, false, true) : '')+'</span></div>'+
-        '<div class="sm-line"><span>Disponível</span><span>'+brl0(p.fin.disponivel)+'</span></div></div>';
+        '<div class="sm-line"><span>Disponível</span><span>'+ifBrl0(p.fin.disponivel)+'</span></div></div>';
     });
     h += '<div class="sm-week" style="border-color:var(--accent);"><h4>Outubro · 4 semanas</h4><div class="sm-sub">pagos de 07/10 a 28/10</div>'+
-      '<div class="sm-res tabular">'+brl0(ifSum(P,'op','repasse'))+'</div>'+
-      '<div class="sm-line"><span>Faturamento</span><span>'+brl0(ifSum(P,'op','fat'))+'</span></div>'+
+      '<div class="sm-res tabular">'+ifBrl0(ifSum(P,'op','repasse'))+'</div>'+
+      '<div class="sm-line"><span>Faturamento</span><span>'+ifBrl0(ifSum(P,'op','fat'))+'</span></div>'+
       '<div class="sm-line"><span>Repasse / fat.</span><span>'+fmt2.format(ifSum(P,'op','repasse')/ifSum(P,'op','fat')*100)+'%</span></div>'+
-      '<div class="sm-line"><span>Disponível</span><span>'+brl0(ifSum(P,'fin','disponivel'))+'</span></div></div></div>';
+      '<div class="sm-line"><span>Disponível</span><span>'+ifBrl0(ifSum(P,'fin','disponivel'))+'</span></div></div></div>';
     var MOD = [['rs','R$'],['pct','% do faturamento'],['var','Variação vs. semana anterior']];
     h += '<div class="dre-tools" style="margin-top:16px;"><span class="dre-tools-hint">DRE operacional do iFood por semana (valores das telas enviadas) e conciliação financeira de cada repasse</span>'+
       '<div class="voxel-tabs" style="margin-top:0;">'+MOD.map(function(m){ return '<button type="button" class="voxel-tab'+(smOutModo===m[0]?' active':'')+'" data-smout-modo="'+m[0]+'">'+m[1]+'</button>'; }).join('')+'</div></div>';
@@ -1921,8 +1921,8 @@
     function cellv(v, i, vals, totFat, isTot){
       if(v===null || v===undefined) return '<td class="num wait">Aguardando dados</td>';
       if(smOutModo==='pct') return '<td class="num tabular">'+fmt2.format(v/(isTot ? totFat : fat[i])*100)+'%</td>';
-      if(smOutModo==='var' && !isTot){ if(!i || vals[i-1]===null) return '<td class="num">—</td>'; var x = v - vals[i-1]; return '<td class="num tabular"><span class="'+(x>0?'sm-down':'sm-up')+'">'+(x>0?'+':'−')+brl0(Math.abs(x)).replace('-','')+'</span></td>'; }
-      return '<td class="num tabular">'+(Math.abs(v)%1>0.001 ? ifBrl(v) : brl0(v))+'</td>';
+      if(smOutModo==='var' && !isTot){ if(!i || vals[i-1]===null) return '<td class="num">—</td>'; var x = v - vals[i-1]; return '<td class="num tabular"><span class="'+(x>0?'sm-down':'sm-up')+'">'+(x>0?'+':'−')+ifBrl0(Math.abs(x)).replace('-','')+'</span></td>'; }
+      return '<td class="num tabular">'+(Math.abs(v)%1>0.001 ? ifBrl(v) : ifBrl0(v))+'</td>';
     }
     var totFat = ifSum(P,'op','fat');
     var t1 = '<table class="voxel-table sm-table if-t">'+head+'<tbody>';
@@ -2041,7 +2041,8 @@
   var ifState = {aberto:false, modo:'consolidado', per:'p1'};
   function ifSum(list, grp, k){ var vals = list.map(function(p){ return p[grp][k]; }).filter(function(v){ return v!==null && v!==undefined; }); return vals.length ? vals.reduce(function(a, b){ return a + b; }, 0) : null; }
   function ifBrl(v){ return v===null ? null : (v<0?'-R$ ':'R$ ')+fmt2.format(Math.abs(v)); }
-  function ifBrl0(v){ return v===null ? null : (v<0?'-R$ ':'R$ ')+fmt0.format(Math.abs(Math.round(v))); }
+  // valores do iFood exatamente como nas fontes: com centavos quando existem, sem arredondar
+  function ifBrl0(v){ if(v===null || v===undefined) return null; var c = Math.round(v*100)/100; return (c<0?'-R$ ':'R$ ')+(Math.abs(c%1)>0.0001 ? fmt2.format(Math.abs(c)) : fmt0.format(Math.abs(c))); }
   function ifIndicadores(){
     var P = IFOOD.periodos;
     var fat = ifSum(P,'op','fat'), rop = ifSum(P,'op','repasse'), prev = ifSum(P,'fin','previsto'), ret = ifSum(P,'fin','santander') + ifSum(P,'fin','safra'), caiu = ifSum(P,'fin','caiu'), disp = ifSum(P,'fin','disponivel');

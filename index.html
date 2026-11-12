@@ -820,6 +820,16 @@
   .if-k .v{font-size:19px; font-weight:800; margin-top:4px;}
   .if-k .s{font-size:11.5px; color:var(--ink-muted); margin-top:2px;}
   .if-det{margin-top:14px;}
+  .if-path-t{margin:16px 0 6px; font-size:13px; font-weight:800; color:var(--ink-2); text-transform:uppercase; letter-spacing:.04em;}
+  .if-path{display:flex; align-items:stretch; gap:6px; flex-wrap:wrap;}
+  .if-path .if-k{flex:1 1 160px; min-width:150px;}
+  .if-path .if-k:first-child{flex:1.7 1 240px;}
+  .if-path .if-k li span{white-space:nowrap;}
+  .if-path .if-arrow{display:flex; align-items:center; font-size:18px; font-weight:800; color:var(--ink-muted); padding:0 2px;}
+  .if-path .if-k ul{margin:6px 0 0; padding:0; list-style:none; font-size:11.5px; color:var(--ink-2);}
+  .if-path .if-k li{display:flex; justify-content:space-between; gap:8px;}
+  .if-k.dif{border-color:color-mix(in srgb, var(--warning) 55%, transparent); background:color-mix(in srgb, var(--warning) 10%, var(--page));}
+  .if-k.dif .v{color:var(--warning);}
   .if-det[hidden]{display:none;}
   .if-ctrl{display:flex; gap:10px; flex-wrap:wrap; align-items:center;}
   .if-per{font-size:12.5px; color:var(--ink-2); margin:10px 0 0;}
@@ -2019,6 +2029,9 @@
         op:{fat:624043, desc:-88377, comis:-119708, entrega:-95432, servico:-15760, promo:91388, ajustes:832, difFontes:-1889, repasse:395097},
         fin:{apurado:395484.58, previsto:395421.42, santander:13637.81, safra:2762.15, baseBruta:379021.46, caiu:379026.15, antecipacao:2400.49, emprestimo:13419.37, subsidio:1207.33, bloqueio:1300.48, disponivel:363113.14}}
     ],
+    // caminho do dinheiro: vendas iFood no sistema (relatório de pagamentos + cupons) x total bruto do iFood
+    caminho: {formas:[['iFood',11071.09],['Pagamento online',2202258.49],['Voucher iFood (desconto)',237.17]], totalFormas:2213566.75,
+      cupons:446343.21, totalSistema:2659909.96, totalIfood:2673275.55},
     // divergências sinalizadas (sem ajuste automático)
     avisos: ['A soma das linhas das DREs operacionais difere em R$ 1 do repasse informado (arredondamento das fontes, acumulado nas 4 semanas).',
              'Semana 19/10 a 25/10: repasse operacional R$ 395.097 × repasse apurado financeiro R$ 395.484,58 (diferença de R$ 387,58) — mantidos como nas fontes.']
@@ -2045,8 +2058,27 @@
       k('Retenções Santander/Safra', ifBrl(ret), 'retido nos repasses')+
       k('Caiu na conta', ifBrl(caiu), 'crédito real no extrato')+
       k('Disponível para uso', ifBrl(disp), 'após antecipação, empréstimos, subsídios e bloqueio')+'</div>';
+    h += ifCaminho();
     if(ifState.aberto) h += ifDetalhe();
     box.innerHTML = h + '</div>';
+  }
+  function ifCaminho(){
+    var C = IFOOD.caminho; if(!C) return '';
+    var somaF = C.formas.reduce(function(a, f){ return a + f[1]; }, 0), dif = C.totalIfood - C.totalSistema;
+    function k(l, v, sub, extra, cls){ return '<div class="if-k'+(cls?' '+cls:'')+'"><div class="l">'+l+'</div><div class="v tabular">'+(v===null ? '<span style="font-size:13px;color:var(--warning)">Aguardando dados</span>' : ifBrl(v))+'</div>'+(sub?'<div class="s">'+sub+'</div>':'')+(extra||'')+'</div>'; }
+    var h = '<div class="if-path-t">Caminho do dinheiro · sistema × iFood</div><div class="if-path">';
+    h += k('Pagamentos iFood no sistema', C.totalFormas, 'relatório de pagamentos por forma',
+      '<ul>'+C.formas.map(function(f){ return '<li><span>'+f[0]+'</span><b class="tabular">'+ifBrl(f[1])+'</b></li>'; }).join('')+'</ul>');
+    h += '<div class="if-arrow">+</div>'+k('Cupons de iFood', C.cupons, 'vendas iFood registradas como cupom');
+    h += '<div class="if-arrow">=</div>'+k('Total bruto no sistema', C.totalSistema, 'pagamentos + cupons');
+    h += '<div class="if-arrow">↔</div>'+k('Total bruto iFood', C.totalIfood, 'segundo o iFood');
+    h += '<div class="if-arrow">=</div>'+k('Diferença', dif, (dif>0 ? 'iFood acima do sistema' : (dif<0 ? 'sistema acima do iFood' : 'sem diferença'))+' · '+fmt2.format(Math.abs(dif)/C.totalIfood*100)+'% do total iFood', '', 'dif');
+    h += '</div>';
+    var avisos = [];
+    if(Math.abs(somaF - C.totalFormas) >= 0.01) avisos.push('A soma das formas de pagamento ('+ifBrl(somaF)+') difere do total informado ('+ifBrl(C.totalFormas)+').');
+    if(Math.abs(C.totalFormas + C.cupons - C.totalSistema) >= 0.01) avisos.push('Pagamentos + cupons ('+ifBrl(C.totalFormas + C.cupons)+') diferem do total bruto do sistema ('+ifBrl(C.totalSistema)+').');
+    if(avisos.length) h += '<div class="if-alert">⚠ '+avisos.join('<br>⚠ ')+'</div>';
+    return h;
   }
   function ifDetalhe(){
     var P = IFOOD.periodos, sel = ifState.modo==='consolidado' ? P : P.filter(function(p){ return p.id===ifState.per; });

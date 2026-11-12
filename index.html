@@ -804,6 +804,37 @@
   .est-note{font-size:11px; font-weight:600; color:var(--ink-muted); margin-top:3px; line-height:1.3;}
   .est-note b{color:var(--ink-2); font-weight:800;}
   .loss-com{display:block; font-size:10.5px; font-weight:600; color:var(--ink-muted);}
+
+  /* DRE iFood */
+  #ifoodBox{margin-top:14px;}
+  .if-card{border:1px solid var(--border); border-radius:14px; background:var(--surface); padding:14px 16px;}
+  .if-head{display:flex; align-items:center; gap:10px; flex-wrap:wrap; cursor:pointer;}
+  .if-head h3{margin:0; font-size:16px; font-weight:800;}
+  .if-head .if-sub{font-size:12.5px; color:var(--ink-muted);}
+  .if-head .if-tog{margin-left:auto; font-size:12px; font-weight:700; color:var(--accent);}
+  .if-kpis{display:grid; grid-template-columns:repeat(6, minmax(0,1fr)); gap:10px; margin-top:12px;}
+  @media (max-width:1100px){ .if-kpis{grid-template-columns:repeat(3, minmax(0,1fr));} }
+  @media (max-width:560px){ .if-kpis{grid-template-columns:repeat(2, minmax(0,1fr));} }
+  .if-k{border:1px solid var(--border); border-radius:10px; padding:10px 12px; background:var(--page);}
+  .if-k .l{font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.03em; color:var(--ink-muted);}
+  .if-k .v{font-size:19px; font-weight:800; margin-top:4px;}
+  .if-k .s{font-size:11.5px; color:var(--ink-muted); margin-top:2px;}
+  .if-det{margin-top:14px;}
+  .if-det[hidden]{display:none;}
+  .if-ctrl{display:flex; gap:10px; flex-wrap:wrap; align-items:center;}
+  .if-per{font-size:12.5px; color:var(--ink-2); margin:10px 0 0;}
+  .if-cols{display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-top:12px;}
+  @media (max-width:980px){ .if-cols{grid-template-columns:1fr;} }
+  .if-cols h4{margin:0 0 6px; font-size:14px; font-weight:800;}
+  .if-t td, .if-t th{font-size:12.5px; padding:6px 9px;}
+  .if-t td:first-child{white-space:normal; min-width:200px;}
+  .if-t tr.tot td{font-weight:800; border-top:2px solid var(--border);}
+  .if-t tr.sub td{font-weight:700;}
+  .if-t td.wait{color:var(--warning); font-style:italic; font-weight:600;}
+  .if-tag{display:inline-block; font-size:10px; font-weight:800; padding:1px 6px; border-radius:999px; margin-left:6px; vertical-align:1px; white-space:nowrap;}
+  .if-tag.med{background:color-mix(in srgb, var(--good) 20%, transparent); color:var(--good);}
+  .if-tag.calc{background:color-mix(in srgb, var(--warning) 22%, transparent); color:var(--warning);}
+  .if-alert{font-size:12px; color:var(--ink-2); background:color-mix(in srgb, var(--warning) 12%, transparent); border:1px solid color-mix(in srgb, var(--warning) 40%, transparent); border-radius:10px; padding:8px 10px; margin-top:10px;}
 </style>
 
 <div class="page">
@@ -860,6 +891,7 @@
     <div class="grid kpi-row" id="resumoKpis"></div>
     <div class="loss-panel" id="lossPanel" hidden></div>
     <div class="pctop-panel" id="pcTopPanel" hidden></div>
+    <div id="ifoodBox"></div>
 
 
     <div class="chart-title" style="margin-top:18px;" id="sigTitle">Sinaleiro da DRE</div>
@@ -1904,6 +1936,103 @@
     Array.prototype.forEach.call(tb.querySelectorAll('tr[data-parent="'+id+'"]'), function(c){ c.hidden = open;
       if(open){ var sb = c.querySelector('[data-sm-toggle]'); if(sb && sb.textContent==='▾'){ sb.textContent='▸'; c.classList.remove('open'); Array.prototype.forEach.call(tb.querySelectorAll('tr[data-parent="'+sb.getAttribute('data-sm-toggle')+'"]'), function(g){ g.hidden = true; }); } } });
   });
+
+  // ---------------- DRE iFood (repasses) ----------------
+  // Cada período = uma semana de apuração com a data de pagamento. Valores exatamente como nas fontes (centavos preservados);
+  // null = campo não informado ("Aguardando dados"). Para novos períodos, basta incluir um objeto em IFOOD.periodos.
+  var IFOOD = {
+    titulo: 'Repasses de outubro/2026 — apuração 28/09 a 25/10', status: 'Fechamento incompleto',
+    periodos: [
+      {id:'p1', apuracao:'28/09 a 04/10', pagamento:'07/10/2026',
+        op:{fat:699892, desc:-115844, comis:-143244, entrega:-118061, servico:-16832, promo:133267, ajustes:3669, difFontes:-20928, repasse:421918},
+        fin:{apurado:421917.83, previsto:422465.01, santander:14012.16, safra:3084.01, baseBruta:405368.84, caiu:405368.84, antecipacao:2697.31, emprestimo:22339.89, subsidio:2646.61, bloqueio:null, disponivel:382978.25}},
+      {id:'p2', apuracao:'05/10 a 11/10', pagamento:'14/10/2026',
+        op:{fat:647795, desc:-90487, comis:-126396, entrega:-97561, servico:-16550, promo:98428, ajustes:12256, difFontes:-10638, repasse:416848},
+        fin:{apurado:416847.78, previsto:417272.74, santander:4012.96, safra:3397.39, baseBruta:409862.39, caiu:409871.77, antecipacao:2483.42, emprestimo:65064.36, subsidio:6797.54, bloqueio:null, disponivel:349121.53}},
+      {id:'p3', apuracao:'12/10 a 18/10', pagamento:'21/10/2026',
+        op:{fat:659101, desc:-95094, comis:-128056, entrega:-97809, servico:-16722, promo:95927, ajustes:5146, difFontes:1712, repasse:424204},
+        fin:{apurado:424204.35, previsto:424626.45, santander:15201.20, safra:3338.10, baseBruta:406087.15, caiu:406091.84, antecipacao:2646.35, emprestimo:null, subsidio:null, bloqueio:null, disponivel:403445.49}},
+      {id:'p4', apuracao:'19/10 a 25/10', pagamento:'28/10/2026',
+        op:{fat:624043, desc:-88377, comis:-119708, entrega:-95432, servico:-15760, promo:91388, ajustes:832, difFontes:-1889, repasse:395097},
+        fin:{apurado:395484.58, previsto:395421.42, santander:13637.81, safra:2762.15, baseBruta:379021.46, caiu:379026.15, antecipacao:2400.49, emprestimo:13419.37, subsidio:1207.33, bloqueio:1300.48, disponivel:363113.14}}
+    ],
+    // divergências sinalizadas (sem ajuste automático)
+    avisos: ['A soma das linhas das DREs operacionais difere em R$ 1 do repasse informado (arredondamento das fontes, acumulado nas 4 semanas).',
+             'Semana 19/10 a 25/10: repasse operacional R$ 395.097 × repasse apurado financeiro R$ 395.484,58 (diferença de R$ 387,58) — mantidos como nas fontes.']
+  };
+  var IF_OP = [['fat','Faturamento','fat'],['desc','(−) Desconto custeado pela loja'],['comis','(−) Comissões e taxas do iFood'],['entrega','(−) Taxa de entrega iFood'],
+    ['servico','(−) Taxa de serviço cobrada do cliente'],['promo','(+) Promoção bancada pelo iFood'],['ajustes','(+) Ajustes, ressarcimentos e cancelamentos'],['difFontes','(±) Diferença entre as fontes'],['repasse','(=) Repasse do iFood','tot']];
+  var ifState = {aberto:false, modo:'consolidado', per:'p1'};
+  function ifSum(list, grp, k){ var vals = list.map(function(p){ return p[grp][k]; }).filter(function(v){ return v!==null && v!==undefined; }); return vals.length ? vals.reduce(function(a, b){ return a + b; }, 0) : null; }
+  function ifBrl(v){ return v===null ? null : (v<0?'-R$ ':'R$ ')+fmt2.format(Math.abs(v)); }
+  function ifBrl0(v){ return v===null ? null : (v<0?'-R$ ':'R$ ')+fmt0.format(Math.abs(Math.round(v))); }
+  function renderIfood(){
+    var box = document.getElementById('ifoodBox'); if(!box) return;
+    var P = IFOOD.periodos, all = P;
+    var fat = ifSum(all,'op','fat'), rop = ifSum(all,'op','repasse');
+    var prev = ifSum(all,'fin','previsto'), ret = ifSum(all,'fin','santander') + ifSum(all,'fin','safra'), caiu = ifSum(all,'fin','caiu'), disp = ifSum(all,'fin','disponivel');
+    var h = '<div class="if-card"><div class="if-head" id="ifHead" role="button" tabindex="0" aria-expanded="'+ifState.aberto+'"><h3>DRE iFood</h3>'+
+      '<span class="if-sub">'+IFOOD.titulo+'</span><span class="chip warning">'+IFOOD.status+'</span>'+
+      '<span class="if-tog">'+(ifState.aberto ? 'Ocultar detalhamento ▴' : 'Ver detalhamento ▾')+'</span></div>';
+    function k(l, v, sub){ return '<div class="if-k"><div class="l">'+l+'</div><div class="v tabular">'+(v===null ? '<span style="font-size:13px;color:var(--warning)">Aguardando dados</span>' : v)+'</div>'+(sub?'<div class="s">'+sub+'</div>':'')+'</div>'; }
+    h += '<div class="if-kpis">'+
+      k('Faturamento', ifBrl0(fat), P.length+' semanas de apuração')+
+      k('Repasse operacional', ifBrl0(rop), fat ? fmt2.format(rop/fat*100)+'% do faturamento' : '')+
+      k('Repasse previsto p/ pagamento', ifBrl(prev), 'soma dos repasses pagos')+
+      k('Retenções Santander/Safra', ifBrl(ret), 'retido nos repasses')+
+      k('Caiu na conta', ifBrl(caiu), 'crédito real no extrato')+
+      k('Disponível para uso', ifBrl(disp), 'após antecipação, empréstimos, subsídios e bloqueio')+'</div>';
+    if(ifState.aberto) h += ifDetalhe();
+    box.innerHTML = h + '</div>';
+  }
+  function ifDetalhe(){
+    var P = IFOOD.periodos, sel = ifState.modo==='consolidado' ? P : P.filter(function(p){ return p.id===ifState.per; });
+    var h = '<div class="if-det"><div class="if-ctrl"><div class="voxel-tabs" style="margin-top:0;">'+
+      ['consolidado','semanal'].map(function(m){ return '<button type="button" class="voxel-tab'+(ifState.modo===m?' active':'')+'" data-if-modo="'+m+'">'+(m==='consolidado'?'Consolidado':'Semanal')+'</button>'; }).join('')+'</div>';
+    if(ifState.modo==='semanal') h += '<div class="voxel-tabs" style="margin-top:0;">'+P.map(function(p){ return '<button type="button" class="voxel-tab'+(ifState.per===p.id?' active':'')+'" data-if-per="'+p.id+'" title="Apuração '+p.apuracao+' · pago em '+p.pagamento+'">'+p.apuracao+'</button>'; }).join('')+'</div>';
+    h += '</div>';
+    h += '<p class="if-per"><b>Período de apuração:</b> '+(ifState.modo==='consolidado' ? '28/09 a 25/10/2026 ('+P.length+' semanas)' : sel[0].apuracao+'/2026')+
+      ' · <b>Data de pagamento:</b> '+sel.map(function(p){ return p.pagamento; }).join(', ')+'</p>';
+    var fat = ifSum(sel,'op','fat');
+    function pc(v){ return (v===null || !fat) ? '—' : fmt2.format(v/fat*100)+'%'; }
+    function cell(v, fmt){ return v===null ? '<td class="num wait">Aguardando dados</td>' : '<td class="num tabular">'+fmt(v)+'</td>'; }
+    // DRE operacional
+    var op = '<table class="if-t cl-table"><thead><tr><th>Linha</th><th class="num">R$</th><th class="num">% do faturamento</th></tr></thead><tbody>';
+    IF_OP.forEach(function(x){ var v = ifSum(sel,'op',x[0]); op += '<tr class="'+(x[2]||'')+'"><td>'+x[1]+' <span class="if-tag med">MEDIDO</span></td>'+cell(v, ifBrl0)+'<td class="num tabular">'+pc(v)+'</td></tr>'; });
+    var somaLinhas = IF_OP.slice(0,-1).reduce(function(a, x){ return a + (ifSum(sel,'op',x[0])||0); }, 0), rep = ifSum(sel,'op','repasse');
+    op += '</tbody></table>';
+    if(Math.abs(somaLinhas - rep) >= 0.5) op += '<div class="if-alert">⚠ A soma das linhas dá '+ifBrl0(somaLinhas)+' e o repasse informado é '+ifBrl0(rep)+' — diferença de '+ifBrl0(somaLinhas-rep)+' por arredondamento das fontes (sem ajuste).</div>';
+    // conciliação financeira
+    var F = function(k){ return ifSum(sel,'fin',k); };
+    var apur = F('apurado'), prevv = F('previsto'), san = F('santander'), saf = F('safra'), base = F('baseBruta'), caiu = F('caiu');
+    var ajCal = (prevv!==null && apur!==null) ? prevv - apur : null, difB = (caiu!==null && base!==null) ? caiu - base : null;
+    function neg(v){ return v===null ? null : -v; }
+    var linhas = [
+      ['Repasse apurado na semana', apur], ['(±) Ajuste de calendário (repasse diferido)', ajCal], ['(=) Repasse previsto para pagamento', prevv, 'sub'],
+      ['(−) Retenção Santander', neg(san)], ['(−) Retenção Safra', neg(saf)], ['(=) Base bruta a receber', base, 'sub'],
+      ['(±) Diferença bancária', difB], ['(=) Crédito em conta (caiu na conta)', caiu, 'sub'],
+      ['(−) Antecipação líquida <span class="if-tag calc">Calculado por diferença — validar detalhamento</span>', neg(F('antecipacao'))],
+      ['(−) Empréstimos iFood', neg(F('emprestimo'))], ['(+) Subsídios', F('subsidio')], ['(−) Bloqueio judicial', neg(F('bloqueio'))],
+      ['(=) Disponível para uso', F('disponivel'), 'tot']];
+    var cf = '<table class="if-t cl-table"><thead><tr><th>Linha</th><th class="num">R$</th><th class="num">% do faturamento</th></tr></thead><tbody>';
+    linhas.forEach(function(x){ cf += '<tr class="'+(x[2]||'')+'"><td>'+x[0]+'</td>'+cell(x[1], ifBrl)+'<td class="num tabular">'+pc(x[1])+'</td></tr>'; });
+    cf += '</tbody></table>';
+    // conferência: crédito − antecipação − empréstimos + subsídios − bloqueio = disponível
+    var chk = (caiu||0) - (F('antecipacao')||0) - (F('emprestimo')||0) + (F('subsidio')||0) - (F('bloqueio')||0), disp = F('disponivel');
+    if(disp!==null && Math.abs(chk - disp) >= 0.01) cf += '<div class="if-alert">⚠ A conciliação não fecha: '+ifBrl(chk)+' calculado × '+ifBrl(disp)+' informado.</div>';
+    cf += '<p class="cl-note" style="margin-top:6px;">Empréstimos, subsídios e bloqueio judicial afetam só o caixa disponível — não reduzem o resultado operacional. A antecipação foi calculada por diferença entre o crédito em conta e o disponível; validar com o detalhamento.</p>';
+    h += '<div class="if-cols"><div style="min-width:0"><h4>1. DRE operacional</h4><div class="table-scroll">'+op.replace('</table>','</table></div>')+'</div><div style="min-width:0"><h4>2. Conciliação financeira</h4><div class="table-scroll">'+cf.replace('</table>','</table></div>')+'</div></div>';
+    var av = IFOOD.avisos.filter(function(a){ return ifState.modo==='consolidado' || (ifState.per==='p4' && /19\/10/.test(a)) });
+    if(av.length) h += '<div class="if-alert">'+av.map(function(a){ return '⚠ '+a; }).join('<br>')+'</div>';
+    return h + '</div>';
+  }
+  document.addEventListener('click', function(e){
+    if(!e.target.closest) return;
+    if(e.target.closest('#ifHead')){ ifState.aberto = !ifState.aberto; renderIfood(); return; }
+    var m = e.target.closest('[data-if-modo]'); if(m){ ifState.modo = m.getAttribute('data-if-modo'); renderIfood(); return; }
+    var p = e.target.closest('[data-if-per]'); if(p){ ifState.per = p.getAttribute('data-if-per'); renderIfood(); }
+  });
+  document.addEventListener('keydown', function(e){ if((e.key==='Enter' || e.key===' ') && e.target.id==='ifHead'){ e.preventDefault(); ifState.aberto = !ifState.aberto; renderIfood(); } });
 
   function voxelRenderKpis(scope){
     var fli = voxelPick(voxelGetVals(scope,'Faturamento Líquido de Itens'));
@@ -3487,6 +3616,7 @@
     renderPrimeCost();
     renderPcResumo();
     renderSemanal();
+    renderIfood();
     if(lojasReady) renderLojasTab();
   }
   renderFiltered();

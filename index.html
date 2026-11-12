@@ -2034,7 +2034,7 @@
     ],
     // caminho do dinheiro: vendas iFood no sistema (relatório de pagamentos + cupons) x total bruto do iFood
     caminho: {formas:[['iFood',11071.09],['Pagamento online',2202258.49],['Voucher iFood (desconto)',237.17]], totalFormas:2213566.75,
-      cupons:446343.21, totalSistema:2659909.96, totalIfood:2673275.55},
+      cupons:446343.21, totalSistema:2659909.96, totalIfood:2630831},
     // divergências sinalizadas (sem ajuste automático)
     avisos: ['A soma das linhas das DREs operacionais difere em R$ 1 do repasse informado (arredondamento das fontes, acumulado nas 4 semanas).',
              'Semana 19/10 a 25/10: repasse operacional R$ 395.097 × repasse apurado financeiro R$ 395.484,58 (diferença de R$ 387,58) — mantidos como nas fontes.']
@@ -2088,7 +2088,7 @@
       '<ul>'+C.formas.map(function(f){ return '<li><span>'+f[0]+'</span><b class="tabular">'+ifBrl(f[1])+'</b></li>'; }).join('')+'</ul>');
     h += '<div class="if-arrow">+</div>'+k('Cupons de iFood', C.cupons, 'vendas iFood registradas como cupom');
     h += '<div class="if-arrow">=</div>'+k('Total bruto no sistema', C.totalSistema, 'pagamentos + cupons');
-    h += '<div class="if-arrow">↔</div>'+k('Total bruto iFood', C.totalIfood, 'segundo o iFood');
+    h += '<div class="if-arrow">↔</div>'+k('Total bruto iFood', C.totalIfood, 'soma das 4 semanas de apuração');
     h += '<div class="if-arrow">=</div>'+k('Diferença', dif, (dif>0 ? 'iFood acima do sistema' : (dif<0 ? 'sistema acima do iFood' : 'sem diferença'))+' · '+fmt2.format(Math.abs(dif)/C.totalIfood*100)+'% do total iFood', '', 'dif');
     h += '</div>';
     var avisos = [];

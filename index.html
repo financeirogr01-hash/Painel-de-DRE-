@@ -3763,14 +3763,14 @@
   var DG_EST = ['Estoque Inicial','Estoque Final'];
   var DG = [
     {id:'rb', t:'1. Faturamento', sl:'Faturamento', k:'tot', c:[['Faturamento Bruto de Itens','salão, delivery, balcão, retirada e iFood'],['Faturamento de Serviços (Bilheteria e Eventos)','eventos']]},
+    {id:'roy', t:'(–) Gestão e estrutura corporativa — royalties', sl:'Royalties', c:[['Taxa de Marketing'],['Royalties'],['Taxa Administrativa']], obs:'Retirado do faturamento antes das deduções. Valores realizados em cada mês.'},
     {id:'ded', t:'(–) Deduções da receita', sl:'Deduções', c:[['Impostos sobre Vendas'],['Devoluções e Cancelamentos'],['Devoluções de Vendas'],['Descontos','descontos concedidos pela loja'],['Ressarcimento de Pedido Cancelado','reembolso de cancelamento — reduz a dedução']]},
-    {id:'rl', t:'2. Receita líquida', sl:'Receita líquida', k:'tot', f:['rb','ded']},
+    {id:'rl', t:'2. Receita líquida', sl:'Receita líquida', k:'tot', f:['rb','roy','ded']},
     {id:'cmv', t:'(–) CMV — Custo das Mercadorias Vendidas', sl:'CMV', c:[['Estoque Inicial','ajuste de estoque — soma ao custo'],['Insumos','alimentos, bebidas e ingredientes'],['Embalagens'],['Produtos para Comercialização'],['Estoque Final','ajuste de estoque — reduz o custo']]},
     {id:'lb', t:'3. Lucro bruto', sl:'Lucro bruto', k:'tot', f:['rl','cmv']},
     {id:'can', t:'(–) Despesas com vendas e canais', sl:'Vendas e canais', c:[['Taxas de Cartão e Apps de Delivery','cartões e aplicativos — conta agrupada na origem'],['Comissões sobre Vendas'],['Reembolso taxa de transação iFood benefícios','reembolso — reduz a despesa'],['Reembolso taxa de serviço iFood','reembolso — reduz a despesa']]},
     {id:'ent', t:'(–) Despesas com TAON / entregas', sl:'TAON / entregas', c:[['Combustível e Entregas'],['Frete Aplicativos'],['Serviços Logísticos'],['Reembolso de Cobrança de Frete','reembolso — reduz a despesa']], obs:'A base não separa o fornecedor TAON: a linha reúne todos os custos de entrega.'},
-    {id:'roy', t:'(–) Gestão e estrutura corporativa — royalties', sl:'Royalties', c:[['Taxa de Marketing'],['Royalties'],['Taxa Administrativa']], obs:'Valores realizados em cada mês (sem aplicar 10,5% sobre o histórico).'},
-    {id:'mc', t:'4. Margem de contribuição — R$', sl:'Margem de contribuição', k:'tot', f:['lb','can','ent','roy']},
+    {id:'mc', t:'4. Margem de contribuição — R$', sl:'Margem de contribuição', k:'tot', f:['lb','can','ent']},
     {id:'mcp', t:'Margem de contribuição — %', k:'pct', of:'mc'},
     {id:'cmof', t:'(–) CMO — equipe fixa', sl:'CMO equipe fixa', c:[['Salários'],['Bonificações'],['Impostos Sobre Salários','encargos'],['Vale Alimentação','benefício'],['Vale Transporte','benefício'],['Rescisões'],['Pró-Labore e Despesas de Sócios','conta agrupada na origem'],['Outros Encargos com Funcionários'],['Férias'],['13º Salário']], obs:'Despesas com pessoal sem os freelancers e terceirizados (que estão no CMO Free).'},
     {id:'cmov', t:'(–) CMO — Free', sl:'CMO Free', c:[['Freelancers e Terceirizados','freelancers e terceirizados — conta agrupada na origem']]},
@@ -3911,7 +3911,8 @@
       h += '<tr class="dg-macro"'+clk(d.id, 'Abrir ou fechar as contas')+'><td>'+ar(d.id)+d.t+(d.aus?'<span class="dg-tag">sem conta na base</span>':'')+'</td><td class="num tabular">'+val+'</td><td class="num tabular">'+(d.aus||d.vazio ? '<span class="dg-eq">—</span>' : pc(cv))+'</td>'+
         (d.aus||d.vazio ? '<td class="num"><span class="dg-eq">—</span></td><td class="num"><span class="dg-eq">—</span></td>' : prevTd(pvv)+dgVarTd(curC.v[d.id], pvv, d, naoAplic))+'</tr>';
       if(!dgOpen[d.id]) return;
-      if(d.aus || d.vazio || d.obs) h += '<tr class="dg-obs"><td colspan="5">'+(d.aus || d.vazio || d.obs)+'</td></tr>';
+      if(d.aus || d.vazio || d.obs) h += '<tr class="dg-obs"><td colspan="5">'+(d.aus || d.vazio || d.obs)+
+        (d.id==='roy' && cur.v.rb ? ' Realizado = <b>'+fmt2.format(-cv/cur.v.rb*100)+'% do faturamento</b> · referência de 10,5% = '+dgR(-cur.v.rb*0.105)+' (diferença '+dgR(cv + cur.v.rb*0.105)+').' : '')+'</td></tr>';
       leafRows(d);
     });
     h += '</tbody></table></div>';
@@ -3923,13 +3924,13 @@
     var chk = [];
     function linha(txt, a, b){ var d = Math.round((a-b)*100)/100, ok = Math.abs(d)<0.05; chk.push({ok:ok, d:d}); return '<li>'+txt+' <span class="'+(ok?'dg-ok':'dg-bad')+'">'+(ok ? '✓ fecha' : '✗ diferença '+dgR(d))+'</span></li>'; }
     var fbt = o('Faturamento Bruto Total'), flt = o('Faturamento Líquido Total'), pes = o('Despesas com Pessoal'), lopO = o('Lucro/Prejuízo Operacional'), llO = o('Lucro/Prejuízo Líquido'), inv = o('Investimento em Equipamentos e Estrutura');
-    var rlEsp = flt + g('Devoluções de Vendas') + g('Impostos sobre Vendas') - g('Comissões sobre Vendas') + g('Ressarcimento de Pedido Cancelado');
+    var rlEsp = flt + (cur.v.roy||0) + g('Devoluções de Vendas') + g('Impostos sobre Vendas') - g('Comissões sobre Vendas') + g('Ressarcimento de Pedido Cancelado');
     var ebEsp = lopO - g('Tarifas Bancárias') + reemb;
     var llEsp = llO - inv + reemb;
     var cmoT = (cur.v.cmof||0) + (cur.v.cmov||0);
     var conf = '<div class="dg-box"><h4>Conciliação com a DRE Voxel</h4><ul>'+
       linha('Receita bruta '+dgR(cur.v.rb)+' = Faturamento Bruto Total da origem '+dgR(fbt)+'.', cur.v.rb, fbt)+
-      linha('Receita líquida gerencial '+dgR(rl)+' = Faturamento Líquido Total '+dgR(flt)+' − devoluções de vendas '+dgR(-g('Devoluções de Vendas'))+' − impostos sobre vendas '+dgR(-g('Impostos sobre Vendas'))+' + comissões sobre vendas (passam para canais) '+dgR(-g('Comissões sobre Vendas'))+' + ressarcimento de pedido cancelado '+dgR(g('Ressarcimento de Pedido Cancelado'))+'.', rl, rlEsp)+
+      linha('Receita líquida gerencial '+dgR(rl)+' = Faturamento Líquido Total '+dgR(flt)+' − royalties e gestão '+dgR(-(cur.v.roy||0))+' − devoluções de vendas '+dgR(-g('Devoluções de Vendas'))+' − impostos sobre vendas '+dgR(-g('Impostos sobre Vendas'))+' + comissões sobre vendas (passam para canais) '+dgR(-g('Comissões sobre Vendas'))+' + ressarcimento de pedido cancelado '+dgR(g('Ressarcimento de Pedido Cancelado'))+'.', rl, rlEsp)+
       linha('CMO total '+dgR(cmoT)+' (equipe fixa '+dgR(cur.v.cmof)+' + Free '+dgR(cur.v.cmov)+') = Despesas com Pessoal da origem '+dgR(pes)+'.', cmoT, pes)+
       linha('EBITDA '+dgR(cur.v.ebitda)+' = Resultado operacional Voxel '+dgR(lopO)+' + tarifas bancárias (vão para despesas financeiras) '+dgR(-g('Tarifas Bancárias'))+' + reembolsos reclassificados '+dgR(reemb)+'.', cur.v.ebitda, ebEsp)+
       linha('Resultado líquido '+dgR(cur.v.ll)+' = Lucro líquido Voxel '+dgR(llO)+' − investimentos em ativo (fora da DRE) '+dgR(inv)+' + reembolsos reclassificados '+dgR(reemb)+'.', cur.v.ll, llEsp)+

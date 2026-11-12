@@ -347,6 +347,8 @@
   .dg-up{color:var(--good); font-weight:700;} .dg-dn{color:var(--critical); font-weight:700;} .dg-eq{color:var(--ink-muted);}
   .dg-var small{display:block; font-size:11px; font-weight:500; color:var(--ink-muted);}
   .dg-aus{color:var(--warning); font-weight:700; font-size:12px;}
+  .dg-det{margin-top:12px;}
+  .dg-det summary{cursor:pointer; font-size:12.5px; font-weight:700; color:var(--ink-2);}
   .dg-foot{display:grid; grid-template-columns:repeat(auto-fit,minmax(280px,1fr)); gap:12px; margin-top:12px;}
   .dg-box{border:1px solid var(--border); border-radius:12px; padding:10px 12px; font-size:12.5px; color:var(--ink-2); line-height:1.45;}
   .dg-box h4{margin:0 0 6px; font-size:12px; text-transform:uppercase; letter-spacing:.04em; color:var(--ink);}
@@ -3760,33 +3762,29 @@
   // c: contas de origem [conta, observação]; f: fórmula (soma de linhas já calculadas); k:'pct' = margem sobre a receita líquida.
   var DG_EST = ['Estoque Inicial','Estoque Final'];
   var DG = [
-    {id:'rb', t:'1. Receita bruta de vendas', sl:'Receita bruta', k:'tot', c:[['Faturamento Bruto de Itens'],['Faturamento de Serviços (Bilheteria e Eventos)']]},
-    {id:'ded', t:'(–) Deduções da receita', sl:'Deduções', c:[['Descontos','descontos concedidos pela loja'],['Devoluções e Cancelamentos'],['Devoluções de Vendas','vinha em "Taxas e Impostos sobre Vendas"'],['Impostos sobre Vendas','vinha em "Taxas e Impostos sobre Vendas"'],['Ressarcimento de Pedido Cancelado','reembolso do cancelamento — vinha abaixo do resultado']]},
+    {id:'rb', t:'1. Faturamento', sl:'Faturamento', k:'tot', c:[['Faturamento Bruto de Itens','salão, delivery, balcão, retirada e iFood'],['Faturamento de Serviços (Bilheteria e Eventos)','eventos']]},
+    {id:'ded', t:'(–) Deduções da receita', sl:'Deduções', c:[['Impostos sobre Vendas'],['Devoluções e Cancelamentos'],['Devoluções de Vendas'],['Descontos','descontos concedidos pela loja'],['Ressarcimento de Pedido Cancelado','reembolso de cancelamento — reduz a dedução']]},
     {id:'rl', t:'2. Receita líquida', sl:'Receita líquida', k:'tot', f:['rb','ded']},
-    {id:'cmv', t:'(–) CMV — Custo das Mercadorias Vendidas', sl:'CMV', c:[['Estoque Inicial','soma ao custo'],['Insumos'],['Embalagens'],['Produtos para Comercialização'],['Estoque Final','reduz o custo']]},
+    {id:'cmv', t:'(–) CMV — Custo das Mercadorias Vendidas', sl:'CMV', c:[['Estoque Inicial','ajuste de estoque — soma ao custo'],['Insumos','alimentos, bebidas e ingredientes'],['Embalagens'],['Produtos para Comercialização'],['Estoque Final','ajuste de estoque — reduz o custo']]},
     {id:'lb', t:'3. Lucro bruto', sl:'Lucro bruto', k:'tot', f:['rl','cmv']},
-    {id:'can', t:'(–) Despesas variáveis com vendas e canais', sl:'Vendas e canais', c:[['Taxas de Cartão e Apps de Delivery','conta agrupada na origem (cartão + aplicativos)'],['Comissões sobre Vendas','vinha nas deduções da receita'],['Reembolso taxa de transação iFood benefícios','reembolso — vinha abaixo do resultado'],['Reembolso taxa de serviço iFood','reembolso — vinha abaixo do resultado']]},
-    {id:'ent', t:'(–) Despesas variáveis com TAON / entregas', sl:'TAON / entregas', c:[['Combustível e Entregas'],['Frete Aplicativos'],['Serviços Logísticos'],['Reembolso de Cobrança de Frete','reembolso — vinha abaixo do resultado']], obs:'A base não identifica o fornecedor TAON: a linha reúne todos os custos de entrega.'},
-    {id:'roy', t:'(–) Gestão e estrutura corporativa — royalties', sl:'Royalties e gestão', c:[['Taxa de Marketing'],['Royalties'],['Taxa Administrativa']], obs:'Valores realizados do período. Referência contratual de 10,5% sobre a receita bruta somente a partir de novembro/2026 — não aplicada aos meses anteriores.'},
-    {id:'mc', t:'4. Margem de contribuição', sl:'Margem de contribuição', k:'tot', f:['lb','can','ent','roy']},
+    {id:'can', t:'(–) Despesas com vendas e canais', sl:'Vendas e canais', c:[['Taxas de Cartão e Apps de Delivery','cartões e aplicativos — conta agrupada na origem'],['Comissões sobre Vendas'],['Reembolso taxa de transação iFood benefícios','reembolso — reduz a despesa'],['Reembolso taxa de serviço iFood','reembolso — reduz a despesa']]},
+    {id:'ent', t:'(–) Despesas com TAON / entregas', sl:'TAON / entregas', c:[['Combustível e Entregas'],['Frete Aplicativos'],['Serviços Logísticos'],['Reembolso de Cobrança de Frete','reembolso — reduz a despesa']], obs:'A base não separa o fornecedor TAON: a linha reúne todos os custos de entrega.'},
+    {id:'roy', t:'(–) Gestão e estrutura corporativa — royalties', sl:'Royalties', c:[['Taxa de Marketing'],['Royalties'],['Taxa Administrativa']], obs:'Valores realizados em cada mês (sem aplicar 10,5% sobre o histórico).'},
+    {id:'mc', t:'4. Margem de contribuição — R$', sl:'Margem de contribuição', k:'tot', f:['lb','can','ent','roy']},
     {id:'mcp', t:'Margem de contribuição — %', k:'pct', of:'mc'},
-    {id:'cmof', t:'(–) CMO — equipe fixa', sl:'CMO equipe fixa', c:[['Salários'],['Bonificações'],['Impostos Sobre Salários'],['Vale Alimentação'],['Vale Transporte'],['Rescisões'],['Pró-Labore e Despesas de Sócios','agrupada na origem — classificar antes de tratar como CMO'],['Outros Encargos com Funcionários'],['Férias'],['13º Salário']]},
-    {id:'cmov', t:'(–) CMO — Free e terceirizados', sl:'CMO Free', c:[['Freelancers e Terceirizados','freelancers e terceirizados agrupados na origem']]},
-    {id:'ocu', t:'(–) Despesas de ocupação', sl:'Ocupação', c:[['Aluguel e Condomínio']], obs:'IPTU e seguros do imóvel não têm conta própria na base.'},
-    {id:'ope', t:'(–) Despesas operacionais', sl:'Operacionais', c:[['Água e Energia'],['Gás de Cozinha'],['Aluguel de Equipamentos'],['Limpeza e Higiene'],['Manutenção Predial e de Equipamentos'],['Segurança, Telefonia e Internet','conta agrupada na origem'],['Músicos'],['Transporte']]},
-    {id:'adm', t:'(–) Despesas administrativas', sl:'Administrativas', c:[['Softwares e Terceirizados'],['Materiais de Escritório'],['Outras Despesas Administrativas']]},
-    {id:'mkt', t:'(–) Marketing e publicidade próprios da loja', sl:'Marketing local', c:[['Despesas com Marketing'],['Endomarketing'],['Pacote Anúncios Ifood']]},
-    {id:'idt', t:'(–) Despesas a identificar — pendente de classificação', sl:'A identificar', c:[['Despesas a Identificar']], opt:true},
-    {id:'ebitda', t:'5. EBITDA — resultado operacional', sl:'EBITDA', k:'tot', f:['mc','cmof','cmov','ocu','ope','adm','mkt','idt']},
+    {id:'cmof', t:'(–) CMO — equipe fixa', sl:'CMO equipe fixa', c:[['Salários'],['Bonificações'],['Impostos Sobre Salários','encargos'],['Vale Alimentação','benefício'],['Vale Transporte','benefício'],['Rescisões'],['Pró-Labore e Despesas de Sócios','conta agrupada na origem'],['Outros Encargos com Funcionários'],['Férias'],['13º Salário']], obs:'Despesas com pessoal sem os freelancers e terceirizados (que estão no CMO Free).'},
+    {id:'cmov', t:'(–) CMO — Free', sl:'CMO Free', c:[['Freelancers e Terceirizados','freelancers e terceirizados — conta agrupada na origem']]},
+    {id:'ocu', t:'(–) Despesas de ocupação', sl:'Ocupação', c:[['Aluguel e Condomínio','aluguel e condomínio']], obs:'IPTU e seguros do imóvel não têm conta própria na base.'},
+    {id:'ope', t:'(–) Despesas operacionais', sl:'Operacionais', c:[['Água e Energia'],['Gás de Cozinha'],['Limpeza e Higiene'],['Manutenção Predial e de Equipamentos'],['Aluguel de Equipamentos'],['Segurança, Telefonia e Internet','conta agrupada na origem'],['Músicos'],['Transporte'],['Despesas com Marketing','marketing local — sem linha própria na DRE'],['Endomarketing','marketing local — sem linha própria na DRE'],['Pacote Anúncios Ifood','marketing local — sem linha própria na DRE']]},
+    {id:'adm', t:'(–) Despesas administrativas', sl:'Administrativas', c:[['Softwares e Terceirizados','sistemas e serviços terceirizados'],['Materiais de Escritório'],['Outras Despesas Administrativas'],['Despesas a Identificar','pendente de classificação']]},
+    {id:'ebitda', t:'5. EBITDA — resultado operacional', sl:'EBITDA', k:'tot', f:['mc','cmof','cmov','ocu','ope','adm']},
     {id:'ebp', t:'Margem EBITDA — %', k:'pct', of:'ebitda'},
-    {id:'da', t:'(–) Depreciação e amortização', sl:'Depreciação e amortização', c:[], aus:'Sem conta de depreciação ou amortização na base.'},
-    {id:'ebit', t:'6. Resultado operacional — EBIT', sl:'EBIT', k:'tot', f:['ebitda','da']},
-    {id:'rf', t:'(+) Receitas financeiras', sl:'Receitas financeiras', c:[['Rendimento de Aplicações']]},
-    {id:'df', t:'(–) Despesas financeiras', sl:'Despesas financeiras', c:[['Tarifas Bancárias','vinha nas despesas administrativas'],['Impostos sobre Aplicações']], obs:'Juros não têm conta própria na base.'},
-    {id:'out', t:'(+/–) Outros resultados', sl:'Outros resultados', c:[], vazio:'Nenhum outro componente de resultado identificado na base.'},
-    {id:'ir', t:'(–) Tributos sobre o lucro', sl:'Tributos sobre o lucro', c:[], aus:'Sem conta de IRPJ/CSLL na base.'},
-    {id:'ll', t:'7. Lucro ou prejuízo líquido', sl:'Resultado líquido', k:'tot', f:['ebit','rf','df','out','ir']},
-    {id:'llp', t:'Margem líquida — %', k:'pct', of:'ll'}
+    // ajustes após o EBITDA: não aparecem como linhas próprias; abrem dentro do resultado líquido
+    {id:'da', hid:true, t:'(–) Depreciação e amortização', sl:'Depreciação e amortização', c:[], aus:'sem conta na base'},
+    {id:'rf', hid:true, t:'(+) Receitas financeiras', sl:'Receitas financeiras', c:[['Rendimento de Aplicações']]},
+    {id:'df', hid:true, t:'(–) Despesas financeiras', sl:'Despesas financeiras', c:[['Tarifas Bancárias'],['Impostos sobre Aplicações']]},
+    {id:'ir', hid:true, t:'(–) Tributos sobre o lucro', sl:'Tributos sobre o lucro', c:[], aus:'sem conta na base'},
+    {id:'ll', t:'6. Lucro ou prejuízo líquido', sl:'Resultado líquido', k:'tot', f:['ebitda','da','rf','df','ir']}
   ];
   // movimentações que não são despesa/receita da DRE (continuam na DRE Voxel, bloco abaixo do operacional)
   var DG_FORA = [['Investimento em Equipamentos e Estrutura','investimento em ativo'],['Empréstimos - Entrada','principal'],['Empréstimos - Saída','principal'],['Aportes'],['Retiradas de Lucro','distribuição aos sócios'],['Transferências de Entrada'],['Transferências de Saída'],['Saldo Inicial'],['Ajuste de Caixa']];
@@ -3858,32 +3856,7 @@
       '<label><input type="checkbox" id="dgZeroChk"'+(dgZero?' checked':'')+'> Mostrar contas zeradas</label></div></div>';
     h += '<div class="table-scroll"><table class="dg-table"><thead><tr><th>Estrutura da DRE</th><th class="num">Realizado R$</th><th class="num">% da receita líquida</th><th class="num">'+(naoAplic ? 'Período anterior' : 'Mês anterior R$'+(temPrev ? ' ('+VOXEL_MONTH_LABELS[m-1].toLowerCase()+')' : ''))+'</th><th class="num">Variação</th></tr></thead><tbody>';
     var prevTd = function(v, isPct){ return '<td class="num tabular">'+(naoAplic ? '<span class="dg-eq">Não aplicável</span>' : (v===null || v===undefined ? '<span class="dg-eq">—</span>' : (isPct ? fmt2.format(v)+'%' : dgR(v))))+'</td>'; };
-    DG.forEach(function(d){
-      if(d.k==='pct'){
-        h += '<tr class="dg-pct"><td>'+d.t+'</td><td class="num tabular">'+(cur.v[d.id]===null ? 'n/d' : fmt2.format(cur.v[d.id])+'%')+'</td><td class="num"><span class="dg-eq">—</span></td>'+
-          prevTd(pv(d.id), true)+dgVarTd(curC.v[d.id], pv(d.id), d, naoAplic)+'</tr>';
-        return;
-      }
-      if(d.f){
-        var lbl = d.t, tag = '';
-        if(d.id==='ll' && incompleto){ lbl = '7. Resultado líquido parcial — dados incompletos'; }
-        if(d.id==='ebit') tag = '<span class="dg-tag">sem depreciação na base</span>';
-        h += '<tr class="dg-tot"'+clk(d.id, 'Ver a fórmula e os valores usados')+'><td>'+ar(d.id)+lbl+tag+'</td><td class="num tabular">'+dgR(cur.v[d.id])+'</td><td class="num tabular">'+pc(cur.v[d.id])+'</td>'+
-          prevTd(pv(d.id))+dgVarTd(curC.v[d.id], pv(d.id), d, naoAplic)+'</tr>';
-        if(dgOpen[d.id]){
-          var parts = d.f.map(function(id){ var x = dgDef(id); var v = cur.v[id]; return x.sl+' <b>'+(v===null ? 'dado ausente (0)' : dgR(v))+'</b>'; });
-          h += '<tr class="dg-form"><td colspan="5">Fórmula: '+parts.join(' + ')+' = <b>'+(d.sl)+' '+dgR(cur.v[d.id])+'</b><span class="dg-note">Valores já contados nas linhas acima — não somar de novo como despesa.'+(d.id==='ebitda' ? ' EBITDA não é lucro líquido nem geração de caixa.' : '')+'</span></td></tr>';
-        }
-        return;
-      }
-      // categoria macro
-      var cv = cur.v[d.id], pvv = pv(d.id);
-      if(d.opt && !dgZero && dgZ(cv) && dgZ(pvv)) return;
-      var val = d.aus ? '<span class="dg-aus">Dado ausente</span>' : (d.vazio ? '<span class="dg-eq">—</span>' : dgR(cv));
-      h += '<tr class="dg-macro"'+clk(d.id, 'Abrir ou fechar as contas')+'><td>'+ar(d.id)+d.t+(d.aus?'<span class="dg-tag">sem conta na base</span>':'')+'</td><td class="num tabular">'+val+'</td><td class="num tabular">'+(d.aus||d.vazio ? '<span class="dg-eq">—</span>' : pc(cv))+'</td>'+
-        (d.aus||d.vazio ? '<td class="num"><span class="dg-eq">—</span></td><td class="num"><span class="dg-eq">—</span></td>' : prevTd(pvv)+dgVarTd(curC.v[d.id], pvv, d, naoAplic))+'</tr>';
-      if(!dgOpen[d.id]) return;
-      if(d.aus || d.vazio || d.obs) h += '<tr class="dg-obs"><td colspan="5">'+(d.aus || d.vazio || d.obs)+'</td></tr>';
+    function leafRows(d){
       var shown = 0;
       d.c.forEach(function(c){
         var line = c[0], v = cur.leaf[line], p = prev ? prev.leaf[line] : null, key = 'L:'+line;
@@ -3902,6 +3875,44 @@
         }
       });
       if(d.c.length && !shown) h += '<tr class="dg-obs"><td colspan="5">Contas zeradas no período — marque “Mostrar contas zeradas” para vê-las.</td></tr>';
+    }
+    DG.forEach(function(d){
+      if(d.hid) return;
+      if(d.k==='pct'){
+        h += '<tr class="dg-pct"><td>'+d.t+'</td><td class="num tabular">'+(cur.v[d.id]===null ? 'n/d' : fmt2.format(cur.v[d.id])+'%')+'</td><td class="num"><span class="dg-eq">—</span></td>'+
+          prevTd(pv(d.id), true)+dgVarTd(curC.v[d.id], pv(d.id), d, naoAplic)+'</tr>';
+        return;
+      }
+      if(d.f){
+        var lbl = d.t, tag = '';
+        if(d.id==='ll' && incompleto){ lbl = '6. Lucro ou prejuízo líquido — parcial'; tag = '<span class="dg-tag">dados incompletos</span>'; }
+        h += '<tr class="dg-tot"'+clk(d.id, d.id==='ll' ? 'Ver os ajustes após o EBITDA' : 'Ver a fórmula e os valores usados')+'><td>'+ar(d.id)+lbl+tag+'</td><td class="num tabular">'+dgR(cur.v[d.id])+'</td><td class="num tabular">'+pc(cur.v[d.id])+'</td>'+
+          prevTd(pv(d.id))+dgVarTd(curC.v[d.id], pv(d.id), d, naoAplic)+'</tr>';
+        if(dgOpen[d.id] && d.id==='ll'){
+          h += '<tr class="dg-form"><td colspan="5">Ajustes após o EBITDA — resultado líquido = EBITDA + ajustes abaixo.'+(incompleto ? '<span class="dg-note">Resultado parcial: depreciação/amortização e tributos sobre o lucro não têm conta na base.</span>' : '')+'</td></tr>';
+          h += '<tr class="dg-leaf"><td>EBITDA</td><td class="num tabular">'+dgR(cur.v.ebitda)+'</td><td class="num tabular">'+pc(cur.v.ebitda)+'</td>'+prevTd(pv('ebitda'))+dgVarTd(curC.v.ebitda, pv('ebitda'), dgDef('ebitda'), naoAplic)+'</tr>';
+          d.f.slice(1).forEach(function(id){
+            var x = dgDef(id), v = cur.v[id];
+            if(x.aus){ h += '<tr class="dg-leaf"><td>'+x.t+'</td><td class="num"><span class="dg-aus">Dado ausente</span></td><td class="num"><span class="dg-eq">—</span></td><td class="num"><span class="dg-eq">—</span></td><td class="num"><span class="dg-eq">'+x.aus+'</span></td></tr>'; return; }
+            h += '<tr class="dg-leaf"><td>'+x.t+'</td><td class="num tabular">'+dgR(v)+'</td><td class="num tabular">'+pc(v)+'</td>'+prevTd(pv(id))+dgVarTd(curC.v[id], pv(id), x, naoAplic)+'</tr>';
+            x.c.forEach(function(c){ var lv = cur.leaf[c[0]], lp = prev ? prev.leaf[c[0]] : null; if(!dgZero && dgZ(lv) && dgZ(lp)) return;
+              h += '<tr class="dg-store"><td>'+clEsc(c[0])+'</td><td class="num tabular">'+dgR(lv)+'</td><td class="num tabular">'+pc(lv)+'</td>'+prevTd(lp)+dgVarTd(curC.leaf[c[0]], lp, null, naoAplic)+'</tr>'; });
+          });
+        } else if(dgOpen[d.id]){
+          var parts = d.f.map(function(id){ var x = dgDef(id); var v = cur.v[id]; return x.sl+' <b>'+(v===null ? 'dado ausente (0)' : dgR(v))+'</b>'; });
+          h += '<tr class="dg-form"><td colspan="5">Fórmula: '+parts.join(' + ')+' = <b>'+(d.sl)+' '+dgR(cur.v[d.id])+'</b><span class="dg-note">Valores já contados nas linhas acima — não somar de novo como despesa.'+(d.id==='ebitda' ? ' EBITDA não é lucro líquido nem geração de caixa.' : '')+'</span></td></tr>';
+        }
+        return;
+      }
+      // categoria macro
+      var cv = cur.v[d.id], pvv = pv(d.id);
+      if(d.opt && !dgZero && dgZ(cv) && dgZ(pvv)) return;
+      var val = d.aus ? '<span class="dg-aus">Dado ausente</span>' : (d.vazio ? '<span class="dg-eq">—</span>' : dgR(cv));
+      h += '<tr class="dg-macro"'+clk(d.id, 'Abrir ou fechar as contas')+'><td>'+ar(d.id)+d.t+(d.aus?'<span class="dg-tag">sem conta na base</span>':'')+'</td><td class="num tabular">'+val+'</td><td class="num tabular">'+(d.aus||d.vazio ? '<span class="dg-eq">—</span>' : pc(cv))+'</td>'+
+        (d.aus||d.vazio ? '<td class="num"><span class="dg-eq">—</span></td><td class="num"><span class="dg-eq">—</span></td>' : prevTd(pvv)+dgVarTd(curC.v[d.id], pvv, d, naoAplic))+'</tr>';
+      if(!dgOpen[d.id]) return;
+      if(d.aus || d.vazio || d.obs) h += '<tr class="dg-obs"><td colspan="5">'+(d.aus || d.vazio || d.obs)+'</td></tr>';
+      leafRows(d);
     });
     h += '</tbody></table></div>';
 
@@ -3924,7 +3935,7 @@
       linha('Resultado líquido '+dgR(cur.v.ll)+' = Lucro líquido Voxel '+dgR(llO)+' − investimentos em ativo (fora da DRE) '+dgR(inv)+' + reembolsos reclassificados '+dgR(reemb)+'.', cur.v.ll, llEsp)+
       '</ul></div>';
     // ---- indicadores com a mesma base ----
-    var cfG = -((cur.v.cmof||0)+(cur.v.cmov||0)+(cur.v.ocu||0)+(cur.v.ope||0)+(cur.v.adm||0)+(cur.v.mkt||0)+(cur.v.idt||0));
+    var cfG = -((cur.v.cmof||0)+(cur.v.cmov||0)+(cur.v.ocu||0)+(cur.v.ope||0)+(cur.v.adm||0));
     var mcRb = cur.v.rb ? cur.v.mc/cur.v.rb : 0, pe = mcRb>0 ? cfG/mcRb : null, prime = -((cur.v.cmv||0) + cmoT);
     var royR = -(cur.v.roy||0);
     var ind = '<div class="dg-box"><h4>Indicadores com os mesmos dados</h4><ul>'+
@@ -3936,7 +3947,7 @@
       '</ul></div>';
     // ---- pendências ----
     var pend = [];
-    pend.push('Depreciação e amortização: sem conta na base — EBIT igual ao EBITDA.');
+    pend.push('Depreciação e amortização: sem conta na base.');
     pend.push('Tributos sobre o lucro (IRPJ/CSLL): sem conta na base — resultado líquido parcial.');
     pend.push('Juros: sem conta própria (podem estar em empréstimos ou tarifas) — não somados ao resultado financeiro.');
     if(dgZ(cur.leaf['Impostos sobre Vendas'])) pend.push('Impostos sobre vendas zerados na origem neste período — confirmar se o imposto é lançado em outra conta ou fora do sistema.');
@@ -3947,25 +3958,26 @@
     var semDado = []; DG.forEach(function(d){ if(d.c) d.c.forEach(function(c){ if(cur.leaf[c[0]]===null) semDado.push(c[0]); }); });
     if(semDado.length) pend.push('Contas sem dado na origem para este filtro: '+semDado.join(', ')+'.');
     if(comDados.length<grupo.length) pend.push('Cobertura incompleta: '+(grupo.length-comDados.length)+' loja(s) sem DRE no período.');
-    if(chk.some(function(x){ return !x.ok; })) pend.push('Há diferença na conciliação com a DRE Voxel (ver ao lado) — não foi lançada em “Outros resultados”.');
+    if(chk.some(function(x){ return !x.ok; })) pend.push('Há diferença na conciliação com a DRE Voxel (ver ao lado) — não foi lançada no resultado.');
     pend.push('Lançamentos individuais não estão carregados no painel: o detalhe vai até loja e conta de origem.');
     var pen = '<div class="dg-box"><h4>Pendências de dados e classificação</h4><ul>'+pend.map(function(x){ return '<li>'+x+'</li>'; }).join('')+'</ul></div>';
     // ---- fora da DRE ----
     var fora = DG_FORA.map(function(f){ var v = o(f[0]); return dgZ(v) ? '' : '<li>'+f[0]+(f[1] ? ' <i>('+f[1]+')</i>' : '')+': <b>'+dgR(v)+'</b></li>'; }).join('');
     var fr = '<div class="dg-box"><h4>Fora da DRE — não reduzem o resultado</h4><ul>'+(fora || '<li>Nenhuma movimentação no período.</li>')+'</ul><div class="dg-note" style="margin-top:6px;">Continuam na DRE Voxel (bloco “abaixo do operacional”).</div></div>';
-    h += '<div class="dg-foot">'+conf+ind+pen+fr+'</div>';
+    h += '<details class="dg-det"'+(dgOpen.__det?' open':'')+'><summary>Conferência com a DRE Voxel, pendências e movimentações fora da DRE</summary><div class="dg-foot">'+conf+ind+pen+fr+'</div></details>';
     box.innerHTML = h;
   }
   document.addEventListener('click', function(e){
     var b = e.target.closest && e.target.closest('#dgCard [data-dg]');
     if(b){ var k = b.getAttribute('data-dg'); dgOpen[k] = !dgOpen[k]; renderDreGer();
       var all = document.querySelectorAll('#dgCard [data-dg]'); for(var i=0;i<all.length;i++){ if(all[i].getAttribute('data-dg')===k){ all[i].focus(); break; } } return; }
-    if(e.target.id==='dgExp'){ DG.forEach(function(d){ if(d.c) dgOpen[d.id] = true; }); renderDreGer(); }
-    if(e.target.id==='dgCol'){ dgOpen = {}; renderDreGer(); }
+    if(e.target.id==='dgExp'){ DG.forEach(function(d){ if(d.c && !d.hid) dgOpen[d.id] = true; }); dgOpen.ll = true; renderDreGer(); }
+    if(e.target.id==='dgCol'){ dgOpen = {__det: dgOpen.__det}; renderDreGer(); }
   });
   document.addEventListener('keydown', function(e){
     if((e.key==='Enter' || e.key===' ') && e.target.getAttribute && e.target.getAttribute('data-dg')!==null && e.target.closest('#dgCard')){ e.preventDefault(); e.target.click(); }
   });
+  document.addEventListener('toggle', function(e){ if(e.target.classList && e.target.classList.contains('dg-det')) dgOpen.__det = e.target.open; }, true);
   document.addEventListener('change', function(e){ if(e.target.id==='dgZeroChk'){ dgZero = e.target.checked; renderDreGer(); } });
 
   function renderFiltered(){

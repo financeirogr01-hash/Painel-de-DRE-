@@ -3763,7 +3763,7 @@
   var DG_EST = ['Estoque Inicial','Estoque Final'];
   var DG = [
     {id:'rb', t:'1. Faturamento', sl:'Faturamento', k:'tot', c:[['Faturamento Bruto de Itens','salão, delivery, balcão, retirada e iFood'],['Faturamento de Serviços (Bilheteria e Eventos)','eventos']]},
-    {id:'roy', t:'(–) Gestão e estrutura corporativa — royalties', sl:'Royalties', c:[['Taxa de Marketing'],['Royalties'],['Taxa Administrativa']], obs:'Retirado do faturamento antes das deduções. Valores realizados em cada mês.'},
+    {id:'roy', t:'(–) Gestão e estrutura corporativa — royalties', sl:'Royalties', c:[['Taxa de Marketing','realizado'],['Royalties','realizado'],['Taxa Administrativa','realizado'],['Ajuste para 10,5% do faturamento','complemento até 10,5% do faturamento (a partir de outubro/2026)']], obs:'Retirado do faturamento antes das deduções. A partir de outubro/2026: 10,5% do faturamento; meses anteriores: valor realizado.'},
     {id:'ded', t:'(–) Deduções da receita', sl:'Deduções', c:[['Impostos sobre Vendas'],['Devoluções e Cancelamentos'],['Devoluções de Vendas'],['Descontos','descontos concedidos pela loja'],['Ressarcimento de Pedido Cancelado','reembolso de cancelamento — reduz a dedução']]},
     {id:'rl', t:'2. Receita líquida', sl:'Receita líquida', k:'tot', f:['rb','roy','ded']},
     {id:'cmv', t:'(–) CMV — Custo das Mercadorias Vendidas', sl:'CMV', c:[['Estoque Inicial','ajuste de estoque — soma ao custo'],['Insumos','alimentos, bebidas e ingredientes'],['Embalagens'],['Produtos para Comercialização'],['Estoque Final','ajuste de estoque — reduz o custo']]},
@@ -3790,7 +3790,17 @@
   var DG_FORA = [['Investimento em Equipamentos e Estrutura','investimento em ativo'],['Empréstimos - Entrada','principal'],['Empréstimos - Saída','principal'],['Aportes'],['Retiradas de Lucro','distribuição aos sócios'],['Transferências de Entrada'],['Transferências de Saída'],['Saldo Inicial'],['Ajuste de Caixa']];
   var dgOpen = {}, dgZero = false;
   function dgDef(id){ for(var i=0;i<DG.length;i++) if(DG[i].id===id) return DG[i]; return null; }
+  // royalties contratuais: 10,5% do faturamento a partir de outubro/2026 (índice 9); antes, o realizado
+  var DG_ROY_PCT = 0.105, DG_ROY_DESDE = 9, DG_ROY_ADJ = 'Ajuste para 10,5% do faturamento';
+  function dgRoyAdj(scope, m){
+    var ms = []; if(m===-1){ for(var i=DG_ROY_DESDE;i<=VOXEL_ACC_FIM;i++) ms.push(i); } else if(m>=DG_ROY_DESDE) ms.push(m);
+    var rb1 = voxelGetVals(scope, 'Faturamento Bruto de Itens'), rb2 = voxelGetVals(scope, 'Faturamento de Serviços (Bilheteria e Eventos)');
+    var r1 = voxelGetVals(scope, 'Taxa de Marketing'), r2 = voxelGetVals(scope, 'Royalties'), r3 = voxelGetVals(scope, 'Taxa Administrativa');
+    var adj = 0; ms.forEach(function(k){ if(rb1[k]===null || rb1[k]===undefined) return; var rb = (rb1[k]||0) + (rb2[k]||0), real = (r1[k]||0) + (r2[k]||0) + (r3[k]||0); adj += -DG_ROY_PCT*rb - real; });
+    return Math.round(adj*100)/100;
+  }
   function dgLeaf(scope, line, m, semEst){
+    if(line===DG_ROY_ADJ) return dgRoyAdj(scope, m);
     if(semEst && DG_EST.indexOf(line)>=0) return 0;
     var v = voxelGetVals(scope, line), x = m===-1 ? voxelAcc(v) : v[m];
     return (x===null || x===undefined) ? null : x;
@@ -3912,7 +3922,7 @@
         (d.aus||d.vazio ? '<td class="num"><span class="dg-eq">—</span></td><td class="num"><span class="dg-eq">—</span></td>' : prevTd(pvv)+dgVarTd(curC.v[d.id], pvv, d, naoAplic))+'</tr>';
       if(!dgOpen[d.id]) return;
       if(d.aus || d.vazio || d.obs) h += '<tr class="dg-obs"><td colspan="5">'+(d.aus || d.vazio || d.obs)+
-        (d.id==='roy' && cur.v.rb ? ' Realizado = <b>'+fmt2.format(-cv/cur.v.rb*100)+'% do faturamento</b> · referência de 10,5% = '+dgR(-cur.v.rb*0.105)+' (diferença '+dgR(cv + cur.v.rb*0.105)+').' : '')+'</td></tr>';
+        (d.id==='roy' && cur.v.rb ? ' Neste período: <b>'+fmt2.format(-cv/cur.v.rb*100)+'% do faturamento</b>'+(dgZ(cur.leaf[DG_ROY_ADJ]) ? '' : ' · realizado na base '+dgR(cv - cur.leaf[DG_ROY_ADJ])+' + complemento '+dgR(cur.leaf[DG_ROY_ADJ]))+'.' : '')+'</td></tr>';
       leafRows(d);
     });
     h += '</tbody></table></div>';
@@ -3925,15 +3935,16 @@
     function linha(txt, a, b){ var d = Math.round((a-b)*100)/100, ok = Math.abs(d)<0.05; chk.push({ok:ok, d:d}); return '<li>'+txt+' <span class="'+(ok?'dg-ok':'dg-bad')+'">'+(ok ? '✓ fecha' : '✗ diferença '+dgR(d))+'</span></li>'; }
     var fbt = o('Faturamento Bruto Total'), flt = o('Faturamento Líquido Total'), pes = o('Despesas com Pessoal'), lopO = o('Lucro/Prejuízo Operacional'), llO = o('Lucro/Prejuízo Líquido'), inv = o('Investimento em Equipamentos e Estrutura');
     var rlEsp = flt + (cur.v.roy||0) + g('Devoluções de Vendas') + g('Impostos sobre Vendas') - g('Comissões sobre Vendas') + g('Ressarcimento de Pedido Cancelado');
-    var ebEsp = lopO - g('Tarifas Bancárias') + reemb;
-    var llEsp = llO - inv + reemb;
+    var royAdj = g(DG_ROY_ADJ);
+    var ebEsp = lopO - g('Tarifas Bancárias') + reemb + royAdj;
+    var llEsp = llO - inv + reemb + royAdj;
     var cmoT = (cur.v.cmof||0) + (cur.v.cmov||0);
     var conf = '<div class="dg-box"><h4>Conciliação com a DRE Voxel</h4><ul>'+
       linha('Receita bruta '+dgR(cur.v.rb)+' = Faturamento Bruto Total da origem '+dgR(fbt)+'.', cur.v.rb, fbt)+
       linha('Receita líquida gerencial '+dgR(rl)+' = Faturamento Líquido Total '+dgR(flt)+' − royalties e gestão '+dgR(-(cur.v.roy||0))+' − devoluções de vendas '+dgR(-g('Devoluções de Vendas'))+' − impostos sobre vendas '+dgR(-g('Impostos sobre Vendas'))+' + comissões sobre vendas (passam para canais) '+dgR(-g('Comissões sobre Vendas'))+' + ressarcimento de pedido cancelado '+dgR(g('Ressarcimento de Pedido Cancelado'))+'.', rl, rlEsp)+
       linha('CMO total '+dgR(cmoT)+' (equipe fixa '+dgR(cur.v.cmof)+' + Free '+dgR(cur.v.cmov)+') = Despesas com Pessoal da origem '+dgR(pes)+'.', cmoT, pes)+
-      linha('EBITDA '+dgR(cur.v.ebitda)+' = Resultado operacional Voxel '+dgR(lopO)+' + tarifas bancárias (vão para despesas financeiras) '+dgR(-g('Tarifas Bancárias'))+' + reembolsos reclassificados '+dgR(reemb)+'.', cur.v.ebitda, ebEsp)+
-      linha('Resultado líquido '+dgR(cur.v.ll)+' = Lucro líquido Voxel '+dgR(llO)+' − investimentos em ativo (fora da DRE) '+dgR(inv)+' + reembolsos reclassificados '+dgR(reemb)+'.', cur.v.ll, llEsp)+
+      linha('EBITDA '+dgR(cur.v.ebitda)+' = Resultado operacional Voxel '+dgR(lopO)+' + tarifas bancárias (vão para despesas financeiras) '+dgR(-g('Tarifas Bancárias'))+' + reembolsos reclassificados '+dgR(reemb)+(dgZ(royAdj) ? '' : ' + complemento de royalties para 10,5% '+dgR(royAdj))+'.', cur.v.ebitda, ebEsp)+
+      linha('Resultado líquido '+dgR(cur.v.ll)+' = Lucro líquido Voxel '+dgR(llO)+' − investimentos em ativo (fora da DRE) '+dgR(inv)+' + reembolsos reclassificados '+dgR(reemb)+(dgZ(royAdj) ? '' : ' + complemento de royalties para 10,5% '+dgR(royAdj))+'.', cur.v.ll, llEsp)+
       '</ul></div>';
     // ---- indicadores com a mesma base ----
     var cfG = -((cur.v.cmof||0)+(cur.v.cmov||0)+(cur.v.ocu||0)+(cur.v.ope||0)+(cur.v.adm||0));

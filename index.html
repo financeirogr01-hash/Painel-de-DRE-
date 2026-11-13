@@ -3613,7 +3613,7 @@
     {id:'cmv', t:'(–) CMV — Custo das Mercadorias Vendidas', sl:'CMV', c:[['Estoque Inicial','ajuste de estoque — soma ao custo'],['Insumos','alimentos, bebidas e ingredientes'],['Embalagens'],['Produtos para Comercialização'],['Estoque Final','ajuste de estoque — reduz o custo']]},
     {id:'lb', t:'3. Lucro bruto', sl:'Lucro bruto', k:'tot', f:['rl','cmv']},
     {id:'can', t:'(–) Despesas com vendas e canais', sl:'Vendas e canais', c:[['Taxas de Cartão e Apps de Delivery','cartões e aplicativos — conta agrupada na origem'],['Comissões sobre Vendas'],['Reembolso taxa de transação iFood benefícios','reembolso — reduz a despesa'],['Reembolso taxa de serviço iFood','reembolso — reduz a despesa']]},
-    {id:'ent', t:'(–) Despesas com TAON / entregas', sl:'TAON / entregas', c:[['Combustível e Entregas'],['Frete Aplicativos'],['Serviços Logísticos'],['Reembolso de Cobrança de Frete','reembolso — reduz a despesa']], obs:'A base não separa o fornecedor TAON: a linha reúne todos os custos de entrega.'},
+    {id:'ent', t:'(–) Despesas com entregas', sl:'Entregas', c:[['Entrega TAON','combustível e entregas, frete de aplicativos, serviços logísticos e reembolso de frete (Voxel)'],['Entrega iFood']]},
     {id:'mc', t:'4. Margem de contribuição — R$', sl:'Margem de contribuição', k:'tot', f:['lb','can','ent']},
     {id:'mcp', t:'Margem de contribuição — %', k:'pct', of:'mc'},
     {id:'cmof', t:'(–) CMO — equipe fixa', sl:'CMO equipe fixa', c:[['Salários'],['Bonificações'],['Impostos Sobre Salários','encargos'],['Vale Alimentação','benefício'],['Vale Transporte','benefício'],['Rescisões'],['Pró-Labore e Despesas de Sócios','conta agrupada na origem'],['Outros Encargos com Funcionários'],['Férias'],['13º Salário']], obs:'Despesas com pessoal sem os freelancers e terceirizados (que estão no CMO Free).'},
@@ -3646,15 +3646,18 @@
   }
   // outubro/2026 (rede): valores do relatório de repasses do iFood informados pelo usuário substituem os da Voxel.
   // Só no consolidado das lojas — o relatório não vem por loja (sem rateio).
-  var DG_IFOOD_MES = 9, DG_IFOOD = {'Descontos': -423863, 'Taxas de Cartão e Apps de Delivery': -564554, 'Ressarcimento de Pedido Cancelado': 22586, 'Freelancers e Terceirizados': -400609.92};
-  var DG_IFOOD_TAG = {'Descontos':'iFood', 'Taxas de Cartão e Apps de Delivery':'iFood', 'Ressarcimento de Pedido Cancelado':'iFood', 'Freelancers e Terceirizados':'Ajustado'};
+  var DG_IFOOD_MES = 9, DG_IFOOD = {'Descontos': -423863, 'Taxas de Cartão e Apps de Delivery': -564554, 'Ressarcimento de Pedido Cancelado': 22586, 'Freelancers e Terceirizados': -400609.92, 'Entrega iFood': -445440};
+  var DG_IFOOD_TAG = {'Descontos':'iFood', 'Taxas de Cartão e Apps de Delivery':'iFood', 'Ressarcimento de Pedido Cancelado':'iFood', 'Freelancers e Terceirizados':'Ajustado', 'Entrega iFood':'iFood'};
+  var DG_TAON = ['Combustível e Entregas','Frete Aplicativos','Serviços Logísticos','Reembolso de Cobrança de Frete'];
   // 13º salário original da Voxel (zerado no painel a pedido) — usado só para sinalizar no rodapé
   var DG_13_VOXEL = {"Biggs 01":[-6993.18,-7389.33,-6697.38,-6916.43,-6370.92,-8154.24,-7659.73,-7480.76,-6795.87,-7452.83],"Biggs 02":[-5511.48,-4812.13,-5018.84,-5088.72,-5565.78,-5341.62,-5870.91,-5065.64,-6650.53,-5354.78],"Biggs 03":[-5365.23,-5479.53,-5517.06,-5545.09,-4900.48,-5376.73,-5167.72,-4989.97,-6258.12,-4836.06],"Biggs 04":[-7070.72,-6827.1,-6902.99,-6714.73,-6544.95,-7549.53,-6444.3,-6845.11,-7060.82,-12263.43],"Biggs 05":[-6944.63,-6706.98,-7347.72,-6285.79,-5918.83,-6233.27,-6133.56,-6770.29,-3764.05,-7763.25],"Biggs 06":[-4380.97,-4705.33,-4508.75,-4522.57,-4550.59,-5006.94,-5243.94,-4914.6,-1481.2,-1227.4],"Biggs 07 e Açaí":[-7410.23,-7424.04,-8345.21,-7370.78,-7379.16,-8206.65,-8287.34,-7114.47,-6439.18,-7533.21],"Biggs 08 e 09":[-3157.28,-3385.18,-3629.65,-4526.02,-4265.17,-4396.87,-3944,-4307.43,-1553.08,-4363.75],"Biggs 10":[-3743.13,-3739.99,-3986.04,-4293.25,-4215.36,-4563.49,-4156.15,-3855.03,-1764.57,-4187.1],"Biggs 11":[-4655,-4653.75,-4836.06,-4562.6,-3878.09,-4781.34,-4579.04,-4025.47,-5208.72,-3696.66],"Biggs 12":[-3585.17,-3876.8,-3495.98,-3018.75,-3692.75,-4115.46,-4175.87,-3813.96,-1132.25,-1218.06],"Isaías 01":[-9380.66,-9097.92,-8446.7,-8754.94,-9096.77,-9172.44,-8828.45,-8984.72,-2813.35,-8234.71],"Isaías 02":[-4246.55,-4276.93,-4413.42,-3554.7,-3568.16,-4626.85,-4348.75,-3664.22,-7290.19,-4055.91],"Isaías 03":[-4499.33,-4704.05,-4833.86,-4348.32,-4451.63,-4671.24,-4641.02,-4050.19,-4438.45,-3997.57],"Robs":[-1574.25,-1741.97,-1725.2,-1542.16,-1914.47,-1794.38,-1846.81,-1884.13,-930.02,-2289.07],"Mapoli":[-1718.81,-1666.59,-1553.03,-1714.12,-1460.05,-1483.95,-1515.69,-1230.41,-390.82,-1300.42],"Biggs 13":[null,null,null,null,null,null,null,0,0,-9673.58]};
   function dg13Voxel(scope, m){ var t = 0; scopeStores(scope).forEach(function(st){ var a = DG_13_VOXEL[st]; if(!a) return; if(m===-1){ for(var k=0;k<=VOXEL_ACC_FIM;k++) t += a[k]||0; } else t += a[m]||0; }); return Math.round(t*100)/100; }
-  var DG_IFOOD_LBL = {'Descontos':'descontos concedidos pela loja — iFood (relatório de repasses de outubro)', 'Taxas de Cartão e Apps de Delivery':'taxas de cartão e iFood (relatório de repasses de outubro)', 'Ressarcimento de Pedido Cancelado':'ressarcimentos, ajustes e cancelamentos — iFood (relatório de repasses de outubro)', 'Freelancers e Terceirizados':'CMO Free de outubro informado pela gestão'};
+  var DG_IFOOD_LBL = {'Descontos':'descontos concedidos pela loja — iFood (relatório de repasses de outubro)', 'Taxas de Cartão e Apps de Delivery':'taxas de cartão e iFood (relatório de repasses de outubro)', 'Ressarcimento de Pedido Cancelado':'ressarcimentos, ajustes e cancelamentos — iFood (relatório de repasses de outubro)', 'Freelancers e Terceirizados':'CMO Free de outubro informado pela gestão', 'Entrega iFood':'taxa de entrega iFood (relatório de repasses de outubro)'};
   function dgIfoodOn(scope, line, m){ return scope==='Consolidado' && DG_IFOOD.hasOwnProperty(line) && (m===DG_IFOOD_MES || (m===-1 && VOXEL_ACC_FIM>=DG_IFOOD_MES)); }
   function dgIfoodDelta(scope, line, m){ if(!dgIfoodOn(scope, line, m)) return 0; var v = voxelGetVals(scope, line)[DG_IFOOD_MES] || 0; return DG_IFOOD[line] - v; }
   function dgLeaf(scope, line, m, semEst){
+    if(line==='Entrega TAON'){ var tt = 0, any = false; DG_TAON.forEach(function(l){ var x = dgLeaf(scope, l, m, semEst); if(x!==null){ tt += x; any = true; } }); return any ? Math.round(tt*100)/100 : null; }
+    if(line==='Entrega iFood' && !dgIfoodOn(scope, line, m)) return 0;
     if(dgIfoodOn(scope, line, m)){ var vv = voxelGetVals(scope, line), base = m===-1 ? voxelAcc(vv) : vv[m]; return Math.round(((base||0) + dgIfoodDelta(scope, line, m))*100)/100; }
     if(line===DG_ROY_ADJ) return dgRoyAdj(scope, m);
     if(semEst && DG_EST.indexOf(line)>=0) return 0;
@@ -3786,15 +3789,15 @@
     // ---- conferência com a origem (DRE Voxel) ----
     function o(line){ var x = dgLeaf(s, line, m, false); return x===null ? 0 : x; }
     var L = cur.leaf, g = function(line){ return L[line]===null || L[line]===undefined ? 0 : L[line]; };
-    var reemb = g('Ressarcimento de Pedido Cancelado') + g('Reembolso taxa de transação iFood benefícios') + g('Reembolso taxa de serviço iFood') + g('Reembolso de Cobrança de Frete');
+    var reemb = g('Ressarcimento de Pedido Cancelado') + g('Reembolso taxa de transação iFood benefícios') + g('Reembolso taxa de serviço iFood') + o('Reembolso de Cobrança de Frete');
     var chk = [];
     function linha(txt, a, b){ var d = Math.round((a-b)*100)/100, ok = Math.abs(d)<0.05; chk.push({ok:ok, d:d}); return '<li>'+txt+' <span class="'+(ok?'dg-ok':'dg-bad')+'">'+(ok ? '✓ fecha' : '✗ diferença '+dgR(d))+'</span></li>'; }
     var fbt = o('Faturamento Bruto Total'), flt = o('Faturamento Líquido Total'), pes = o('Despesas com Pessoal'), lopO = o('Lucro/Prejuízo Operacional'), llO = o('Lucro/Prejuízo Líquido'), inv = o('Investimento em Equipamentos e Estrutura');
-    var ifD = dgIfoodDelta(s, 'Descontos', m), ifT = dgIfoodDelta(s, 'Taxas de Cartão e Apps de Delivery', m), ifF = dgIfoodDelta(s, 'Freelancers e Terceirizados', m);
+    var ifD = dgIfoodDelta(s, 'Descontos', m), ifT = dgIfoodDelta(s, 'Taxas de Cartão e Apps de Delivery', m), ifF = dgIfoodDelta(s, 'Freelancers e Terceirizados', m), ifE = dgIfoodDelta(s, 'Entrega iFood', m);
     var rlEsp = ifD + flt + (cur.v.roy||0) + g('Devoluções de Vendas') + g('Impostos sobre Vendas') - g('Comissões sobre Vendas') + g('Ressarcimento de Pedido Cancelado');
     var royAdj = g(DG_ROY_ADJ);
-    var ebEsp = lopO - g('Tarifas Bancárias') + reemb + royAdj + ifD + ifT + ifF;
-    var llEsp = llO - inv + reemb + royAdj + ifD + ifT + ifF;
+    var ebEsp = lopO - g('Tarifas Bancárias') + reemb + royAdj + ifD + ifT + ifF + ifE;
+    var llEsp = llO - inv + reemb + royAdj + ifD + ifT + ifF + ifE;
     var cmoT = (cur.v.cmof||0) + (cur.v.cmov||0);
     var conf = '<div class="dg-box"><h4>Conciliação com a DRE Voxel</h4><ul>'+
       ((ifD||ifT||dgIfoodOn(s,'Ressarcimento de Pedido Cancelado',m)) ? '<li><b>Ajuste iFood (outubro, rede):</b> descontos '+dgR(ifD)+', taxas de cartão e iFood '+dgR(ifT)+' e ressarcimentos '+dgR(dgIfoodDelta(s,'Ressarcimento de Pedido Cancelado',m))+' em relação à Voxel — já considerados nas conferências abaixo.</li>' : '')+
@@ -3824,7 +3827,7 @@
     if(!dgZ(cur.leaf['Pró-Labore e Despesas de Sócios'])) pend.push('Pró-labore e despesas de sócios '+dgR(cur.leaf['Pró-Labore e Despesas de Sócios'])+': conta agrupada — classificar antes de tratar todo o valor como CMO.');
     if(!dgZ(cur.leaf['Despesas a Identificar'])) pend.push('Despesas a identificar '+dgR(cur.leaf['Despesas a Identificar'])+': sem classificação na origem.');
     pend.push('Contas agrupadas na origem: taxas de cartão e apps; freelancers e terceirizados; segurança, telefonia e internet.');
-    pend.push('TAON sem identificação de fornecedor; IPTU e seguros do imóvel sem conta própria.');
+    pend.push('Entrega TAON = contas de entrega da Voxel; entrega iFood só no consolidado de outubro (relatório de repasses). IPTU e seguros do imóvel sem conta própria.');
     var semDado = []; DG.forEach(function(d){ if(d.c) d.c.forEach(function(c){ if(cur.leaf[c[0]]===null) semDado.push(c[0]); }); });
     if(semDado.length) pend.push('Contas sem dado na origem para este filtro: '+semDado.join(', ')+'.');
     if(comDados.length<grupo.length) pend.push('Cobertura incompleta: '+(grupo.length-comDados.length)+' loja(s) sem DRE no período.');

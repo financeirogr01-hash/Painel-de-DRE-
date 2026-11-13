@@ -3646,8 +3646,12 @@
   }
   // outubro/2026 (rede): valores do relatório de repasses do iFood informados pelo usuário substituem os da Voxel.
   // Só no consolidado das lojas — o relatório não vem por loja (sem rateio).
-  var DG_IFOOD_MES = 9, DG_IFOOD = {'Descontos': -423863, 'Taxas de Cartão e Apps de Delivery': -564554, 'Ressarcimento de Pedido Cancelado': 22586};
-  var DG_IFOOD_LBL = {'Descontos':'descontos concedidos pela loja — iFood (relatório de repasses de outubro)', 'Taxas de Cartão e Apps de Delivery':'taxas de cartão e iFood (relatório de repasses de outubro)', 'Ressarcimento de Pedido Cancelado':'ressarcimentos, ajustes e cancelamentos — iFood (relatório de repasses de outubro)'};
+  var DG_IFOOD_MES = 9, DG_IFOOD = {'Descontos': -423863, 'Taxas de Cartão e Apps de Delivery': -564554, 'Ressarcimento de Pedido Cancelado': 22586, 'Freelancers e Terceirizados': -382464.82};
+  var DG_IFOOD_TAG = {'Descontos':'iFood', 'Taxas de Cartão e Apps de Delivery':'iFood', 'Ressarcimento de Pedido Cancelado':'iFood', 'Freelancers e Terceirizados':'Ajustado'};
+  // 13º salário original da Voxel (zerado no painel a pedido) — usado só para sinalizar no rodapé
+  var DG_13_VOXEL = {"Biggs 01":[-6993.18,-7389.33,-6697.38,-6916.43,-6370.92,-8154.24,-7659.73,-7480.76,-6795.87,-7452.83],"Biggs 02":[-5511.48,-4812.13,-5018.84,-5088.72,-5565.78,-5341.62,-5870.91,-5065.64,-6650.53,-5354.78],"Biggs 03":[-5365.23,-5479.53,-5517.06,-5545.09,-4900.48,-5376.73,-5167.72,-4989.97,-6258.12,-4836.06],"Biggs 04":[-7070.72,-6827.1,-6902.99,-6714.73,-6544.95,-7549.53,-6444.3,-6845.11,-7060.82,-12263.43],"Biggs 05":[-6944.63,-6706.98,-7347.72,-6285.79,-5918.83,-6233.27,-6133.56,-6770.29,-3764.05,-7763.25],"Biggs 06":[-4380.97,-4705.33,-4508.75,-4522.57,-4550.59,-5006.94,-5243.94,-4914.6,-1481.2,-1227.4],"Biggs 07 e Açaí":[-7410.23,-7424.04,-8345.21,-7370.78,-7379.16,-8206.65,-8287.34,-7114.47,-6439.18,-7533.21],"Biggs 08 e 09":[-3157.28,-3385.18,-3629.65,-4526.02,-4265.17,-4396.87,-3944,-4307.43,-1553.08,-4363.75],"Biggs 10":[-3743.13,-3739.99,-3986.04,-4293.25,-4215.36,-4563.49,-4156.15,-3855.03,-1764.57,-4187.1],"Biggs 11":[-4655,-4653.75,-4836.06,-4562.6,-3878.09,-4781.34,-4579.04,-4025.47,-5208.72,-3696.66],"Biggs 12":[-3585.17,-3876.8,-3495.98,-3018.75,-3692.75,-4115.46,-4175.87,-3813.96,-1132.25,-1218.06],"Isaías 01":[-9380.66,-9097.92,-8446.7,-8754.94,-9096.77,-9172.44,-8828.45,-8984.72,-2813.35,-8234.71],"Isaías 02":[-4246.55,-4276.93,-4413.42,-3554.7,-3568.16,-4626.85,-4348.75,-3664.22,-7290.19,-4055.91],"Isaías 03":[-4499.33,-4704.05,-4833.86,-4348.32,-4451.63,-4671.24,-4641.02,-4050.19,-4438.45,-3997.57],"Robs":[-1574.25,-1741.97,-1725.2,-1542.16,-1914.47,-1794.38,-1846.81,-1884.13,-930.02,-2289.07],"Mapoli":[-1718.81,-1666.59,-1553.03,-1714.12,-1460.05,-1483.95,-1515.69,-1230.41,-390.82,-1300.42],"Biggs 13":[null,null,null,null,null,null,null,0,0,-9673.58]};
+  function dg13Voxel(scope, m){ var t = 0; scopeStores(scope).forEach(function(st){ var a = DG_13_VOXEL[st]; if(!a) return; if(m===-1){ for(var k=0;k<=VOXEL_ACC_FIM;k++) t += a[k]||0; } else t += a[m]||0; }); return Math.round(t*100)/100; }
+  var DG_IFOOD_LBL = {'Descontos':'descontos concedidos pela loja — iFood (relatório de repasses de outubro)', 'Taxas de Cartão e Apps de Delivery':'taxas de cartão e iFood (relatório de repasses de outubro)', 'Ressarcimento de Pedido Cancelado':'ressarcimentos, ajustes e cancelamentos — iFood (relatório de repasses de outubro)', 'Freelancers e Terceirizados':'CMO Free de outubro informado pela gestão'};
   function dgIfoodOn(scope, line, m){ return scope==='Consolidado' && DG_IFOOD.hasOwnProperty(line) && (m===DG_IFOOD_MES || (m===-1 && VOXEL_ACC_FIM>=DG_IFOOD_MES)); }
   function dgIfoodDelta(scope, line, m){ if(!dgIfoodOn(scope, line, m)) return 0; var v = voxelGetVals(scope, line)[DG_IFOOD_MES] || 0; return DG_IFOOD[line] - v; }
   function dgLeaf(scope, line, m, semEst){
@@ -3724,7 +3728,7 @@
         var line = c[0], v = cur.leaf[line], p = prev ? prev.leaf[line] : null, key = 'L:'+line;
         if(!dgZero && dgZ(v) && dgZ(p)) return;
         shown++;
-        h += '<tr class="dg-leaf"'+(multi ? clk(key, 'Ver por loja') : '')+'><td>'+(multi ? ar(key) : '')+clEsc(line)+(dgIfoodOn(s, line, m) ? '<span class="dg-tag">iFood</span><span class="dg-note">'+DG_IFOOD_LBL[line]+' · na Voxel: '+dgR(v - dgIfoodDelta(s, line, m))+' · por loja segue a Voxel</span>' : (c[1] ? '<span class="dg-note">'+c[1]+'</span>' : ''))+'</td>'+
+        h += '<tr class="dg-leaf"'+(multi ? clk(key, 'Ver por loja') : '')+'><td>'+(multi ? ar(key) : '')+clEsc(line)+(dgIfoodOn(s, line, m) ? '<span class="dg-tag">'+DG_IFOOD_TAG[line]+'</span><span class="dg-note">'+DG_IFOOD_LBL[line]+' · na Voxel: '+dgR(v - dgIfoodDelta(s, line, m))+' · por loja segue a Voxel</span>' : (c[1] ? '<span class="dg-note">'+c[1]+'</span>' : ''))+'</td>'+
           '<td class="num tabular">'+(v===null ? '<span class="dg-aus">sem dado</span>' : dgR(v))+'</td><td class="num tabular">'+pc(v)+'</td>'+prevTd(p)+dgVarTd(curC.leaf[line], p, null, naoAplic)+'</tr>';
         if(multi && dgOpen[key]){
           grupo.forEach(function(t){
@@ -3786,17 +3790,17 @@
     var chk = [];
     function linha(txt, a, b){ var d = Math.round((a-b)*100)/100, ok = Math.abs(d)<0.05; chk.push({ok:ok, d:d}); return '<li>'+txt+' <span class="'+(ok?'dg-ok':'dg-bad')+'">'+(ok ? '✓ fecha' : '✗ diferença '+dgR(d))+'</span></li>'; }
     var fbt = o('Faturamento Bruto Total'), flt = o('Faturamento Líquido Total'), pes = o('Despesas com Pessoal'), lopO = o('Lucro/Prejuízo Operacional'), llO = o('Lucro/Prejuízo Líquido'), inv = o('Investimento em Equipamentos e Estrutura');
-    var ifD = dgIfoodDelta(s, 'Descontos', m), ifT = dgIfoodDelta(s, 'Taxas de Cartão e Apps de Delivery', m);
+    var ifD = dgIfoodDelta(s, 'Descontos', m), ifT = dgIfoodDelta(s, 'Taxas de Cartão e Apps de Delivery', m), ifF = dgIfoodDelta(s, 'Freelancers e Terceirizados', m);
     var rlEsp = ifD + flt + (cur.v.roy||0) + g('Devoluções de Vendas') + g('Impostos sobre Vendas') - g('Comissões sobre Vendas') + g('Ressarcimento de Pedido Cancelado');
     var royAdj = g(DG_ROY_ADJ);
-    var ebEsp = lopO - g('Tarifas Bancárias') + reemb + royAdj + ifD + ifT;
-    var llEsp = llO - inv + reemb + royAdj + ifD + ifT;
+    var ebEsp = lopO - g('Tarifas Bancárias') + reemb + royAdj + ifD + ifT + ifF;
+    var llEsp = llO - inv + reemb + royAdj + ifD + ifT + ifF;
     var cmoT = (cur.v.cmof||0) + (cur.v.cmov||0);
     var conf = '<div class="dg-box"><h4>Conciliação com a DRE Voxel</h4><ul>'+
       ((ifD||ifT||dgIfoodOn(s,'Ressarcimento de Pedido Cancelado',m)) ? '<li><b>Ajuste iFood (outubro, rede):</b> descontos '+dgR(ifD)+', taxas de cartão e iFood '+dgR(ifT)+' e ressarcimentos '+dgR(dgIfoodDelta(s,'Ressarcimento de Pedido Cancelado',m))+' em relação à Voxel — já considerados nas conferências abaixo.</li>' : '')+
       linha('Receita bruta '+dgR(cur.v.rb)+' = Faturamento Bruto Total da origem '+dgR(fbt)+'.', cur.v.rb, fbt)+
       linha('Receita líquida gerencial '+dgR(rl)+' = Faturamento Líquido Total '+dgR(flt)+' − royalties e gestão '+dgR(-(cur.v.roy||0))+' − devoluções de vendas '+dgR(-g('Devoluções de Vendas'))+' − impostos sobre vendas '+dgR(-g('Impostos sobre Vendas'))+' + comissões sobre vendas (passam para canais) '+dgR(-g('Comissões sobre Vendas'))+' + ressarcimento de pedido cancelado '+dgR(g('Ressarcimento de Pedido Cancelado'))+'.', rl, rlEsp)+
-      linha('CMO total '+dgR(cmoT)+' (equipe fixa '+dgR(cur.v.cmof)+' + Free '+dgR(cur.v.cmov)+') = Despesas com Pessoal da origem '+dgR(pes)+'.', cmoT, pes)+
+      linha('CMO total '+dgR(cmoT)+' (equipe fixa '+dgR(cur.v.cmof)+' + Free '+dgR(cur.v.cmov)+') = Despesas com Pessoal da origem '+dgR(pes)+(ifF ? ' + ajuste do CMO Free '+dgR(ifF) : '')+'.', cmoT, pes + ifF)+
       linha('EBITDA '+dgR(cur.v.ebitda)+' = Resultado operacional Voxel '+dgR(lopO)+' + tarifas bancárias (vão para despesas financeiras) '+dgR(-g('Tarifas Bancárias'))+' + reembolsos reclassificados '+dgR(reemb)+(dgZ(royAdj) ? '' : ' + ajuste de royalties ao percentual contratual '+dgR(royAdj))+'.', cur.v.ebitda, ebEsp)+
       linha('Resultado líquido '+dgR(cur.v.ll)+' = Lucro líquido Voxel '+dgR(llO)+' − investimentos em ativo (fora da DRE) '+dgR(inv)+' + reembolsos reclassificados '+dgR(reemb)+(dgZ(royAdj) ? '' : ' + ajuste de royalties ao percentual contratual '+dgR(royAdj))+'.', cur.v.ll, llEsp)+
       '</ul></div>';
@@ -3830,6 +3834,16 @@
     // ---- fora da DRE ----
     var fora = DG_FORA.map(function(f){ var v = o(f[0]); return dgZ(v) ? '' : '<li>'+f[0]+(f[1] ? ' <i>('+f[1]+')</i>' : '')+': <b>'+dgR(v)+'</b></li>'; }).join('');
     var fr = '<div class="dg-box"><h4>Fora da DRE — não reduzem o resultado</h4><ul>'+(fora || '<li>Nenhuma movimentação no período.</li>')+'</ul><div class="dg-note" style="margin-top:6px;">Continuam na DRE Voxel (bloco “abaixo do operacional”).</div></div>';
+    // rodapé sempre visível: valores da Voxel × valores usados no painel
+    var aj = [];
+    if(!dgZ(royAdj)) aj.push(['Royalties e gestão (13% até set; 10,5% a partir de out)', (cur.v.roy||0) - royAdj, cur.v.roy||0]);
+    Object.keys(DG_IFOOD).forEach(function(l){ if(dgIfoodOn(s, l, m)){ var dv = dgIfoodDelta(s, l, m); aj.push([l+' ('+DG_IFOOD_TAG[l]+')', (cur.leaf[l]||0) - dv, cur.leaf[l]||0]); } });
+    var v13 = dg13Voxel(s, m); if(!dgZ(v13)) aj.push(['13º Salário (zerado em todo o painel)', v13, 0]);
+    if(aj.length){ var efe = 0;
+      h += '<div class="dg-box" style="margin-top:12px;"><h4>Valores da Voxel × valores usados no painel</h4><div class="table-scroll" style="border:0;"><table class="dg-table" style="min-width:520px;"><thead><tr><th>Conta</th><th class="num">Voxel</th><th class="num">Painel</th><th class="num">Efeito no resultado</th></tr></thead><tbody>'+
+        aj.map(function(a){ efe += a[2]-a[1]; return '<tr><td>'+a[0]+'</td><td class="num tabular">'+dgR(a[1])+'</td><td class="num tabular">'+dgR(a[2])+'</td><td class="num tabular">'+(a[2]-a[1]>=0?'+':'')+dgR(a[2]-a[1])+'</td></tr>'; }).join('')+
+        '<tr class="dg-tot"><td>Efeito total no resultado</td><td></td><td></td><td class="num tabular">'+(efe>=0?'+':'')+dgR(efe)+'</td></tr></tbody></table></div>'+
+        '<div class="dg-note" style="margin-top:4px;">'+periodName(m)+' · '+scopeName(s)+' · ajustes de iFood e CMO Free valem só para o consolidado da rede.</div></div>'; }
     h += '<details class="dg-det"'+(dgOpen.__det?' open':'')+'><summary>Conferência com a DRE Voxel, pendências e movimentações fora da DRE</summary><div class="dg-foot">'+conf+ind+pen+fr+'</div></details>';
     box.innerHTML = h;
   }

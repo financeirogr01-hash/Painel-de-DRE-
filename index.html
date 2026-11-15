@@ -3682,11 +3682,11 @@
   var DG = [
     {id:'rb', t:'1. Faturamento', sl:'Faturamento', k:'tot', c:[['Faturamento Bruto de Itens','salão, delivery, balcão, retirada e iFood'],['Faturamento de Serviços (Bilheteria e Eventos)','eventos']]},
     {id:'roy', t:'(–) Gestão e estrutura corporativa — royalties', sl:'Royalties', c:[['Royalties contratuais']], obs:'Retirado do faturamento antes das deduções. Percentual contratual sobre o faturamento: 13% até setembro/2026 e 10,5% a partir de outubro/2026.'},
-    {id:'ded', t:'(–) Deduções da receita', sl:'Deduções', c:[['Impostos sobre Vendas'],['Devoluções e Cancelamentos'],['Devoluções de Vendas'],['Descontos','descontos concedidos pela loja'],['Taxas de Cartão e Apps de Delivery','cartões e aplicativos — conta agrupada na origem'],['Taxa de serviço iFood'],['Promoção bancada pelo iFood'],['Ressarcimento de Pedido Cancelado','reembolso de cancelamento — reduz a dedução'],['Diferença entre as fontes iFood']]},
+    {id:'ded', t:'(–) Deduções da receita', sl:'Deduções', c:[['Impostos sobre Vendas'],['Devoluções e Cancelamentos'],['Devoluções de Vendas'],['Descontos','descontos concedidos pela loja'],['Taxa de serviço iFood'],['Promoção bancada pelo iFood'],['Ressarcimento de Pedido Cancelado','reembolso de cancelamento — reduz a dedução'],['Diferença entre as fontes iFood']]},
     {id:'rl', t:'2. Receita líquida', sl:'Receita líquida', k:'tot', f:['rb','roy','ded']},
     {id:'cmv', t:'(–) CMV — Custo das Mercadorias Vendidas', sl:'CMV', c:[['Estoque Inicial','ajuste de estoque — soma ao custo'],['Insumos','alimentos, bebidas e ingredientes'],['Embalagens'],['Produtos para Comercialização'],['Estoque Final','ajuste de estoque — reduz o custo']]},
     {id:'lb', t:'3. Lucro bruto', sl:'Lucro bruto', k:'tot', f:['rl','cmv']},
-    {id:'can', t:'(–) Despesas com vendas e canais', sl:'Vendas e canais', c:[['Comissões sobre Vendas'],['Reembolso taxa de transação iFood benefícios','reembolso — reduz a despesa'],['Reembolso taxa de serviço iFood','reembolso — reduz a despesa']], obs:'Comissões e taxas do iFood (e cartões) estão nas deduções da receita.'},
+    {id:'can', t:'(–) Despesas com vendas e canais', sl:'Vendas e canais', c:[['Taxas de Cartão e Apps de Delivery','cartões e aplicativos — conta agrupada na origem'],['Comissões sobre Vendas'],['Reembolso taxa de transação iFood benefícios','reembolso — reduz a despesa'],['Reembolso taxa de serviço iFood','reembolso — reduz a despesa']]},
     {id:'ent', t:'(–) Despesas com entregas', sl:'Entregas', c:[['Entrega TAON','combustível e entregas, frete de aplicativos, serviços logísticos e reembolso de frete (Voxel)'],['Entrega iFood']]},
     {id:'mc', t:'4. Margem de contribuição — R$', sl:'Margem de contribuição', k:'tot', f:['lb','can','ent']},
     {id:'mcp', t:'Margem de contribuição — %', k:'pct', of:'mc'},
@@ -3877,7 +3877,7 @@
     function linha(txt, a, b){ var d = Math.round((a-b)*100)/100, ok = Math.abs(d)<0.05; chk.push({ok:ok, d:d}); return '<li>'+txt+' <span class="'+(ok?'dg-ok':'dg-bad')+'">'+(ok ? '✓ fecha' : '✗ diferença '+dgR(d))+'</span></li>'; }
     var fbt = o('Faturamento Bruto Total'), flt = o('Faturamento Líquido Total'), pes = o('Despesas com Pessoal'), lopO = o('Lucro/Prejuízo Operacional'), llO = o('Lucro/Prejuízo Líquido'), inv = o('Investimento em Equipamentos e Estrutura');
     var ifD = dgIfoodDelta(s, 'Descontos', m), ifT = dgIfoodDelta(s, 'Taxas de Cartão e Apps de Delivery', m), ifF = dgIfoodDelta(s, 'Freelancers e Terceirizados', m), ifE = dgIfoodDelta(s, 'Entrega iFood', m), ifX = dgIfoodDelta(s, 'Taxa de serviço iFood', m) + dgIfoodDelta(s, 'Promoção bancada pelo iFood', m) + dgIfoodDelta(s, 'Diferença entre as fontes iFood', m);
-    var rlEsp = ifD + flt + (cur.v.roy||0) + g('Devoluções de Vendas') + g('Impostos sobre Vendas') - g('Comissões sobre Vendas') + g('Ressarcimento de Pedido Cancelado') + g('Taxas de Cartão e Apps de Delivery') + ifX;
+    var rlEsp = ifD + flt + (cur.v.roy||0) + g('Devoluções de Vendas') + g('Impostos sobre Vendas') - g('Comissões sobre Vendas') + g('Ressarcimento de Pedido Cancelado') + ifX;
     var royAdj = dgRoyAdj(s, m);
     var ebEsp = lopO - g('Tarifas Bancárias') + reemb + royAdj + ifD + ifT + ifF + ifE + ifX;
     var llEsp = llO - inv + reemb + royAdj + ifD + ifT + ifF + ifE + ifX;

@@ -794,7 +794,7 @@
   #resumoKpis .card.kpi:hover{transform:translateY(-2px); box-shadow:0 0 0 1px rgba(255,255,255,.04) inset, 0 0 34px -4px var(--kc);}
   .kpi .kpi-label{letter-spacing:.12em; color:var(--ink-2);}
   /* destaque do faturamento */
-  .hero-wrap{display:grid; grid-template-columns:minmax(300px,380px) 1fr; gap:18px; align-items:center; margin-top:18px;}
+  .hero-wrap{display:grid; grid-template-columns:270px 1fr; gap:26px; align-items:center; margin:4px 0 22px;}
   .hero-wrap #resumoKpis{grid-template-columns:repeat(3,1fr); align-self:center; align-items:stretch;}
   @media (max-width:980px){ .hero-wrap{grid-template-columns:1fr;} }
   @media (max-width:700px){ .hero-wrap #resumoKpis{grid-template-columns:1fr;} }
@@ -807,7 +807,7 @@
   @keyframes lfMove{ 0%{transform:rotate(var(--r0)) scale(var(--s0));} 100%{transform:rotate(var(--r1)) scale(var(--s1));} }
   @keyframes lfRun{ to{ stroke-dashoffset:-100; } }
   @media (prefers-reduced-motion: reduce){ .hero-fat .lf, .hero-fat .lf-run{animation:none;} }
-  .hero-fat{position:relative; aspect-ratio:1/1; width:100%; max-width:420px; margin:0 auto; display:grid; place-items:center; cursor:default;}
+  .hero-fat{position:relative; aspect-ratio:3/4; width:100%; max-width:270px; margin:0 auto; display:grid; place-items:center; cursor:default;}
   .hero-fat .ring{position:absolute; inset:6%; border-radius:50%; border:2px solid transparent; filter:drop-shadow(0 0 10px rgba(255,140,80,.45));
     background:conic-gradient(from var(--a,0deg), #ff9b45, #b56bff, #ff5ca8, #6aa8ff, #ff9b45) border-box;
     -webkit-mask:linear-gradient(#000 0 0) padding-box, linear-gradient(#000 0 0); -webkit-mask-composite:xor; mask-composite:exclude;
@@ -815,12 +815,12 @@
   .hero-fat .ring.r2{inset:9%; border-radius:47% 53% 51% 49% / 52% 46% 54% 48%; --d:19s; animation-direction:reverse; opacity:.65;}
   .hero-fat .ring.r3{inset:4%; border-radius:53% 47% 48% 52% / 47% 55% 45% 53%; --d:23s; opacity:.5;}
   .hero-fat .core{position:absolute; inset:14%; border-radius:50%; background:radial-gradient(circle at 50% 40%, rgba(70,40,130,.9), rgba(16,10,34,.96) 70%); box-shadow:0 0 60px rgba(140,80,255,.35) inset;}
-  .hero-fat .txt{position:relative; text-align:center; padding:0 18%; transform:translate(-5%, -5%);}
-  .hero-fat .lbl{font-size:12px; font-weight:800; letter-spacing:.16em; color:var(--ink-2); text-transform:uppercase;}
-  .hero-fat .val{white-space:nowrap; font-size:clamp(22px,2.4vw,31px); font-weight:900; letter-spacing:-.02em; margin:8px 0 6px; color:#fff; text-shadow:0 0 22px rgba(255,155,69,.35);}
-  .hero-fat .sub{font-size:12.5px; color:var(--ink-2);}
+  .hero-fat .txt{position:relative; text-align:center; padding:0 12%; transform:translate(-9%, -7%);}
+  .hero-fat .lbl{font-size:10px; font-weight:800; letter-spacing:.12em; color:var(--ink-2); text-transform:uppercase;}
+  .hero-fat .val{white-space:nowrap; font-size:clamp(20px,1.9vw,25px); font-weight:900; letter-spacing:-.02em; margin:8px 0 6px; color:#fff; text-shadow:0 0 22px rgba(255,155,69,.35);}
+  .hero-fat .sub{font-size:11.5px; color:var(--ink-2);}
   .hero-fat .sub b.up{color:var(--good);} .hero-fat .sub b.dn{color:var(--critical);}
-  .hero-fat .hint{margin-top:8px; font-size:11px; color:var(--ink-muted);}
+  .hero-fat .hint{margin-top:6px; font-size:10px; color:var(--ink-muted);}
   @keyframes heroSpin{ to{ transform:rotate(360deg); } }
   @media (prefers-reduced-motion: reduce){ .hero-fat .ring{animation:none;} }
   /* detalhamento ao passar o mouse */
@@ -4086,7 +4086,7 @@
         var dpr = Math.min(window.devicePixelRatio||1, 2), W = cv.clientWidth, H = cv.clientHeight;
         if(cv.width !== Math.round(W*dpr) || cv.height !== Math.round(H*dpr)){ cv.width = Math.round(W*dpr); cv.height = Math.round(H*dpr); }
         var g = cv.getContext('2d'); g.setTransform(dpr,0,0,dpr,0,0); g.clearRect(0,0,W,H);
-        var P = leafPts(), sc = Math.min(W, H)*0.92/92, cx = W/2, cy = H/2, LX = 37, LY = 46, T = time/1000;
+        var P = leafPts(), sc = Math.min(W/70, H/92)*0.86, cx = W/2, cy = H/2, LX = 36, LY = 45, T = time/1000;
         function pt(t, f){ var k = Math.round(t/6.2832*N) % N; if(k<0) k += N; var q = P[k]; return [cx + (q[0]-LX)*sc*f, cy + (q[1]-LY)*sc*f]; }
         // fundo da folha (para leitura do valor)
         g.save(); g.beginPath(); for(var i=0;i<=N;i++){ var q = pt(i/N*6.2832, 0.97); i ? g.lineTo(q[0], q[1]) : g.moveTo(q[0], q[1]); } g.closePath();

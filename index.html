@@ -797,7 +797,15 @@
   .hero-wrap #resumoKpis{grid-template-columns:repeat(3,1fr); align-self:center; align-items:stretch;}
   @media (max-width:980px){ .hero-wrap{grid-template-columns:1fr;} }
   @media (max-width:700px){ .hero-wrap #resumoKpis{grid-template-columns:1fr;} }
-  .hero-fat{position:relative; aspect-ratio:1/1; width:100%; max-width:380px; margin:0 auto; display:grid; place-items:center; cursor:default;}
+  .hero-fat svg.leafs{position:absolute; inset:0; width:100%; height:100%; overflow:visible;}
+  .hero-fat .lf-core{filter:drop-shadow(0 0 18px rgba(140,80,255,.45));}
+  .hero-fat .lf{fill:none; stroke-width:.45; opacity:.85; transform-box:view-box; transform-origin:52px 55px; animation:lfMove var(--d,12s) ease-in-out infinite alternate; }
+  .hero-fat .lf-run{fill:none; stroke:#fff; stroke-width:1.3; stroke-linecap:round; stroke-dasharray:7 93; animation:lfRun 7s linear infinite; filter:drop-shadow(0 0 4px #ff9b45);}
+  .hero-fat .lf-run.r2{stroke:#d9b8ff; stroke-dasharray:4 96; animation-duration:11s; animation-direction:reverse; filter:drop-shadow(0 0 4px #b56bff);}
+  @keyframes lfMove{ 0%{transform:rotate(var(--r0)) scale(var(--s0));} 100%{transform:rotate(var(--r1)) scale(var(--s1));} }
+  @keyframes lfRun{ to{ stroke-dashoffset:-100; } }
+  @media (prefers-reduced-motion: reduce){ .hero-fat .lf, .hero-fat .lf-run{animation:none;} }
+  .hero-fat{position:relative; aspect-ratio:116/122; width:100%; max-width:400px; margin:0 auto; display:grid; place-items:center; cursor:default;}
   .hero-fat .ring{position:absolute; inset:6%; border-radius:50%; border:2px solid transparent; filter:drop-shadow(0 0 10px rgba(255,140,80,.45));
     background:conic-gradient(from var(--a,0deg), #ff9b45, #b56bff, #ff5ca8, #6aa8ff, #ff9b45) border-box;
     -webkit-mask:linear-gradient(#000 0 0) padding-box, linear-gradient(#000 0 0); -webkit-mask-composite:xor; mask-composite:exclude;
@@ -805,7 +813,7 @@
   .hero-fat .ring.r2{inset:9%; border-radius:47% 53% 51% 49% / 52% 46% 54% 48%; --d:19s; animation-direction:reverse; opacity:.65;}
   .hero-fat .ring.r3{inset:4%; border-radius:53% 47% 48% 52% / 47% 55% 45% 53%; --d:23s; opacity:.5;}
   .hero-fat .core{position:absolute; inset:14%; border-radius:50%; background:radial-gradient(circle at 50% 40%, rgba(70,40,130,.9), rgba(16,10,34,.96) 70%); box-shadow:0 0 60px rgba(140,80,255,.35) inset;}
-  .hero-fat .txt{position:relative; text-align:center; padding:0 12%;}
+  .hero-fat .txt{position:relative; text-align:center; padding:0 14%; transform:translate(-1%, -2%);}
   .hero-fat .lbl{font-size:12px; font-weight:800; letter-spacing:.16em; color:var(--ink-2); text-transform:uppercase;}
   .hero-fat .val{white-space:nowrap; font-size:clamp(26px,2.9vw,36px); font-weight:900; letter-spacing:-.02em; margin:8px 0 6px; color:#fff; text-shadow:0 0 22px rgba(255,155,69,.35);}
   .hero-fat .sub{font-size:12.5px; color:var(--ink-2);}
@@ -3998,7 +4006,7 @@
     var d = MP ? M.fb - MP.fb : null, p = (MP && MP.fb) ? d/MP.fb*100 : null;
     var nome = s==='Consolidado' ? 'Faturamento da rede' : (isBrandScope(s) ? 'Faturamento da marca' : 'Faturamento da loja');
     var lojasN = scopeStores(s).filter(function(t){ return scopeHasData(t, m); }).length;
-    box.innerHTML = '<div class="ring"></div><div class="ring r2"></div><div class="ring r3"></div><div class="core"></div>'+
+    box.innerHTML = '<svg class="leafs" viewBox="-8 -6 116 122" aria-hidden="true"><defs><radialGradient id="lfCore" cx="50%" cy="45%" r="60%"><stop offset="0" stop-color="#4a2a8a" stop-opacity=".95"/><stop offset=".75" stop-color="#140c2c" stop-opacity=".97"/></radialGradient><filter id="lfWave" x="-20%" y="-20%" width="140%" height="140%"><feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="4" result="n"><animate attributeName="baseFrequency" dur="14s" values="0.014;0.03;0.014" repeatCount="indefinite"/></feTurbulence><feDisplacementMap in="SourceGraphic" in2="n" scale="8" xChannelSelector="R" yChannelSelector="G"/></filter></defs><path class="lf-core" d="M34 6C62 10 90 34 92 64C93 86 76 98 58 96C40 94 22 82 14 60C7 40 12 18 34 6Z" fill="url(#lfCore)"/><path class="lf-stem" d="M60 96C66 100 72 104 80 104" fill="none" stroke="#ff9b45" stroke-width="1.6" stroke-linecap="round"/><g class="lf-lines" filter="url(#lfWave)"><path class="lf" d="M34 6C62 10 90 34 92 64C93 86 76 98 58 96C40 94 22 82 14 60C7 40 12 18 34 6Z" stroke="#ff9b45" style="--r0:-7deg;--s0:0.93;--r1:5deg;--s1:1.04;--d:9s;"/><path class="lf" d="M34 6C62 10 90 34 92 64C93 86 76 98 58 96C40 94 22 82 14 60C7 40 12 18 34 6Z" stroke="#b56bff" style="--r0:8deg;--s0:1.05;--r1:-6deg;--s1:0.95;--d:11s;"/><path class="lf" d="M34 6C62 10 90 34 92 64C93 86 76 98 58 96C40 94 22 82 14 60C7 40 12 18 34 6Z" stroke="#ff5ca8" style="--r0:-10deg;--s0:1.07;--r1:4deg;--s1:0.92;--d:13s;"/><path class="lf" d="M34 6C62 10 90 34 92 64C93 86 76 98 58 96C40 94 22 82 14 60C7 40 12 18 34 6Z" stroke="#6aa8ff" style="--r0:5deg;--s0:0.9;--r1:-9deg;--s1:1.06;--d:15s;"/><path class="lf" d="M34 6C62 10 90 34 92 64C93 86 76 98 58 96C40 94 22 82 14 60C7 40 12 18 34 6Z" stroke="#ffd18a" style="--r0:-3deg;--s0:1.09;--r1:9deg;--s1:0.97;--d:17s;"/><path class="lf" d="M34 6C62 10 90 34 92 64C93 86 76 98 58 96C40 94 22 82 14 60C7 40 12 18 34 6Z" stroke="#c98bff" style="--r0:11deg;--s0:0.97;--r1:-4deg;--s1:1.1;--d:19s;"/></g><path class="lf-run" d="M34 6C62 10 90 34 92 64C93 86 76 98 58 96C40 94 22 82 14 60C7 40 12 18 34 6Z" pathLength="100"/><path class="lf-run r2" d="M34 6C62 10 90 34 92 64C93 86 76 98 58 96C40 94 22 82 14 60C7 40 12 18 34 6Z" pathLength="100"/></svg>'+
       '<div class="txt"><div class="lbl">'+nome+'</div><div class="val tabular">'+brl0(M.fb)+'</div>'+
       '<div class="sub">'+periodName(m)+(p!==null ? ' · <b class="'+(p>=0?'up':'dn')+'">'+(p>=0?'▲ ':'▼ ')+fmt1.format(Math.abs(p))+'%</b> vs '+VOXEL_MONTH_LABELS[m-1].toLowerCase() : '')+'</div>'+
       '<div class="hint">passe o mouse para ver o detalhe</div></div>';

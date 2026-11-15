@@ -3671,7 +3671,7 @@
   var DG_EST = ['Estoque Inicial','Estoque Final'];
   var DG = [
     {id:'rb', t:'1. Faturamento', sl:'Faturamento', k:'tot', c:[['Faturamento Bruto de Itens','salão, delivery, balcão, retirada e iFood'],['Faturamento de Serviços (Bilheteria e Eventos)','eventos']]},
-    {id:'roy', t:'(–) Gestão e estrutura corporativa — royalties', sl:'Royalties', c:[['Taxa de Marketing','realizado'],['Royalties','realizado'],['Taxa Administrativa','realizado'],['Ajuste para o percentual contratual','diferença entre o lançado e o contratual (13% até set/2026; 10,5% a partir de out/2026)']], obs:'Retirado do faturamento antes das deduções. Percentual contratual sobre o faturamento: 13% até setembro/2026 e 10,5% a partir de outubro/2026.'},
+    {id:'roy', t:'(–) Gestão e estrutura corporativa — royalties', sl:'Royalties', c:[['Royalties contratuais']], obs:'Retirado do faturamento antes das deduções. Percentual contratual sobre o faturamento: 13% até setembro/2026 e 10,5% a partir de outubro/2026.'},
     {id:'ded', t:'(–) Deduções da receita', sl:'Deduções', c:[['Impostos sobre Vendas'],['Devoluções e Cancelamentos'],['Devoluções de Vendas'],['Descontos','descontos concedidos pela loja'],['Ressarcimento de Pedido Cancelado','reembolso de cancelamento — reduz a dedução']]},
     {id:'rl', t:'2. Receita líquida', sl:'Receita líquida', k:'tot', f:['rb','roy','ded']},
     {id:'cmv', t:'(–) CMV — Custo das Mercadorias Vendidas', sl:'CMV', c:[['Estoque Inicial','ajuste de estoque — soma ao custo'],['Insumos','alimentos, bebidas e ingredientes'],['Embalagens'],['Produtos para Comercialização'],['Estoque Final','ajuste de estoque — reduz o custo']]},
@@ -3719,11 +3719,18 @@
   var DG_IFOOD_LBL = {'Descontos':'descontos concedidos pela loja — iFood (relatório de repasses de outubro)', 'Taxas de Cartão e Apps de Delivery':'taxas de cartão e iFood (relatório de repasses de outubro)', 'Ressarcimento de Pedido Cancelado':'ressarcimentos, ajustes e cancelamentos — iFood (relatório de repasses de outubro)', 'Freelancers e Terceirizados':'CMO Free de outubro informado pela gestão', 'Entrega iFood':'taxa de entrega iFood (relatório de repasses de outubro)'};
   function dgIfoodOn(scope, line, m){ return scope==='Consolidado' && DG_IFOOD.hasOwnProperty(line) && (m===DG_IFOOD_MES || (m===-1 && VOXEL_ACC_FIM>=DG_IFOOD_MES)); }
   function dgIfoodDelta(scope, line, m){ if(!dgIfoodOn(scope, line, m)) return 0; var v = voxelGetVals(scope, line)[DG_IFOOD_MES] || 0; return DG_IFOOD[line] - v; }
+  function dgRoyNome(scope, m){
+    var pct = m===-1 ? '13% até set/2026 · 10,5% em out/2026' : (m>=9 ? '10,5%' : '13%')+' do faturamento';
+    var parts = [['taxa de marketing','Taxa de Marketing'],['royalties','Royalties'],['taxa administrativa','Taxa Administrativa']].map(function(p){ var x = dgLeaf(scope, p[1], m, false); return dgZ(x) ? '' : p[0]+' '+dgR(x); }).filter(Boolean);
+    var aj = dgRoyAdj(scope, m);
+    return 'Royalties ('+pct+')<span class="dg-note">lançado na Voxel: '+(parts.join(' · ') || 'R$ 0,00')+(dgZ(aj) ? '' : ' · ajuste ao contratual '+dgR(aj))+'</span>';
+  }
   function dgLeaf(scope, line, m, semEst){
     if(line==='Entrega TAON'){ var tt = 0, any = false; DG_TAON.forEach(function(l){ var x = dgLeaf(scope, l, m, semEst); if(x!==null){ tt += x; any = true; } }); return any ? Math.round(tt*100)/100 : null; }
     if(line==='Entrega iFood' && !dgIfoodOn(scope, line, m)) return 0;
     if(dgIfoodOn(scope, line, m)){ var vv = voxelGetVals(scope, line), base = m===-1 ? voxelAcc(vv) : vv[m]; return Math.round(((base||0) + dgIfoodDelta(scope, line, m))*100)/100; }
     if(line===DG_ROY_ADJ) return dgRoyAdj(scope, m);
+    if(line==='Royalties contratuais'){ var rt = 0, ra = false; ['Taxa de Marketing','Royalties','Taxa Administrativa'].forEach(function(l){ var x = dgLeaf(scope, l, m, semEst); if(x!==null){ rt += x; ra = true; } }); return ra ? Math.round((rt + dgRoyAdj(scope, m))*100)/100 : null; }
     if(semEst && DG_EST.indexOf(line)>=0) return 0;
     var v = voxelGetVals(scope, line), x = m===-1 ? voxelAcc(v) : v[m];
     return (x===null || x===undefined) ? null : x;
@@ -3795,7 +3802,7 @@
         var line = c[0], v = cur.leaf[line], p = prev ? prev.leaf[line] : null, key = 'L:'+line;
         if(!dgZero && dgZ(v) && dgZ(p)) return;
         shown++;
-        h += '<tr class="dg-leaf"'+(multi ? clk(key, 'Ver por loja') : '')+'><td>'+(multi ? ar(key) : '')+clEsc(line)+(dgIfoodOn(s, line, m) ? '<span class="dg-tag">'+DG_IFOOD_TAG[line]+'</span><span class="dg-note">'+DG_IFOOD_LBL[line]+' · na Voxel: '+dgR(v - dgIfoodDelta(s, line, m))+' · por loja segue a Voxel</span>' : (c[1] ? '<span class="dg-note">'+c[1]+'</span>' : ''))+'</td>'+
+        h += '<tr class="dg-leaf"'+(multi ? clk(key, 'Ver por loja') : '')+'><td>'+(multi ? ar(key) : '')+(line==='Royalties contratuais' ? dgRoyNome(s, m) : clEsc(line))+(dgIfoodOn(s, line, m) ? '<span class="dg-tag">'+DG_IFOOD_TAG[line]+'</span><span class="dg-note">'+DG_IFOOD_LBL[line]+' · na Voxel: '+dgR(v - dgIfoodDelta(s, line, m))+' · por loja segue a Voxel</span>' : (c[1] ? '<span class="dg-note">'+c[1]+'</span>' : ''))+'</td>'+
           '<td class="num tabular">'+(v===null ? '<span class="dg-aus">sem dado</span>' : dgR(v))+'</td><td class="num tabular">'+pc(v)+'</td>'+prevTd(p)+dgVarTd(curC.leaf[line], p, null, naoAplic)+'</tr>';
         if(multi && dgOpen[key]){
           grupo.forEach(function(t){
@@ -3845,7 +3852,7 @@
         (d.aus||d.vazio ? '<td class="num"><span class="dg-eq">—</span></td><td class="num"><span class="dg-eq">—</span></td>' : prevTd(pvv)+dgVarTd(curC.v[d.id], pvv, d, naoAplic))+'</tr>';
       if(!dgOpen[d.id]) return;
       if(d.aus || d.vazio || d.obs) h += '<tr class="dg-obs"><td colspan="5">'+(d.aus || d.vazio || d.obs)+
-        (d.id==='roy' && cur.v.rb ? ' Neste período: <b>'+fmt2.format(-cv/cur.v.rb*100)+'% do faturamento</b>'+(dgZ(cur.leaf[DG_ROY_ADJ]) ? '' : ' · realizado na base '+dgR(cv - cur.leaf[DG_ROY_ADJ])+' + ajuste '+dgR(cur.leaf[DG_ROY_ADJ]))+'.' : '')+'</td></tr>';
+        (d.id==='roy' && cur.v.rb ? ' Neste período: <b>'+fmt2.format(-cv/cur.v.rb*100)+'% do faturamento</b>'+(dgZ(dgRoyAdj(s, m)) ? '' : ' · lançado na Voxel '+dgR(cv - dgRoyAdj(s, m))+' + ajuste '+dgR(dgRoyAdj(s, m)))+'.' : '')+'</td></tr>';
       leafRows(d);
     });
     h += '</tbody></table></div>';
@@ -3859,7 +3866,7 @@
     var fbt = o('Faturamento Bruto Total'), flt = o('Faturamento Líquido Total'), pes = o('Despesas com Pessoal'), lopO = o('Lucro/Prejuízo Operacional'), llO = o('Lucro/Prejuízo Líquido'), inv = o('Investimento em Equipamentos e Estrutura');
     var ifD = dgIfoodDelta(s, 'Descontos', m), ifT = dgIfoodDelta(s, 'Taxas de Cartão e Apps de Delivery', m), ifF = dgIfoodDelta(s, 'Freelancers e Terceirizados', m), ifE = dgIfoodDelta(s, 'Entrega iFood', m);
     var rlEsp = ifD + flt + (cur.v.roy||0) + g('Devoluções de Vendas') + g('Impostos sobre Vendas') - g('Comissões sobre Vendas') + g('Ressarcimento de Pedido Cancelado');
-    var royAdj = g(DG_ROY_ADJ);
+    var royAdj = dgRoyAdj(s, m);
     var ebEsp = lopO - g('Tarifas Bancárias') + reemb + royAdj + ifD + ifT + ifF + ifE;
     var llEsp = llO - inv + reemb + royAdj + ifD + ifT + ifF + ifE;
     var cmoT = (cur.v.cmof||0) + (cur.v.cmov||0);

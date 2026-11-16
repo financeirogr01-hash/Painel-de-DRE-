@@ -344,6 +344,19 @@
   .dg-mov-h td{font-size:11px; font-weight:800; letter-spacing:.12em; text-transform:uppercase; color:var(--ink-2); background:var(--surface-2); border-top:2px dashed var(--baseline); padding-top:10px;}
   .dg-mov td{background:var(--surface-2);}
   .dg-transf{margin-top:12px;} .dg-transf h4{display:flex; align-items:center; gap:6px; flex-wrap:wrap;} .dg-transf .dg-table td{padding:5px 10px;} .dg-transf .dg-table td:first-child{position:static; min-width:0; width:auto;}
+  .dg-movfin{margin-top:12px; border:1px solid rgba(190,170,255,.22); border-radius:14px; padding:10px 12px; background:rgba(30,22,58,.55);}
+  .dg-movfin-h{all:unset; cursor:pointer; display:flex; flex-wrap:wrap; align-items:center; gap:6px; width:100%; font-size:14px; font-weight:800; color:var(--ink);}
+  .dg-movfin-s{flex-basis:100%; font-size:12px; font-weight:600; color:var(--ink-2); padding-left:15px;}
+  .dg-gamel{margin-top:12px;} .gm-kpis{display:grid; grid-template-columns:repeat(auto-fit,minmax(170px,1fr)); gap:8px; margin:6px 0 12px;}
+  .gm-k{border:1px solid var(--border); border-radius:10px; padding:8px 10px;} .gm-k .l{font-size:10.5px; font-weight:800; letter-spacing:.1em; text-transform:uppercase; color:var(--ink-2);} .gm-k .v{font-size:18px; font-weight:900; margin-top:2px;} .gm-k .s{font-size:11px; color:var(--ink-muted);}
+  .gm-t{font-size:12px; font-weight:800; margin-bottom:6px;} .gm-t span{font-weight:600; color:var(--ink-muted); margin-left:6px;}
+  .gm-row{display:grid; grid-template-columns:24px minmax(110px,150px) 1fr 120px 54px; align-items:center; gap:8px; padding:4px 6px; border-radius:8px; font-size:12.5px; cursor:pointer;}
+  .gm-row:hover{background:rgba(255,255,255,.04);} .gm-pos{font-weight:800; color:var(--ink-muted); text-align:right;}
+  .gm-bar{height:10px; border-radius:999px; background:rgba(255,255,255,.06); overflow:hidden;} .gm-bar i{display:block; height:100%; border-radius:999px; background:linear-gradient(90deg,#4a6be0,#9db2ff);}
+  .gm-row.top{background:rgba(255,155,69,.08);} .gm-row.top .gm-bar i{background:linear-gradient(90deg,#ff9b45,#ff5ca8);} .gm-row.top .gm-pos{color:#ff9b45;}
+  .gm-v{text-align:right; font-weight:700;} .gm-p{text-align:right; color:var(--ink-2);} .gm-tot{cursor:default; font-weight:800; border-top:1px solid var(--border); margin-top:4px;}
+  .gm-det{margin:2px 0 8px 32px; padding:8px 10px; border-left:2px solid rgba(157,178,255,.5); font-size:12px; color:var(--ink-2); display:grid; gap:3px;}
+  @media (max-width:640px){ .gm-row{grid-template-columns:20px 1fr 90px; } .gm-row .gm-bar, .gm-row .gm-p{display:none;} }
   .dg-note{display:block; font-size:11px; font-weight:500; color:var(--ink-muted); font-style:italic; white-space:normal; max-width:440px; line-height:1.35;}
   #dgCard [data-dg]{cursor:pointer;}
   #dgCard [data-dg]:hover td{filter:brightness(0.98);}
@@ -3796,6 +3809,10 @@
   function dgSoma(mapa, scope){ var t = 0; scopeStores(scope).forEach(function(st){ t += mapa[st]||0; }); return Math.round(t*100)/100; }
   // transferências entre contas Sicredi de outubro/2026, por loja de destino (informativo — não entra na DRE)
   var DG_TRANSF = {'Biggs 01':220560.42,'Biggs 02':170602.48,'Biggs 03':116274.76,'Biggs 04':199663.18,'Biggs 05':230299.39,'Biggs 06':56290.82,'Biggs 07 e Açaí':299434.70,'Biggs 08 e 09':30296.89,'Biggs 10':53957.12,'Biggs 11':98954.43,'Biggs 12':109476.30,'Biggs 13':71048.66,'Isaías 01':188754.48,'Isaías 02':73577.27,'Isaías 03':35720.15,'Robs':58002.68};
+  // aportes via Gamel — outubro/2026 (movimentação financeira, sem impacto na DRE)
+  var DG_GAMEL = {total: 1442838.39, enviado: 693893.24, recebido: 748945.15,
+    rec: {'Isaías 01':93836.03,'Robs':74407.71,'Biggs 06':71715.00,'Isaías 02':60545.20,'Biggs 04':57603.50,'Biggs 11':57322.16,'Biggs 08 e 09':53574.50,'Biggs 10':42451.10,'Mapoli':37460.05,'Isaías 03':34781.50,'Biggs 03':34213.30,'Biggs 07 e Açaí':31146.00,'Biggs 13':26886.00,'Biggs 01':25364.00,'Biggs 05':21499.10,'Biggs 12':18539.00,'Biggs 02':7601.00},
+    env: null, lanc: null};   // envio por loja e lançamentos do extrato: aguardando a relação
   var DG_VT_RH = {'Biggs 01':5362.5,'Biggs 02':737.5,'Biggs 03':3187.5,'Biggs 04':1925,'Biggs 05':3355.5,'Biggs 06':3450,'Biggs 07 e Açaí':1125,'Biggs 08 e 09':1637.5,'Biggs 10':900,'Biggs 11':688.5,'Biggs 12':2162.5,'Biggs 13':3077.5,'Isaías 01':3044.5,'Isaías 02':362.5,'Isaías 03':1900,'Mapoli':862.5,'Robs':1312.5}, DG_VT_FREE = {'Biggs 01':51.99,'Biggs 02':120.5,'Biggs 03':157.5,'Biggs 04':1107,'Biggs 05':287.5,'Biggs 06':166.5,'Biggs 07 e Açaí':249,'Biggs 08 e 09':10,'Biggs 10':87.5,'Biggs 11':0,'Biggs 12':442.5,'Biggs 13':205.1,'Isaías 01':220,'Isaías 02':0,'Isaías 03':0,'Mapoli':87.5,'Robs':18.75};
   var DG_VT_AJUDA = {'Biggs 05':400.00};
   function dgVtNota(scope){ var a = 0, b = 0, c = 0; scopeStores(scope).forEach(function(t){ a += DG_VT_RH[t]||0; b += DG_VT_FREE[t]||0; c += DG_VT_AJUDA[t]||0; }); return 'VT do RH (Sicredi) '+dgR(a)+' + VT do Free (gerenciador) '+dgR(b)+(c ? ' + ajuda de custo '+dgR(c) : ''); }
@@ -3968,13 +3985,29 @@
     h += '</tbody></table></div>';
     // quadro informativo: transferências entre contas e lojas (outubro/2026)
     if(m===DG_IFOOD_MES || (m===-1 && VOXEL_ACC_FIM>=DG_IFOOD_MES)){
+      var movH = '';
       var trL = grupo.filter(function(t){ return scopeHasData(t, DG_IFOOD_MES); }), trT = 0;
       var trRows = trL.map(function(t){ var v = DG_TRANSF[t]; if(v) trT += v; return '<tr><td>'+clEsc(t)+'</td><td class="num tabular">'+(v ? dgR(v) : '<span class="dg-eq">não identificado</span>')+'</td></tr>'; }).join('');
-      h += '<div class="dg-box dg-transf"><h4>Transferências entre contas e lojas — outubro/2026 <span class="dg-tag">Sem impacto no resultado</span></h4>'+
+      movH += '<div class="dg-box dg-transf"><h4>Transferências entre contas e lojas — outubro/2026 <span class="dg-tag">Sem impacto no resultado</span></h4>'+
         '<div class="dg-note" style="font-style:normal;">Movimentação financeira entre contas Sicredi. Não soma ao faturamento, às despesas, ao EBITDA nem ao resultado líquido. Cada envio é contado uma vez (entrada e saída da mesma transferência não são somadas).</div>'+
         '<table class="dg-table" style="min-width:0; margin-top:8px;"><thead><tr><th>Loja de destino</th><th class="num">Transferências recebidas</th></tr></thead><tbody>'+(trL.length>1 ? trRows : '')+
         '<tr class="dg-tot"><td>'+(trL.length>1 ? 'Total' : clEsc(trL[0]||scopeName(s)))+' · entre contas Sicredi</td><td class="num tabular">'+dgR(trT)+'</td></tr></tbody></table>'+
         (trL.indexOf('Mapoli')>=0 ? '<div class="dg-note" style="margin-top:4px;">Mapoli/Casaria não consta na relação — sem valor atribuído até identificar os lançamentos.</div>' : '')+'</div>';
+      // aportes via Gamel
+      var gL = grupo.filter(function(t){ return scopeHasData(t, DG_IFOOD_MES); }).map(function(t){ return {t:t, v:DG_GAMEL.rec[t]||0}; }).sort(function(a, b){ return b.v - a.v; });
+      var gT = gL.reduce(function(a, x){ return a + x.v; }, 0), gMax = gL.length ? Math.max.apply(null, gL.map(function(x){ return x.v; })) : 0, rede = s==='Consolidado';
+      var gk = function(l, v, sub){ return '<div class="gm-k"><div class="l">'+l+'</div><div class="v tabular">'+v+'</div>'+(sub?'<div class="s">'+sub+'</div>':'')+'</div>'; };
+      movH += '<div class="dg-box dg-gamel"><h4>Aportes via Gamel — outubro/2026 <span class="dg-tag">Sem impacto no resultado</span></h4>'+
+        '<div class="gm-kpis">'+(rede ? gk('Total movimentado', dgR(DG_GAMEL.total), 'enviado + recebido')+gk('Enviado à Gamel', dgR(DG_GAMEL.enviado))+gk('Aportes recebidos pelas lojas', dgR(DG_GAMEL.recebido)) : gk('Aportes recebidos', dgR(gT), scopeName(s))+gk('Enviado à Gamel', '<span class="dg-aus">aguardando relação por loja</span>'))+'</div>'+
+        '<div class="gm-t">'+(gL.length>1 ? 'Lojas que mais receberam aportes no mês' : 'Aporte recebido')+' <span>aportes brutos recebidos · % do total recebido</span></div>'+
+        gL.map(function(x, i){ var k = 'GM:'+x.t, pct = gT ? x.v/gT*100 : 0;
+          var row = '<div class="gm-row'+(i<3 && gL.length>3 ? ' top' : '')+'"'+clk(k, 'Ver os lançamentos do aporte')+'><span class="gm-pos">'+(i+1)+'</span><span class="gm-n">'+clEsc(x.t)+'</span><span class="gm-bar"><i style="width:'+(gMax ? (x.v/gMax*100).toFixed(1) : 0)+'%"></i></span><span class="gm-v tabular">'+dgR(x.v)+'</span><span class="gm-p tabular">'+fmt1.format(pct)+'%</span></div>';
+          if(dgOpen[k]) row += '<div class="gm-det"><div><b>Recebido da Gamel:</b> '+dgR(x.v)+'</div><div><b>Enviado à Gamel:</b> '+(DG_GAMEL.env && DG_GAMEL.env[x.t]!==undefined ? dgR(DG_GAMEL.env[x.t]) : '<span class="dg-aus">aguardando relação por loja</span>')+'</div><div><b>Saldo líquido (recebido − enviado):</b> '+(DG_GAMEL.env && DG_GAMEL.env[x.t]!==undefined ? dgR(x.v - DG_GAMEL.env[x.t]) : '<span class="dg-aus">depende do enviado</span>')+'</div>'+
+            ((DG_GAMEL.lanc && DG_GAMEL.lanc[x.t]) ? '<table class="dg-table" style="min-width:0;margin-top:6px;"><thead><tr><th>Data</th><th>Origem</th><th>Conta de destino</th><th class="num">Valor</th></tr></thead><tbody>'+DG_GAMEL.lanc[x.t].map(function(l){ return '<tr><td>'+l[0]+'</td><td>'+clEsc(l[1])+'</td><td>'+clEsc(l[2])+'</td><td class="num tabular">'+dgR(l[3])+'</td></tr>'; }).join('')+'</tbody></table>' : '<div class="dg-note">Lançamentos do extrato (data, origem Gamel, conta de destino e valor): aguardando a relação de outubro.</div>')+'</div>';
+          return row; }).join('')+
+        (gL.length>1 ? '<div class="gm-row gm-tot"><span class="gm-pos"></span><span class="gm-n">Total</span><span class="gm-bar"></span><span class="gm-v tabular">'+dgR(gT)+'</span><span class="gm-p tabular">100%</span></div>' : '')+
+        '<div class="dg-note" style="margin-top:6px;">Ranking pelos aportes brutos recebidos (não pelo total movimentado nem pelo saldo). Não altera faturamento, despesas, EBITDA nem o resultado da DRE.</div></div>';
+      h += '<div class="dg-movfin"><button type="button" class="dg-movfin-h"'+clk('MOVFIN', 'Abrir movimentações financeiras')+'>'+ar('MOVFIN')+'Movimentações financeiras — outubro/2026 <span class="dg-tag">Sem impacto no resultado</span><span class="dg-movfin-s">transferências entre contas '+dgR(trT)+' · aportes via Gamel recebidos '+dgR(gT)+'</span></button>'+(dgOpen.MOVFIN ? movH : '')+'</div>';
     }
 
     // ---- conferência com a origem (DRE Voxel) ----

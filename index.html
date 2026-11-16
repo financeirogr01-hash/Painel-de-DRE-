@@ -3808,7 +3808,7 @@
   var DG_SUPRIMENTO = {'Biggs 01':0,'Biggs 02':3000,'Biggs 03':0,'Biggs 04':3000,'Biggs 05':0,'Biggs 06':7000,'Biggs 07 e Açaí':2000,'Biggs 08 e 09':0,'Biggs 10':0,'Biggs 11':3000,'Biggs 12':0,'Biggs 13':0,'Isaías 01':7000,'Isaías 02':6000,'Isaías 03':1000,'Mapoli':0,'Robs':7500};   // suprimento de caixa: informativo, não entra no resultado
   function dgSoma(mapa, scope){ var t = 0; scopeStores(scope).forEach(function(st){ t += mapa[st]||0; }); return Math.round(t*100)/100; }
   // transferências entre contas Sicredi de outubro/2026, por loja de destino (informativo — não entra na DRE)
-  var DG_TRANSF = {'Biggs 01':220560.42,'Biggs 02':170602.48,'Biggs 03':116274.76,'Biggs 04':199663.18,'Biggs 05':230299.39,'Biggs 06':56290.82,'Biggs 07 e Açaí':299434.70,'Biggs 08 e 09':30296.89,'Biggs 10':53957.12,'Biggs 11':98954.43,'Biggs 12':109476.30,'Biggs 13':71048.66,'Isaías 01':188754.48,'Isaías 02':73577.27,'Isaías 03':35720.15,'Robs':58002.68};
+  var DG_TRANSF = {'Biggs 01':['Marti 65742-4 → Galno 71532-6',90801.00],'Biggs 02':['Fusi 70400-7 → Amege 70972-4',73800.50],'Biggs 03':['Pigui 70833-7 → Mapasi 70832-2',49264.00],'Biggs 04':['Agape 70829-8 → Madriom 70828-9',44304.00],'Biggs 05':['Chema 70851-6 → Paladar 70942-7',84413.20],'Biggs 07 e Açaí':['Sica 63923-8 → Euciva 70835-0',94313.00],'Isaías 01':['Elma 63912-7 → Paleza 70402-0',77878.48]};   // total R$ 514.774,18
   // aportes via Gamel — outubro/2026 (movimentação financeira, sem impacto na DRE)
   var DG_GAMEL = {total: 1442838.39, enviado: 693893.24, recebido: 748945.15,
     rec: {'Isaías 01':93836.03,'Robs':74407.71,'Biggs 06':71715.00,'Isaías 02':60545.20,'Biggs 04':57603.50,'Biggs 11':57322.16,'Biggs 08 e 09':53574.50,'Biggs 10':42451.10,'Mapoli':37460.05,'Isaías 03':34781.50,'Biggs 03':34213.30,'Biggs 07 e Açaí':31146.00,'Biggs 13':26886.00,'Biggs 01':25364.00,'Biggs 05':21499.10,'Biggs 12':18539.00,'Biggs 02':7601.00},
@@ -3987,12 +3987,13 @@
     if(m===DG_IFOOD_MES || (m===-1 && VOXEL_ACC_FIM>=DG_IFOOD_MES)){
       var movH = '';
       var trL = grupo.filter(function(t){ return scopeHasData(t, DG_IFOOD_MES); }), trT = 0;
-      var trRows = trL.map(function(t){ var v = DG_TRANSF[t]; if(v) trT += v; return '<tr><td>'+clEsc(t)+'</td><td class="num tabular">'+(v ? dgR(v) : '<span class="dg-eq">não identificado</span>')+'</td></tr>'; }).join('');
+      var trRows = trL.filter(function(t){ return DG_TRANSF[t]; }).map(function(t){ var x = DG_TRANSF[t]; trT += x[1]; return '<tr><td>'+clEsc(t)+'</td><td>'+clEsc(x[0])+'</td><td class="num tabular">'+dgR(x[1])+'</td></tr>'; }).join('');
+      var trSem = trL.filter(function(t){ return !DG_TRANSF[t]; });
       movH += '<div class="dg-box dg-transf"><h4>Transferências entre contas e lojas — outubro/2026 <span class="dg-tag">Sem impacto no resultado</span></h4>'+
         '<div class="dg-note" style="font-style:normal;">Movimentação financeira entre contas Sicredi. Não soma ao faturamento, às despesas, ao EBITDA nem ao resultado líquido. Cada envio é contado uma vez (entrada e saída da mesma transferência não são somadas).</div>'+
-        '<table class="dg-table" style="min-width:0; margin-top:8px;"><thead><tr><th>Loja de destino</th><th class="num">Transferências recebidas</th></tr></thead><tbody>'+(trL.length>1 ? trRows : '')+
-        '<tr class="dg-tot"><td>'+(trL.length>1 ? 'Total' : clEsc(trL[0]||scopeName(s)))+' · entre contas Sicredi</td><td class="num tabular">'+dgR(trT)+'</td></tr></tbody></table>'+
-        (trL.indexOf('Mapoli')>=0 ? '<div class="dg-note" style="margin-top:4px;">Mapoli/Casaria não consta na relação — sem valor atribuído até identificar os lançamentos.</div>' : '')+'</div>';
+        '<table class="dg-table" style="min-width:0; margin-top:8px;"><thead><tr><th>Loja</th><th>Conta de origem → destino</th><th class="num">Valor</th></tr></thead><tbody>'+trRows+
+        '<tr class="dg-tot"><td colspan="2">Total · entre contas Sicredi</td><td class="num tabular">'+dgR(trT)+'</td></tr></tbody></table>'+
+        (trSem.length ? '<div class="dg-note" style="margin-top:4px;">Sem transferência entre contas na relação: '+trSem.map(clEsc).join(', ')+'.</div>' : '')+'</div>';
       // aportes via Gamel
       var gL = grupo.filter(function(t){ return scopeHasData(t, DG_IFOOD_MES); }).map(function(t){ return {t:t, v:DG_GAMEL.rec[t]||0}; }).sort(function(a, b){ return b.v - a.v; });
       var gT = gL.reduce(function(a, x){ return a + x.v; }, 0), gMax = gL.length ? Math.max.apply(null, gL.map(function(x){ return x.v; })) : 0, rede = s==='Consolidado';

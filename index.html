@@ -343,6 +343,7 @@
   #dgCard .dg-obs td, #dgCard .dg-form td{white-space:normal;}
   .dg-mov-h td{font-size:11px; font-weight:800; letter-spacing:.12em; text-transform:uppercase; color:var(--ink-2); background:var(--surface-2); border-top:2px dashed var(--baseline); padding-top:10px;}
   .dg-mov td{background:var(--surface-2);}
+  .dg-transf{margin-top:12px;} .dg-transf h4{display:flex; align-items:center; gap:6px; flex-wrap:wrap;} .dg-transf .dg-table td{padding:5px 10px;} .dg-transf .dg-table td:first-child{position:static; min-width:0; width:auto;}
   .dg-note{display:block; font-size:11px; font-weight:500; color:var(--ink-muted); font-style:italic; white-space:normal; max-width:440px; line-height:1.35;}
   #dgCard [data-dg]{cursor:pointer;}
   #dgCard [data-dg]:hover td{filter:brightness(0.98);}
@@ -3793,6 +3794,8 @@
   var DG_ESC_SIC = {'Biggs 01':646.52,'Biggs 02':1154.01,'Biggs 03':326.56,'Biggs 04':578.58,'Biggs 05':843.06,'Biggs 06':277.62,'Biggs 07 e Açaí':1093.8,'Biggs 08 e 09':363.89,'Biggs 10':309.32,'Biggs 11':512.6,'Biggs 12':685.58,'Biggs 13':358.96,'Isaías 01':341.2,'Isaías 02':404,'Isaías 03':112.8,'Mapoli':183.4,'Robs':0}, DG_ESC_CX = {'Biggs 01':23,'Biggs 02':0,'Biggs 03':122,'Biggs 04':0,'Biggs 05':0,'Biggs 06':13.25,'Biggs 07 e Açaí':206.1,'Biggs 08 e 09':0,'Biggs 10':65,'Biggs 11':0,'Biggs 12':90,'Biggs 13':0,'Isaías 01':108.5,'Isaías 02':0,'Isaías 03':70,'Mapoli':0,'Robs':0};
   var DG_SUPRIMENTO = {'Biggs 01':0,'Biggs 02':3000,'Biggs 03':0,'Biggs 04':3000,'Biggs 05':0,'Biggs 06':7000,'Biggs 07 e Açaí':2000,'Biggs 08 e 09':0,'Biggs 10':0,'Biggs 11':3000,'Biggs 12':0,'Biggs 13':0,'Isaías 01':7000,'Isaías 02':6000,'Isaías 03':1000,'Mapoli':0,'Robs':7500};   // suprimento de caixa: informativo, não entra no resultado
   function dgSoma(mapa, scope){ var t = 0; scopeStores(scope).forEach(function(st){ t += mapa[st]||0; }); return Math.round(t*100)/100; }
+  // transferências entre contas Sicredi de outubro/2026, por loja de destino (informativo — não entra na DRE)
+  var DG_TRANSF = {'Biggs 01':220560.42,'Biggs 02':170602.48,'Biggs 03':116274.76,'Biggs 04':199663.18,'Biggs 05':230299.39,'Biggs 06':56290.82,'Biggs 07 e Açaí':299434.70,'Biggs 08 e 09':30296.89,'Biggs 10':53957.12,'Biggs 11':98954.43,'Biggs 12':109476.30,'Biggs 13':71048.66,'Isaías 01':188754.48,'Isaías 02':73577.27,'Isaías 03':35720.15,'Robs':58002.68};
   var DG_VT_RH = {'Biggs 01':5362.5,'Biggs 02':737.5,'Biggs 03':3187.5,'Biggs 04':1925,'Biggs 05':3355.5,'Biggs 06':3450,'Biggs 07 e Açaí':1125,'Biggs 08 e 09':1637.5,'Biggs 10':900,'Biggs 11':688.5,'Biggs 12':2162.5,'Biggs 13':3077.5,'Isaías 01':3044.5,'Isaías 02':362.5,'Isaías 03':1900,'Mapoli':862.5,'Robs':1312.5}, DG_VT_FREE = {'Biggs 01':51.99,'Biggs 02':120.5,'Biggs 03':157.5,'Biggs 04':1107,'Biggs 05':287.5,'Biggs 06':166.5,'Biggs 07 e Açaí':249,'Biggs 08 e 09':10,'Biggs 10':87.5,'Biggs 11':0,'Biggs 12':442.5,'Biggs 13':205.1,'Isaías 01':220,'Isaías 02':0,'Isaías 03':0,'Mapoli':87.5,'Robs':18.75};
   var DG_VT_AJUDA = {'Biggs 05':400.00};
   function dgVtNota(scope){ var a = 0, b = 0, c = 0; scopeStores(scope).forEach(function(t){ a += DG_VT_RH[t]||0; b += DG_VT_FREE[t]||0; c += DG_VT_AJUDA[t]||0; }); return 'VT do RH (Sicredi) '+dgR(a)+' + VT do Free (gerenciador) '+dgR(b)+(c ? ' + ajuda de custo '+dgR(c) : ''); }
@@ -3963,6 +3966,16 @@
       leafRows(d);
     });
     h += '</tbody></table></div>';
+    // quadro informativo: transferências entre contas e lojas (outubro/2026)
+    if(m===DG_IFOOD_MES || (m===-1 && VOXEL_ACC_FIM>=DG_IFOOD_MES)){
+      var trL = grupo.filter(function(t){ return scopeHasData(t, DG_IFOOD_MES); }), trT = 0;
+      var trRows = trL.map(function(t){ var v = DG_TRANSF[t]; if(v) trT += v; return '<tr><td>'+clEsc(t)+'</td><td class="num tabular">'+(v ? dgR(v) : '<span class="dg-eq">não identificado</span>')+'</td></tr>'; }).join('');
+      h += '<div class="dg-box dg-transf"><h4>Transferências entre contas e lojas — outubro/2026 <span class="dg-tag">Sem impacto no resultado</span></h4>'+
+        '<div class="dg-note" style="font-style:normal;">Movimentação financeira entre contas Sicredi. Não soma ao faturamento, às despesas, ao EBITDA nem ao resultado líquido. Cada envio é contado uma vez (entrada e saída da mesma transferência não são somadas).</div>'+
+        '<table class="dg-table" style="min-width:0; margin-top:8px;"><thead><tr><th>Loja de destino</th><th class="num">Transferências recebidas</th></tr></thead><tbody>'+(trL.length>1 ? trRows : '')+
+        '<tr class="dg-tot"><td>'+(trL.length>1 ? 'Total' : clEsc(trL[0]||scopeName(s)))+' · entre contas Sicredi</td><td class="num tabular">'+dgR(trT)+'</td></tr></tbody></table>'+
+        (trL.indexOf('Mapoli')>=0 ? '<div class="dg-note" style="margin-top:4px;">Mapoli/Casaria não consta na relação — sem valor atribuído até identificar os lançamentos.</div>' : '')+'</div>';
+    }
 
     // ---- conferência com a origem (DRE Voxel) ----
     function o(line){ var x = dgLeaf(s, line, m, false); return x===null ? 0 : x; }

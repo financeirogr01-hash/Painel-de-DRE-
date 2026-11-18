@@ -359,6 +359,7 @@
   @media (max-width:640px){ .gm-row{grid-template-columns:20px 1fr 90px; } .gm-row .gm-bar, .gm-row .gm-p{display:none;} }
   .dg-ifinfo{margin-top:8px; padding:8px 10px; border-radius:10px; border:1px dashed rgba(255,155,69,.45); font-size:12px; color:var(--ink-2); line-height:1.5;}
   .dg-movtot td{border-top:2px dashed var(--baseline);}
+  .dg-gamrow > td{background:var(--surface-2); position:static !important; white-space:normal;} .dg-gamrow .dg-gamel{margin:4px 0;}
   .dg-note{display:block; font-size:11px; font-weight:500; color:var(--ink-muted); font-style:italic; white-space:normal; max-width:440px; line-height:1.35;}
   #dgCard [data-dg]{cursor:pointer;}
   #dgCard [data-dg]:hover td{filter:brightness(0.98);}
@@ -3977,15 +3978,18 @@
         }
         if(d.id==='ll' && dgIfoodOn(s, 'Outras Despesas Administrativas', m)){
           var supT = dgSoma(DG_SUPRIMENTO, s), trfT = 0; grupo.forEach(function(t){ if(DG_TRANSF[t]) trfT += DG_TRANSF[t][1]; });
-          var movT = supT + trfT, dash = '<td class="num"><span class="dg-eq">—</span></td>';
+          var gamT = 0; grupo.forEach(function(t){ if(scopeHasData(t, DG_IFOOD_MES)) gamT += DG_GAMEL.rec[t]||0; });
+          var movT = supT + trfT + gamT, dash = '<td class="num"><span class="dg-eq">—</span></td>';
           if(movT || dgZero){
             h += '<tr class="dg-tot dg-movtot"'+clk('MOVINT', 'Abrir as movimentações internas')+'><td>'+ar('MOVINT')+'7. Movimentações internas financeiras<span class="dg-tag">Não afetam o resultado</span></td><td class="num tabular">'+dgR(movT)+'</td>'+dash+dash+dash+'</tr>';
             if(dgOpen.MOVINT){
-              h += '<tr class="dg-obs"><td colspan="5">Movimentações entre contas e caixas do grupo. Não compõem receitas nem despesas e não alteram EBITDA ou resultado líquido.</td></tr>';
+              h += '<tr class="dg-obs"><td colspan="5">Movimentações entre contas, caixas do grupo e aportes. Não compõem receitas nem despesas e não alteram EBITDA ou resultado líquido.</td></tr>';
               h += '<tr class="dg-leaf"'+(multi ? clk('MOV:sup', 'Ver por unidade') : '')+'><td>'+(multi ? ar('MOV:sup') : '')+'Suprimento de caixa<span class="dg-note">transferência do banco para o caixa das lojas · os gastos feitos com esse dinheiro estão nas respectivas contas</span></td><td class="num tabular">'+dgR(supT)+'</td>'+dash+dash+dash+'</tr>';
               if(multi && dgOpen['MOV:sup']) grupo.forEach(function(t){ var sv = DG_SUPRIMENTO[t]||0; if(!dgZero && dgZ(sv)) return; h += '<tr class="dg-store"><td>'+clEsc(t)+' · '+periodShort(m)+'</td><td class="num tabular">'+dgR(sv)+'</td><td class="num"></td><td class="num"></td><td class="num"></td></tr>'; });
               h += '<tr class="dg-leaf"'+clk('MOV:trf', 'Ver por unidade e conta')+'><td>'+ar('MOV:trf')+'Transferências entre contas<span class="dg-note">entre contas Sicredi do grupo · cada envio contado uma vez</span></td><td class="num tabular">'+dgR(trfT)+'</td>'+dash+dash+dash+'</tr>';
               if(dgOpen['MOV:trf']) grupo.forEach(function(t){ var x = DG_TRANSF[t]; if(!x && !dgZero) return; h += '<tr class="dg-store"><td>'+clEsc(t)+(x ? '<span class="dg-note">'+clEsc(x[0])+'</span>' : '')+'</td><td class="num tabular">'+dgR(x ? x[1] : 0)+'</td><td class="num"></td><td class="num"></td><td class="num"></td></tr>'; });
+              h += '<tr class="dg-leaf"'+clk('MOV:gam', 'Ver o ranking dos aportes')+'><td>'+ar('MOV:gam')+'Aportes via Gamel<span class="dg-note">aportes brutos recebidos pelas lojas'+(s==='Consolidado' ? ' · enviado à Gamel '+dgR(DG_GAMEL.enviado)+' · total movimentado '+dgR(DG_GAMEL.total) : '')+'</span></td><td class="num tabular">'+dgR(gamT)+'</td>'+dash+dash+dash+'</tr>';
+              if(dgOpen['MOV:gam']) h += '<tr class="dg-gamrow"><td colspan="5">'+dgGamelHtml()+'</td></tr>';
             }
           }
         }
@@ -4003,12 +4007,9 @@
       leafRows(d);
     });
     h += '</tbody></table></div>';
-    // quadro informativo: transferências entre contas e lojas (outubro/2026)
-    if(m===DG_IFOOD_MES || (m===-1 && VOXEL_ACC_FIM>=DG_IFOOD_MES)){
+    // aportes via Gamel (item 7 da DRE): conteúdo aberto no clique
+    function dgGamelHtml(){
       var movH = '';
-      var trL = grupo.filter(function(t){ return scopeHasData(t, DG_IFOOD_MES); }), trT = 0;
-      var trRows = trL.filter(function(t){ return DG_TRANSF[t]; }).map(function(t){ var x = DG_TRANSF[t]; trT += x[1]; return '<tr><td>'+clEsc(t)+'</td><td>'+clEsc(x[0])+'</td><td class="num tabular">'+dgR(x[1])+'</td></tr>'; }).join('');
-      var trSem = trL.filter(function(t){ return !DG_TRANSF[t]; });
       // aportes via Gamel
       var gL = grupo.filter(function(t){ return scopeHasData(t, DG_IFOOD_MES); }).map(function(t){ return {t:t, v:DG_GAMEL.rec[t]||0}; }).sort(function(a, b){ return b.v - a.v; });
       var gT = gL.reduce(function(a, x){ return a + x.v; }, 0), gMax = gL.length ? Math.max.apply(null, gL.map(function(x){ return x.v; })) : 0, rede = s==='Consolidado';
@@ -4023,7 +4024,7 @@
           return row; }).join('')+
         (gL.length>1 ? '<div class="gm-row gm-tot"><span class="gm-pos"></span><span class="gm-n">Total</span><span class="gm-bar"></span><span class="gm-v tabular">'+dgR(gT)+'</span><span class="gm-p tabular">100%</span></div>' : '')+
         '<div class="dg-note" style="margin-top:6px;">Ranking pelos aportes brutos recebidos (não pelo total movimentado nem pelo saldo). Não altera faturamento, despesas, EBITDA nem o resultado da DRE.</div></div>';
-      h += '<div class="dg-movfin"><button type="button" class="dg-movfin-h"'+clk('MOVFIN', 'Abrir aportes via Gamel')+'>'+ar('MOVFIN')+'Aportes via Gamel — outubro/2026 <span class="dg-tag">Sem impacto no resultado</span><span class="dg-movfin-s">aportes recebidos pelas lojas '+dgR(gT)+'</span></button>'+(dgOpen.MOVFIN ? movH : '')+'</div>';
+      return movH;
     }
 
     // ---- conferência com a origem (DRE Voxel) ----

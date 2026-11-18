@@ -4084,11 +4084,13 @@
     if(!dgZ(royAdj)) aj.push(['Royalties e gestão (10,5% do faturamento a partir de out/2026)', (cur.v.roy||0) - royAdj, cur.v.roy||0]);
     Object.keys(DG_IFOOD).forEach(function(l){ if(dgIfoodOn(s, l, m)){ var dv = dgIfoodDelta(s, l, m); if(dgZ(cur.leaf[l]||0) && dgZ((cur.leaf[l]||0) - dv)) return; aj.push([(DG_IFOOD_NOME[l] || l)+' ('+DG_IFOOD_TAG[l]+')', (cur.leaf[l]||0) - dv, cur.leaf[l]||0]); } });
     var v13 = dg13Voxel(s, m); if(!dgZ(v13)) aj.push(['13º Salário (zerado em outubro)', v13, 0]);
-    if(aj.length){ var efe = 0;
-      h += '<div class="dg-box" style="margin-top:12px;"><h4>Valores da Voxel × valores usados no painel</h4><div class="table-scroll" style="border:0;"><table class="dg-table" style="min-width:520px;"><thead><tr><th>Conta</th><th class="num">Voxel</th><th class="num">Painel</th><th class="num">Efeito no resultado</th></tr></thead><tbody>'+
-        aj.map(function(a){ efe += a[2]-a[1]; return '<tr><td>'+a[0]+'</td><td class="num tabular">'+dgR(a[1])+'</td><td class="num tabular">'+dgR(a[2])+'</td><td class="num tabular">'+(a[2]-a[1]>=0?'+':'')+dgR(a[2]-a[1])+'</td></tr>'; }).join('')+
-        '<tr class="dg-tot"><td>Efeito total no resultado</td><td></td><td></td><td class="num tabular">'+(efe>=0?'+':'')+dgR(efe)+'</td></tr></tbody></table></div>'+
-        '<div class="dg-note" style="margin-top:4px;">'+periodName(m)+' · '+scopeName(s)+' · ajustes do iFood valem só para o consolidado da rede; CMO Free e salários por loja.</div></div>'; }
+    if(aj.length){ var efe = 0; aj.forEach(function(a){ efe += a[2]-a[1]; });
+      h += '<div class="dg-movfin" style="margin-top:12px;"><button type="button" class="dg-movfin-h"'+clk('VXFOOT', 'Ver os valores da Voxel × painel')+'>'+ar('VXFOOT')+'Valores da Voxel × valores usados no painel<span class="dg-movfin-s">'+aj.length+' contas ajustadas · efeito total no resultado '+(efe>=0?'+':'')+dgR(efe)+' · clique para detalhar</span></button>';
+      if(dgOpen.VXFOOT){ var efe2 = 0; h += '<div class="table-scroll" style="border:0; margin-top:8px;"><table class="dg-table" style="min-width:520px;"><thead><tr><th>Conta</th><th class="num">Voxel</th><th class="num">Painel</th><th class="num">Efeito no resultado</th></tr></thead><tbody>'+
+        aj.map(function(a){ efe2 += a[2]-a[1]; return '<tr><td>'+a[0]+'</td><td class="num tabular">'+dgR(a[1])+'</td><td class="num tabular">'+dgR(a[2])+'</td><td class="num tabular">'+(a[2]-a[1]>=0?'+':'')+dgR(a[2]-a[1])+'</td></tr>'; }).join('')+
+        '<tr class="dg-tot"><td>Efeito total no resultado</td><td></td><td></td><td class="num tabular">'+(efe2>=0?'+':'')+dgR(efe2)+'</td></tr></tbody></table></div>'+
+        '<div class="dg-note" style="margin-top:4px;">'+periodName(m)+' · '+scopeName(s)+' · ajustes do iFood valem só para o consolidado da rede; CMO Free e salários por loja.</div>'; }
+      h += '</div>'; }
     h += '<details class="dg-det"'+(dgOpen.__det?' open':'')+'><summary>Conferência com a DRE Voxel, pendências e movimentações fora da DRE</summary><div class="dg-foot">'+conf+ind+pen+fr+'</div></details>';
     box.innerHTML = h;
     dgPops(cur, prev, m);

@@ -1062,8 +1062,7 @@
     </div>
 
     <div class="hero-wrap"><div class="hero-fat" id="heroFat"></div><div class="grid kpi-row" id="resumoKpis"></div></div>
-    <div class="loss-panel" id="lossPanel" hidden></div>
-    <div class="pctop-panel" id="pcTopPanel" hidden></div>
+    <div class="loss-panel" id="lossPanelGer" hidden></div>
     <div class="card dg-card" id="dgCard"></div>
 
 
@@ -1109,6 +1108,10 @@
     <div class="section-head" style="margin-top:32px;">
       <h3 style="font-size:17px; font-weight:800;">DRE Voxel — Regime de Competência</h3>
     </div>
+    <div class="chart-note" style="margin:-4px 0 8px;">Indicadores calculados com a DRE da Voxel (histórico) — não incluem os ajustes da DRE gerencial.</div>
+    <div class="grid kpi-row vx-kpis" id="vxKpis"></div>
+    <div class="loss-panel" id="lossPanel" hidden></div>
+    <div class="pctop-panel" id="pcTopPanel" hidden></div>
 
     <div id="voxelMonthTabs" hidden></div><!-- mês: filtro do topo -->
     <div class="vx-bar" id="vxBar"></div>
@@ -2669,17 +2672,16 @@
       '<div class="kpi-sub">'+sub+'</div>'+(extra||'')+'</div>';
   }
 
-  function renderResumo(){
+  function renderResumoVoxelBase(){
     var s = fState.scope, m = fState.month, M0 = storeMetrics(s, m), M = cmpM(M0, m), isRede = isGroupScope(s), comEst = M0 && M0!==M;
     document.getElementById('resumoTitle').textContent = (s==='Consolidado' ? 'Resumo da rede' : 'Resumo — '+scopeName(s)) + ' · ' + periodName(m);
-    var box = document.getElementById('resumoKpis');
+    var box = document.getElementById('vxKpis');
     if(!M){ box.innerHTML = '<div class="card kpi" style="grid-column:1/-1;">Sem dados de '+scopeName(s)+' em '+periodName(m)+'.</div>'; return; }
     var grupo = scopeStores(s);
     var lojas0 = grupo.map(function(t){ return storeMetrics(t, m); }).filter(Boolean);
     var lojas = lojas0.map(function(x){ return cmpM(x, m); });
     var MP = (m>0 && scopeHasData(s, m-1)) ? prevM(s, m) : null;
     var html = '';
-    renderHero(s, m, M0, MP);   // faturamento em destaque (substitui o cartão de faturamento)
     var chip = '';
     if(m>0){
       var P = prevM(s, m);
@@ -2734,6 +2736,63 @@
       else { pp.hidden = true; pp.innerHTML = ''; }
     }
   }
+  // Resumo: faturamento em destaque e cartões pela DRE gerencial; cartões pela Voxel acima da DRE Voxel
+  function renderResumo(){
+    var s = fState.scope, m = fState.month, M0 = storeMetrics(s, m), MP = (m>0 && scopeHasData(s, m-1)) ? prevM(s, m) : null;
+    renderHero(s, m, M0, MP);
+    renderKpiGer(s, m);
+    var svS = voxelData.stores, svB = voxelBiggs13Months;
+    voxelData.stores = voxelDataVx.stores; voxelBiggs13Months = voxelBiggs13Vx;
+    try { renderResumoVoxelBase(); } finally { voxelData.stores = svS; voxelBiggs13Months = svB; }
+  }
+  var lossGerOpen = false;
+  function renderKpiGer(s, m){
+    var box = document.getElementById('resumoKpis'); if(!box) return;
+    var cur = dgCalc(s, m, false);
+    if(cur.v.rb===null){ box.innerHTML = '<div class="card kpi" style="grid-column:1/-1;">Sem dados de '+scopeName(s)+' em '+periodName(m)+'.</div>'; return; }
+    var temPrev = m>0 && scopeHasData(s, m-1), prev = temPrev ? dgCalc(s, m-1, prevNoEst(m)) : null;
+    var rb = cur.v.rb, eb = cur.v.ebitda, rl = cur.v.rl, html = '';
+    // 1) resultado operacional = EBITDA da DRE gerencial
+    var desp = rb - eb;
+    html += kpiCard('Resultado operacional <span style="font-weight:600;color:var(--ink-muted);text-transform:none;letter-spacing:0;">· EBITDA gerencial</span>', brl0(eb), eb<0 ? 'var(--critical)' : 'var(--good)',
+      fmt1.format(eb/rb*100)+'% do faturamento bruto'+(prev ? vsPrevHtml(eb, prev.v.ebitda, 'high', 'brl', m, brl0(prev.v.ebitda)) : '')+
+      '<div class="kpi-desp">Faturamento '+brl0(rb)+' − despesas <b>'+brl0(desp)+'</b> ('+fmt1.format(desp/rb*100)+'%)</div>',
+      prev ? '<span class="chip '+((eb/rb - prev.v.ebitda/prev.v.rb)>=0?'good':'critical')+'">'+((eb/rb - prev.v.ebitda/prev.v.rb)>=0?'+':'−')+fmt1.format(Math.abs(eb/rb - prev.v.ebitda/prev.v.rb)*100)+' pp vs. '+VOXEL_MONTH_LABELS[m-1].toLowerCase()+'</span>' : '');
+    // 2) lojas no prejuízo (EBITDA gerencial por loja) ou, numa loja, margem de contribuição
+    var grupo = scopeStores(s).filter(function(t){ return scopeHasData(t, m); });
+    if(grupo.length>1){
+      var L = grupo.map(function(t){ return {t:t, v:dgCalc(t, m, false).v.ebitda}; }).filter(function(x){ return x.v!==null; });
+      var neg = L.filter(function(x){ return x.v<0; });
+      var negP = temPrev ? scopeStores(s).filter(function(t){ return scopeHasData(t, m-1); }).map(function(t){ return dgCalc(t, m-1, prevNoEst(m)).v.ebitda; }).filter(function(v){ return v!==null && v<0; }).length : null;
+      html += kpiCard('Lojas no prejuízo', neg.length+' <span class="kpi-of">/ '+L.length+'</span>', null,
+        'EBITDA gerencial por loja'+(negP!==null ? vsPrevHtml(neg.length, negP, 'low', 'n', m, negP+' lojas') : '')+
+        (s==='Consolidado' ? '<div class="kpi-desp" style="font-size:11px;">ajustes lançados só na rede (iFood, contabilidade etc.) não entram por loja</div>' : ''),
+        '<div class="kpi-hint">'+(lossGerOpen ? 'Ocultar lojas ▴' : 'Ver lojas e resultado ▾')+'</div>').replace('<div class="card kpi">', '<div class="card kpi kpi-click" id="lossCardGer" role="button" tabindex="0" aria-expanded="'+lossGerOpen+'" aria-controls="lossPanelGer">');
+      var pn = document.getElementById('lossPanelGer');
+      if(pn){
+        if(lossGerOpen){ var ord = L.slice().sort(function(a, b){ return a.v - b.v; });
+          pn.innerHTML = '<div class="card" style="margin-top:10px;"><div class="chart-title">EBITDA gerencial por loja · '+periodName(m)+'</div><div class="table-scroll"><table class="dg-table" style="min-width:0;"><tbody>'+ord.map(function(x){ return '<tr><td>'+clEsc(x.t)+'</td><td class="num tabular" style="color:'+(x.v<0?'var(--critical)':'var(--good)')+'">'+dgR(x.v)+'</td></tr>'; }).join('')+'</tbody></table></div></div>';
+          pn.hidden = false; }
+        else { pn.hidden = true; pn.innerHTML = ''; }
+      }
+    } else {
+      var pnx = document.getElementById('lossPanelGer'); if(pnx){ pnx.hidden = true; pnx.innerHTML = ''; }
+      var mcp = rl>0 ? cur.v.mc/rl*100 : null, mcpP = prev && prev.v.rl>0 ? prev.v.mc/prev.v.rl*100 : null;
+      html += kpiCard('Margem de contribuição', brl0(cur.v.mc), null, (mcp===null ? '—' : fmt1.format(mcp)+'% da receita líquida')+(mcpP!==null ? vsPrevHtml(mcp, mcpP, 'high', 'pp', m, fmt1.format(mcpP)+'%') : ''));
+    }
+    // 3) Prime Cost gerencial = CMV + CMO (fixo + Free) sobre a receita líquida gerencial
+    function pcG(x){ if(!x || !(x.v.rl>0)) return null; var cmv = -(x.v.cmv||0), cmo = -((x.v.cmof||0)+(x.v.cmov||0)); return {cmv:cmv, cmo:cmo, cmvP:cmv/x.v.rl*100, cmoP:cmo/x.v.rl*100, pc:(cmv+cmo)/x.v.rl*100}; }
+    var P = pcG(cur), PP = pcG(prev);
+    if(P){
+      var cl = pcCls(P.pc), dpc = P.pc - PC_META;
+      html += kpiCard((s==='Consolidado' ? 'Prime Cost da rede' : 'Prime Cost')+' (CMV + CMO)', fmt1.format(P.pc)+'%', pcColor(P.pc),
+        'CMV '+fmt1.format(P.cmvP)+'% + CMO '+fmt1.format(P.cmoP)+'% · meta ≤'+PC_META+'% · sobre a receita líquida gerencial'+(PP ? vsPrevHtml(P.pc, PP.pc, 'low', 'pp', m, fmt1.format(PP.pc)+'%') : '')+
+        '<div class="kpi-desp">CMV '+brl0(P.cmv)+' · CMO '+brl0(P.cmo)+'</div>',
+        '<span class="chip '+(cl==='sig-good'?'good':(cl==='sig-warn'?'warning':'critical'))+'">'+(dpc>0.05 ? '+'+fmt1.format(dpc)+'pp acima da meta' : 'dentro da meta')+'</span>');
+    }
+    box.innerHTML = html;
+  }
+  document.addEventListener('click', function(e){ if(e.target.closest && e.target.closest('#lossCardGer')){ lossGerOpen = !lossGerOpen; renderKpiGer(fState.scope, fState.month); } });
   var pcTopOpen = false;
   document.addEventListener('click', function(e){ if(e.target.closest('#pcTopCard')){ pcTopOpen = !pcTopOpen; renderResumo(); } });
   document.addEventListener('keydown', function(e){ if((e.key==='Enter' || e.key===' ') && e.target.id==='pcTopCard'){ e.preventDefault(); pcTopOpen = !pcTopOpen; renderResumo(); var c = document.getElementById('pcTopCard'); if(c) c.focus(); } });

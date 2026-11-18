@@ -1731,6 +1731,7 @@
   var VOXEL_NM = 10, VOXEL_B13_M = 7, VOXEL_MES_ABERTO = 9;
   // último mês fechado: o painel abre nele e o acumulado/média vão até ele (outubro ainda parcial)
   var VOXEL_ACC_FIM = 9, VOXEL_PADRAO = 9;
+  var VOXEL_VISIVEL_DESDE = 9;   // meses visíveis nos seletores: a partir de outubro/2026 (jan–set ocultos)
   var VOXEL_PARCIAL = {};   // meses parciais exibidos no filtro (nenhum no momento)   // setembro: 17 lojas fechadas pelos lançamentos completos (Biggs 13 com cartão/apps estimado)   // jan–set/2026 · Biggs 13 só tem DRE de agosto (índice 7)
   function voxelZeros(){ var z = []; for(var i=0;i<VOXEL_NM;i++) z.push(0); return z; }
   function voxelSum4(a,b){ return a.map(function(v, i){ return v + (b[i]||0); }); }
@@ -1897,7 +1898,7 @@
   // total do mês de setembro (DRE), para a última coluna — a semana 5 inclui 01–04/10
   function smMes(scope, line){ return scopeStores(scope).reduce(function(a, t){ var m = DRE_SEMANAL.mesLojas && DRE_SEMANAL.mesLojas[t]; return a + (m && m[line] ? m[line] : 0); }, 0); }
   // outubro/2026: semanas do iFood (apuração 28/09 a 25/10)
-  var smMesSel = 'out', smOutModo = 'rs';
+  var smMesSel = 'out', smOutModo = 'rs';   // setembro oculto (meses jan–set fora do painel)
   function renderSemanalOut(){
     var box = document.getElementById('smOut'), P = IFOOD.periodos;
     document.getElementById('smTitle').textContent = 'DRE semanal · iFood · Outubro/2026';
@@ -1956,7 +1957,7 @@
   });
   function renderSemanal(){
     if(typeof DRE_SEMANAL==='undefined' || !document.getElementById('smTable')) return;
-    document.getElementById('smMesSel').innerHTML = [['out','Outubro/2026 · iFood'],['set','Setembro/2026 · rede']].map(function(x){ return '<button type="button" class="voxel-tab'+(smMesSel===x[0]?' active':'')+'" data-sm-mes="'+x[0]+'">'+x[1]+'</button>'; }).join('');
+    document.getElementById('smMesSel').innerHTML = [['out','Outubro/2026 · iFood']].map(function(x){ return '<button type="button" class="voxel-tab'+(smMesSel===x[0]?' active':'')+'" data-sm-mes="'+x[0]+'">'+x[1]+'</button>'; }).join('');
     var isOut = smMesSel==='out';
     document.getElementById('smOut').hidden = !isOut; document.getElementById('smSet').hidden = isOut;
     if(isOut){ renderSemanalOut(); return; }
@@ -2222,6 +2223,7 @@
     var isBiggs13 = voxelActiveScope === 'Biggs 13';
     var html = '';
     VOXEL_MONTH_LABELS.forEach(function(lbl, i){
+      if(i < VOXEL_VISIVEL_DESDE) return;   // jan–set ocultos no painel
       var disabled = isBiggs13 && !b13Has(i);
       html += '<div class="voxel-tab'+(disabled?' disabled':'')+(voxelActiveMonth===i?' active':'')+'" data-month="'+i+'"'+(VOXEL_PARCIAL[i]?' title="'+VOXEL_PARCIAL[i]+'"':'')+'>'+lbl+(VOXEL_PARCIAL[i]?'<sup class="parc">parcial</sup>':'')+'</div>';
     });
@@ -2600,6 +2602,7 @@
   function estNote(txt){ return '<div class="est-note" title="Setembro considerando o estoque inicial (31/08) e final (01/10) no CMV">⚖️ com estoque inicial e final: <b>'+txt+'</b></div>'; }
 
   function setFilter(scope, month){
+    if(month>=0 && month < VOXEL_VISIVEL_DESDE) month = VOXEL_VISIVEL_DESDE;
     if(scope==='Biggs 13' && month!==-1 && !b13Has(month)){ month = VOXEL_B13_M; }
     fState.scope = scope; fState.month = month;
     voxelActiveScope = scope; voxelActiveMonth = month;
@@ -2638,6 +2641,7 @@
     var isB13 = fState.scope==='Biggs 13';
     var html = '';
     VOXEL_MONTH_LABELS.forEach(function(lbl, i){
+      if(i < VOXEL_VISIVEL_DESDE) return;   // jan–set ocultos no painel
       var dis = isB13 && !b13Has(i);
       html += '<button type="button" class="voxel-tab'+(dis?' disabled':'')+(fState.month===i?' active':'')+'" data-month="'+i+'"'+(dis?' disabled title="Biggs 13 só tem dados a partir de agosto"':(VOXEL_PARCIAL[i]?' title="'+VOXEL_PARCIAL[i]+'"':''))+'>'+lbl+(VOXEL_PARCIAL[i]?'<sup class="parc">parcial</sup>':'')+'</button>';
     });
@@ -4265,7 +4269,7 @@
   function vxSalvar(){ try{ localStorage.setItem(VX_LS, JSON.stringify(vxMeses)); }catch(e){} }
   function vxAplicaColunas(){
     var st = document.getElementById('vxColStyle'); if(!st){ st = document.createElement('style'); st.id = 'vxColStyle'; document.head.appendChild(st); }
-    var css = ''; vxMeses.forEach(function(on, i){ if(!on) css += '#voxelTable tr > th:nth-child('+(i+2)+'), #voxelTable tr > td:nth-child('+(i+2)+'):not([colspan]){display:none;}\n'; });
+    var css = ''; vxMeses.forEach(function(on, i){ if(!on || i < VOXEL_VISIVEL_DESDE) css += '#voxelTable tr > th:nth-child('+(i+2)+'), #voxelTable tr > td:nth-child('+(i+2)+'):not([colspan]){display:none;}\n'; });
     st.textContent = css;
   }
   function vxBrand(b, m){ var s = 'Marca:'+b, M = storeMetrics(s, m); if(!M) return null; var P = (m>0 && scopeHasData(s, m-1)) ? storeMetrics(s, m-1) : null;
@@ -4274,10 +4278,10 @@
     var box = document.getElementById('vxBar'); if(!box) return;
     var m = fState.month, s = fState.scope;
     // 1) meses
-    var chips = VOXEL_MONTH_LABELS.map(function(l, i){ return '<button type="button" class="vx-chip'+(vxMeses[i]?' on':'')+'" data-vxm="'+i+'" aria-pressed="'+vxMeses[i]+'">'+l+'</button>'; }).join('');
-    var nOn = vxMeses.filter(Boolean).length;
-    var c1 = '<div class="vx-card"><div class="vx-t">Meses na tabela <span>'+nOn+' de '+VOXEL_NM+'</span></div><div class="vx-chips">'+chips+'</div>'+
-      '<div class="vx-quick"><button type="button" data-vxq="all">Todos</button><button type="button" data-vxq="3">Últimos 3</button><button type="button" data-vxq="1">Só o mês do filtro</button></div></div>';
+    var chips = VOXEL_MONTH_LABELS.map(function(l, i){ if(i < VOXEL_VISIVEL_DESDE) return ''; return '<button type="button" class="vx-chip'+(vxMeses[i]?' on':'')+'" data-vxm="'+i+'" aria-pressed="'+vxMeses[i]+'">'+l+'</button>'; }).join('');
+    var nOn = vxMeses.filter(function(on, i){ return on && i >= VOXEL_VISIVEL_DESDE; }).length;
+    var c1 = '<div class="vx-card"><div class="vx-t">Meses na tabela <span>'+nOn+' de '+(VOXEL_NM - VOXEL_VISIVEL_DESDE)+'</span></div><div class="vx-chips">'+chips+'</div>'+
+      '</div>';
     // 2) visão
     var opts = '<option value="Consolidado">Consolidado da rede</option><optgroup label="Marcas">'+BRANDS.map(function(b){ return '<option value="Marca:'+b.id+'">Marca '+b.id+'</option>'; }).join('')+'</optgroup><optgroup label="Lojas">'+voxelTabsList.map(function(t){ return '<option value="'+t+'">'+t+'</option>'; }).join('')+'</optgroup>';
     var M = storeMetrics(s, m);

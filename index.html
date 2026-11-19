@@ -518,6 +518,10 @@
   .mand-form{font-size:12px; color:var(--ink-2); background:color-mix(in srgb, var(--ink) 5%, transparent); border-radius:10px; padding:8px 10px; margin:8px 0; line-height:1.5;}
   @media (max-width:420px){ .mand-grid{grid-template-columns:1fr;} .mand-body{grid-template-columns:1fr 100px 1fr; grid-template-rows:auto 100px auto;} .mand-ctr{width:100px; height:100px;} .mand-body::before{width:206px; height:206px;} }
   .lv-card{margin-top:10px; position:relative;}
+  .lv-mov{margin-top:8px; display:flex; flex-direction:column; gap:3px; font-size:12px;}
+  .lv-mt{font-size:11px; font-weight:800; text-transform:uppercase; letter-spacing:.04em; margin-top:2px;}
+  .lv-mt.up, .lv-mi.up{color:var(--good);} .lv-mt.dn, .lv-mi.dn{color:var(--critical);}
+  .lv-mi{font-weight:700;} .lv-mi small{font-weight:600; color:var(--ink-muted); margin-left:4px;}
   #lossPanelGer.lv-pop{position:fixed; z-index:80; width:min(560px, calc(100vw - 32px)); overflow:auto; border-radius:16px; box-shadow:0 18px 50px rgba(0,0,0,.55); animation:lvPop .16s ease-out;}
   #lossPanelGer.lv-pop .lv-card{margin:0;}
   @keyframes lvPop{from{opacity:0; transform:translateY(-6px);} to{opacity:1; transform:none;}}
@@ -2849,6 +2853,17 @@
     try { renderResumoVoxelBase(); } finally { voxelData.stores = svS; voxelBiggs13Months = svB; }
   }
   var lossGerOpen = false;
+  // quem saiu e quem entrou no prejuízo em relação ao mês anterior (EBITDA gerencial por loja)
+  function lossMovHtml(s, m, L){
+    if(!(m>0)) return '';
+    var ant = {}; scopeStores(s).forEach(function(t){ if(scopeHasData(t, m-1)){ var e = dgCalc(t, m-1, prevNoEst(m)).v.ebitda; if(e!==null) ant[t] = e; } });
+    var sai = L.filter(function(x){ return x.v>=0 && ant[x.t]!==undefined && ant[x.t]<0; }), ent = L.filter(function(x){ return x.v<0 && ant[x.t]!==undefined && ant[x.t]>=0; });
+    if(!sai.length && !ent.length) return '<div class="kpi-desp lv-mov">mesmas lojas no prejuízo de '+VOXEL_MONTH_LABELS[m-1].toLowerCase()+'</div>';
+    var item = function(x, up){ return '<span class="lv-mi '+(up?'up':'dn')+'" title="'+clEsc(x.t)+': '+brl0(ant[x.t])+' em '+VOXEL_MONTH_LABELS[m-1].toLowerCase()+' → '+brl0(x.v)+'">'+clEsc(x.t)+' <small>'+brl0(ant[x.t])+' → '+brl0(x.v)+'</small></span>'; };
+    return '<div class="lv-mov">'+
+      (sai.length ? '<div class="lv-mt up">▲ Saíram do prejuízo ('+sai.length+')</div>'+sai.map(function(x){ return item(x, true); }).join('') : '')+
+      (ent.length ? '<div class="lv-mt dn">▼ Entraram no prejuízo ('+ent.length+')</div>'+ent.map(function(x){ return item(x, false); }).join('') : '')+'</div>';
+  }
   // painel flutuante: abre na hora, colado ao card, sem empurrar a página
   function lossPos(){
     var pn = document.getElementById('lossPanelGer'), cd = document.getElementById('lossCardGer');
@@ -2899,7 +2914,7 @@
       var negP = temPrev ? scopeStores(s).filter(function(t){ return scopeHasData(t, m-1); }).map(function(t){ return dgCalc(t, m-1, prevNoEst(m)).v.ebitda; }).filter(function(v){ return v!==null && v<0; }).length : null;
       html += kpiCard('Lojas no prejuízo', neg.length+' <span class="kpi-of">/ '+L.length+'</span>', null,
         'EBITDA gerencial por loja'+(negP!==null ? vsPrevHtml(neg.length, negP, 'low', 'n', m, negP+' lojas') : '')+
-        '',
+        lossMovHtml(s, m, L),
         '<div class="kpi-hint">'+(lossGerOpen ? 'Ocultar lojas ▴' : 'Ver lojas e resultado ▾')+'</div>').replace('<div class="card kpi">', '<div class="card kpi kpi-click" id="lossCardGer" role="button" tabindex="0" aria-expanded="'+lossGerOpen+'" aria-controls="lossPanelGer">');
       var pn = document.getElementById('lossPanelGer');
       if(pn){

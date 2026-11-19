@@ -1063,9 +1063,6 @@
 
     <div class="hero-wrap"><div class="hero-fat" id="heroFat"></div><div class="grid kpi-row" id="resumoKpis"></div></div>
     <div class="loss-panel" id="lossPanelGer" hidden></div>
-    <div class="card dg-card" id="dgCard"></div>
-
-
     <div class="chart-title" style="margin-top:18px;" id="sigTitle">Sinaleiro da DRE</div>
     <div class="sig-panel" id="sigPanel"></div>
     <div class="sig-legend" style="justify-content:center;">
@@ -1089,6 +1086,9 @@
       </div>
       <p class="chart-note" style="margin-top:6px;">Clique na loja para ver as contas de CMV e CMO e a comparação com o mês anterior. Base: faturamento líquido de itens · meta ≤ 53% · 🟢 até 53% · 🟡 até 60% · 🔴 acima de 60%.</p>
     </div>
+
+    <div class="card dg-card" id="dgCard"></div>
+
 
     <div class="grid two-col" style="margin-top:14px;">
       <div class="card lc-card">
@@ -2310,10 +2310,21 @@
     var txt = unit==='brl' ? sg+brl0(Math.abs(d)).replace('-','') : (unit==='n' ? sg+Math.abs(d) : (unit==='pct' ? sg+fmt1.format(Math.abs(prev ? d/Math.abs(prev)*100 : 0))+'%' : sg+fmt1.format(Math.abs(d))+' pp'));
     return '<div class="vs-prev '+cls+'" title="Comparação com '+MONTH_FULL[m-1].toLowerCase()+'"><b>'+arrow+' '+txt+'</b> vs. '+VOXEL_MONTH_LABELS[m-1].toLowerCase()+(wasTxt ? ' <span class="vs-was">('+wasTxt+')</span>' : '')+'</div>';
   }
+  // métricas no formato do sinaleiro, calculadas pela DRE gerencial (base "fli/flt" = receita líquida gerencial)
+  var DG_OPEX = ['Manutenção Predial e de Equipamentos','Transporte','Outras Despesas Administrativas','Despesas a Identificar','Despesas com Marketing','Endomarketing','Pacote Anúncios Ifood'];
+  function dgSigM(sc, mm){
+    if(mm<0 && mm!==-1) return null;
+    var R = dgCalc(sc, mm, false); if(R.v.rb===null) return null;
+    var g = function(l){ return R.leaf[l]||0; }, v = R.v;
+    var opex = -DG_OPEX.reduce(function(acc, l){ return acc + g(l); }, 0);
+    // tudo sobre a receita líquida (igual à coluna % da DRE gerencial); royalties seguem sobre o faturamento bruto (contrato de 10,5%)
+    return {fb:v.rl, fli:v.rl, flt:v.rl, cmv:-(v.cmv||0), cmo:-((v.cmof||0)+(v.cmov||0)), opex:opex, cfFix:-((v.ocu||0)+(v.ope||0)+(v.adm||0)) - opex,
+      roy:v.rb ? -(v.roy||0)*v.rl/v.rb : 0, desc:-g('Descontos'), cartao:-g('Taxas de Cartão e Apps de Delivery'), entregas:-(v.ent||0) - g('Devoluções de Vendas'), mc:v.mc, lop:v.ebitda};
+  }
   function renderSigPanel(){
-    var s = voxelActiveScope, m = voxelActiveMonth, M0 = storeMetrics(s, m), M = cmpM(M0, m);
-    var MP = (m>0 && scopeHasData(s, m-1)) ? prevM(s, m) : null;
-    document.getElementById('sigTitle').textContent = 'Sinaleiro da DRE · realizado x meta · '+scopeName(s)+' · '+periodName(m);
+    var s = voxelActiveScope, m = voxelActiveMonth, M0 = dgSigM(s, m), M = M0;
+    var MP = (m>0 && scopeHasData(s, m-1)) ? dgSigM(s, m-1) : null;
+    document.getElementById('sigTitle').textContent = 'Sinaleiro da DRE gerencial · realizado x meta · '+scopeName(s)+' · '+periodName(m);
     var html = '';
     SIG_ORDER.forEach(function(k){
       var d = SIG[k], p = sigPct(k, M), cls = sigClass(k, p);
@@ -2336,7 +2347,7 @@
             '<span class="mark" style="left:calc('+pos(d.g)+' - 1px)"></span></div>'+
           '<div class="sig-rm"><span>Meta</span><b>'+(d.dir==='low'?'≤ ':'≥ ')+fmt1.format(d.g)+'%</b></div>'+
           '<span class="sig-gap '+cls+'"><i class="sig-dot '+cls+'"></i>'+gapTxt+'</span>'+
-          '<div class="sig-foot" style="margin-top:4px;">'+rsTxt+' · '+sigBaseName(k)+'</div>';
+          '<div class="sig-foot" style="margin-top:4px;">'+rsTxt+' · '+(k==='roy' ? 'faturamento bruto' : 'receita líquida gerencial')+'</div>';
       } else {
         body = '<div class="sig-foot"><i class="sig-dot sig-na"></i>sem dados · '+sigMeta(k)+'</div>';
       }
@@ -2344,7 +2355,7 @@
         '<div class="sig-name"><span class="cat-dot" style="background:'+d.color+'"></span>'+d.label+'</div>'+
         '<div class="sig-val tabular">'+(p===null?'—':fmt1.format(p)+'%')+' <span style="font-size:11.5px;font-weight:600;color:var(--ink-muted);">realizado</span></div>'+
         (function(){ if(!M0 || M0===M || p===null) return ''; var p0 = sigPct(k, M0); return (p0===null || Math.abs(p0-p)<0.05) ? '' : estNote(fmt1.format(p0)+'%'); })()+
-        (MP && p!==null ? (function(){ var pp = sigPct(k, MP); return pp===null ? '' : vsPrevHtml(sigPct(k, cmpM(M, m)), pp, d.dir, 'pp', m, fmt1.format(pp)+'%'+''); })() : '')+body+'<div class="go-hint">Ver na DRE ↓</div></div>';
+        (MP && p!==null ? (function(){ var pp = sigPct(k, MP); return pp===null ? '' : vsPrevHtml(p, pp, d.dir, 'pp', m, fmt1.format(pp)+'%'+''); })() : '')+body+'<div class="go-hint">Ver na DRE ↓</div></div>';
     });
     document.getElementById('sigPanel').innerHTML = html;
   }
@@ -3575,8 +3586,17 @@
   var PC_CMV_LINES = ['Estoque Inicial','Insumos','Embalagens','Produtos para Comercialização','Estoque Final'];
   var PC_CMO_LINES = ['Salários','Bonificações','Impostos Sobre Salários','Vale Alimentação','Vale Transporte','Rescisões','Freelancers e Terceirizados','Outros Encargos com Funcionários','Férias','13º Salário'];
   var pcSort = {k:'ordem', dir:1}, pcOpen = {};   // padrão: ordem fixa das lojas
-  function pcLine(t, line, m){ var v = voxelGetVals(t, line); var x = m===-1 ? voxelAcc(v) : v[m]; return (x===null||x===undefined) ? null : -x; }
+  function pcLine(t, line, m){ if(PC_MODO_GER){ var xg = dgLeaf(t, line, m, false); return xg===null ? null : -xg; }
+    return pcLineVx(t, line, m); }
+  function pcLineVx(t, line, m){ var v = voxelGetVals(t, line); var x = m===-1 ? voxelAcc(v) : v[m]; return (x===null||x===undefined) ? null : -x; }
+  var PC_MODO_GER = false;
+  function pcDataGer(t, m, semEst){
+    var R = dgCalc(t, m, !!semEst), rl = R.v.rl; if(R.v.rb===null || !(rl>0)) return null;
+    var cmv = -(R.v.cmv||0), cmo = -((R.v.cmof||0)+(R.v.cmov||0)), pc = (cmv+cmo)/rl*100;
+    return {t:t, label:t, ordem:voxelTabsList.indexOf(t), base:rl, cmv:cmv, cmo:cmo, cmvP:cmv/rl*100, cmoP:cmo/rl*100, pc:pc, dev:pc-PC_META, exc:Math.max(0, cmv+cmo - PC_META/100*rl), issues:[]};
+  }
   function pcData(t, m, semEst){
+    if(PC_MODO_GER) return pcDataGer(t, m, semEst);
     var M = storeMetrics(t, m); if(semEst) M = semEstM(M);
     if(!M || !(M.fli>0)) return null;
     var base = M.fli, cmv = M.cmv, cmo = M.cmo, tot = cmv + cmo;
@@ -3622,12 +3642,17 @@
   }
   // Prime Cost no resumo (mesmo modelo do sinaleiro); clique leva ao detalhamento na aba "As 17 lojas"
   function renderPcResumo(){
+    var svC = PC_CMV_LINES, svO = PC_CMO_LINES; PC_MODO_GER = true;
+    PC_CMV_LINES = dgDef('cmv').c.map(function(c){ return c[0]; }); PC_CMO_LINES = dgDef('cmof').c.concat(dgDef('cmov').c).map(function(c){ return c[0]; });
+    try { renderPcResumoBase(); } finally { PC_MODO_GER = false; PC_CMV_LINES = svC; PC_CMO_LINES = svO; }
+  }
+  function renderPcResumoBase(){
     var row = document.getElementById('pcrRow'); if(!row) return;
     var s = fState.scope, m = fState.month;
     var list0 = scopeStores(s).map(function(t){ return pcData(t, m); }).filter(Boolean);
     var list = cmpNoEst(m) ? scopeStores(s).map(function(t){ return pcData(t, m, true); }).filter(Boolean) : list0;
     var A0 = cmpNoEst(m) && list0.length ? (list0.length>1 || isGroupScope(s) ? pcAgg(list0) : list0[0]) : null;
-    document.getElementById('pcrTitle').textContent = 'Prime Cost (CMV + CMO) · realizado x meta · '+scopeName(s)+' · '+periodName(m);
+    document.getElementById('pcrTitle').textContent = 'Prime Cost (CMV + CMO) · DRE gerencial · realizado x meta · '+scopeName(s)+' · '+periodName(m);
     if(!list.length){ row.innerHTML = '<div class="sig-card"><div class="sig-name">Prime Cost</div><div class="sub">Dados insuficientes</div></div>'; return; }
     var A = list.length>1 || isGroupScope(s) ? pcAgg(list) : list[0];
     var listP = m>0 ? scopeStores(s).map(function(t){ return pcData(t, m-1, prevNoEst(m)); }).filter(Boolean) : [];
@@ -3681,7 +3706,7 @@
     });
     h += '</tbody><tfoot><tr><td>Total '+(kind==='cmv'?'CMV':'CMO')+'</td><td class="num tabular">'+brl0(soma)+'</td><td class="num tabular">'+fmt2.format(soma/A.base*100)+'%</td><td class="num tabular">100%</td><td></td><td></td></tr></tfoot></table></div>'+
       (Math.abs(soma - total) > 1 ? '<p class="rd-hint rd-warn">⚠ As contas somam '+brl2(soma)+' e a linha da DRE é '+brl2(total)+' — classificação a conferir.</p>' : '')+
-      '<p class="rd-hint" style="margin:6px 0 0;">Receita-base = faturamento líquido de itens ('+brl0(A.base)+'). "vs. mês anterior" compara o % da receita em pontos percentuais (vermelho = aumentou).</p></div>';
+      '<p class="rd-hint" style="margin:6px 0 0;">Receita-base = '+(PC_MODO_GER ? 'receita líquida da DRE gerencial' : 'faturamento líquido de itens')+' ('+brl0(A.base)+'). "vs. mês anterior" compara o % da receita em pontos percentuais (vermelho = aumentou).</p></div>';
     return h;
   }
   function renderPcrDetail(list, A, m){

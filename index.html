@@ -478,6 +478,9 @@
   /* ---------- clique no card -> linha da DRE ---------- */
   .sig-card .sig-bt{display:inline-block; margin-top:3px; padding:1px 7px; font:inherit; font-size:10.5px; font-weight:700; color:var(--ink-muted); background:transparent; border:1px solid var(--border); border-radius:999px; cursor:pointer;}
   .sig-card .sig-bt:hover, .sig-card .sig-bt.on{color:var(--ink); border-color:var(--sig-c);}
+  .kpi-alt{margin:4px 0 2px;} .kpi-alt .sig-bt{display:inline-block; padding:1px 8px; font:inherit; font-size:11px; font-weight:700; color:var(--ink-muted); background:transparent; border:1px solid var(--border); border-radius:999px; cursor:pointer;}
+  .kpi-alt .sig-bt:hover, .kpi-alt .sig-bt.on{color:var(--ink); border-color:var(--accent);}
+  .kpi-alt-v{font-size:11.5px; color:var(--ink-2); margin-top:3px;} .kpi-alt-v b{color:var(--ink); font-size:13px;} .kpi-alt-v span{color:var(--ink-muted);}
   .sig-card .sig-base{font-size:10.5px; color:var(--ink-muted); margin-top:1px;}
   .sig-card .sig-bruto{font-size:11px; color:var(--ink-2); margin-top:3px;}
   .sig-card .sig-bruto b{font-size:13px; color:var(--ink);}
@@ -1184,7 +1187,7 @@
       <span><i class="sig-dot sig-warn"></i>Atenção</span>
       <span><i class="sig-dot sig-orange"></i>Alerta (só custos fixos)</span>
       <span><i class="sig-dot sig-bad"></i>Fora da meta</span>
-      <span><b>Bases:</b> OPEX, CMV, CMO e custos fixos sobre a receita líquida; royalties, deduções, entregas e EBITDA sobre o faturamento bruto — cada um comparado com a meta da mesma base.</span>
+      <span><b>Bases:</b> OPEX, CMO e custos fixos sobre a receita líquida; CMV, royalties, deduções, entregas e EBITDA sobre o faturamento bruto — cada um comparado com a meta da mesma base.</span>
     </div>
 
 
@@ -2371,7 +2374,7 @@
   // dir 'low' = quanto menor melhor; g = limite do verde, y = limite do amarelo (acima/abaixo disso, vermelho).
   // base: 'fli' (fat. líquido, convenção Voxel p/ CMV e pessoal), 'flt' (margem) ou 'fb' (fat. bruto).
   var SIG = {
-    cmv:      {label:'CMV', color:'var(--cat-1)', base:'fli', dir:'low',  g:31, y:35},
+    cmv:      {label:'CMV', color:'var(--cat-1)', base:'fb', dir:'low',  g:31, y:35},
     cf:       {label:'Custos fixos (sem pessoal)', color:'var(--cat-2)', base:'fli', dir:'low', g:15, y:20, o:25},  // régua do grupo: 10–15 / 15–20 / 20–25 / >25
     opex:     {label:'OPEX', color:'#3fb6c6', base:'fli', dir:'low', g:1, y:2},   // meta ≤1% (já usada nos KPIs da DRE Voxel); faixa amarela até 2% provisória
     cartao:   {label:'Cartão + apps', color:'var(--cat-3)', base:'fb', dir:'low', g:10, y:13},
@@ -2888,6 +2891,17 @@
     try { renderResumoVoxelBase(); } finally { voxelData.stores = svS; voxelBiggs13Months = svB; }
   }
   var lossGerOpen = false;
+  // % do indicador na outra base (sem meta nessa base) — abre ao clicar, sem sair do card
+  var kpiAltOpen = {};
+  function kpiAltHtml(k, p, M, MP, m){
+    if(p===null || !M || !(M.rbB>0) || !(M.rlL>0)) return '';
+    var noBruto = SIG[k].base==='fb', f = function(X){ return noBruto ? X.rbB/X.rlL : X.rlL/X.rbB; };
+    var alt = p*f(M), pp = (MP && MP.rbB>0 && MP.rlL>0) ? sigPct(k, MP) : null, altP = pp===null ? null : pp*f(MP);
+    var on = !!kpiAltOpen[k], nome = noBruto ? 'receita líquida' : 'faturamento bruto';
+    return '<div class="kpi-alt"><button type="button" class="sig-bt'+(on?' on':'')+'" data-kalt="'+k+'" aria-expanded="'+on+'">'+(on?'▾':'▸')+' % s/ '+(noBruto ? 'receita líquida' : 'bruto')+'</button>'+
+      (on ? '<div class="kpi-alt-v"><b>'+fmt1.format(alt)+'%</b> da '+nome+(altP!==null ? ' <span>· '+VOXEL_MONTH_LABELS[m-1].slice(0,3).toLowerCase()+' '+fmt1.format(altP)+'%</span>' : '')+' · só informativo (meta na outra base)</div>' : '')+'</div>';
+  }
+  document.addEventListener('click', function(e){ var b = e.target.closest && e.target.closest('[data-kalt]'); if(!b) return; e.stopPropagation(); var k = b.getAttribute('data-kalt'); kpiAltOpen[k] = !kpiAltOpen[k]; renderKpiGer(fState.scope, fState.month); var nb = document.querySelector('[data-kalt="'+k+'"]'); if(nb) nb.focus({preventScroll:true}); }, true);
   // quem saiu e quem entrou no prejuízo em relação ao mês anterior (EBITDA gerencial por loja)
   function lossMovHtml(s, m, L){
     if(!(m>0)) return '';
@@ -2981,7 +2995,7 @@
       var cor = cls==='sig-good' ? 'var(--good)' : (cls==='sig-warn' ? 'var(--warning)' : (cls==='sig-orange' ? '#ff8a3d' : 'var(--critical)'));
       var chip = cls==='sig-good' ? 'good' : (cls==='sig-warn' || cls==='sig-orange' ? 'warning' : 'critical');
       html += kpiCard(it[1], fmt1.format(p)+'%', cor,
-        'meta ≤'+fmt1.format(d.g)+'% · sobre a receita líquida gerencial'+(pp!==null ? vsPrevHtml(p, pp, 'low', 'pp', m, fmt1.format(pp)+'%') : '')+
+        'meta ≤'+fmt1.format(d.g)+'% · % sobre '+(d.base==='fb' ? 'o faturamento bruto' : 'a receita líquida gerencial')+kpiAltHtml(k, p, SM, SP, m)+(pp!==null ? vsPrevHtml(p, pp, 'low', 'pp', m, fmt1.format(pp)+'%') : '')+
         '<div class="kpi-desp">'+it[2]+brl0(rs).replace('R$ ','')+'</div>',
         '<span class="chip '+chip+'">'+(dif>0.05 ? '+'+fmt1.format(dif)+'pp acima da meta' : (dif< -0.05 ? '−'+fmt1.format(-dif)+'pp abaixo da meta' : 'na meta'))+'</span><div class="kpi-hint">Ver na DRE gerencial ↓</div>')
         .replace('<div class="card kpi">', '<div class="card kpi kpi-click" data-dgo="'+k+'" role="button" tabindex="0" style="--kc:'+d.color+';" title="Ver '+it[1]+' na DRE gerencial">');
@@ -3092,7 +3106,7 @@
       '<span class="sig-pill '+rc+'"><i class="sig-dot '+rc+'"></i><span class="tabular">'+pct(perRes)+'</span><span class="sig-meta">do faturamento bruto · meta ≥'+fmt1.format(SIG.lop.g)+'%</span></span>'+bnVs(perRes, perResP, false)+'</div>'+
       '<div class="bn-value tabular" style="color:'+(perRes<0?'var(--critical)':'var(--good)')+'">'+(perRes<0?'-':'+')+'R$ '+fmt2.format(Math.abs(perRes))+' <span class="bn-sub" style="font-weight:600;">a cada R$ 100</span></div></div>';
     grid.innerHTML = html;
-    foot.textContent = 'Atenção às bases: os valores "a cada R$ 100" são sobre o faturamento bruto. O selo colorido repete o indicador do sinaleiro na base em que a meta foi definida — CMV, CMO e custos fixos sobre a receita líquida; deduções, royalties, entregas e EBITDA sobre o bruto. Por isso o % do selo pode diferir do valor a cada R$ 100.';
+    foot.textContent = 'Atenção às bases: os valores "a cada R$ 100" são sobre o faturamento bruto. O selo colorido repete o indicador do sinaleiro na base em que a meta foi definida — CMO e custos fixos sobre a receita líquida; CMV, deduções, royalties, entregas e EBITDA sobre o bruto. Por isso o % do selo pode diferir do valor a cada R$ 100.';
   }
 
   // better: 'high' = maior é melhor, 'low' = menor é melhor, null = neutro
@@ -4633,7 +4647,8 @@
     o.cmv = -(v.cmv||0); o.cmof = -(v.cmof||0); o.cmov = -(v.cmov||0); o.cmo = o.cmof + o.cmov; o.pc = o.cmv + o.cmo;
     o.grupos = MAND_FIXOS.map(function(g){ return {id:g[0], t:g[1], v:-(v[g[0]]||0)}; });
     o.fixos = o.grupos.reduce(function(a, g){ return a + g.v; }, 0);
-    o.cmvP = o.rl>0 ? o.cmv/o.rl*100 : null; o.cmoP = o.rl>0 ? o.cmo/o.rl*100 : null;
+    o.cmvP = o.rb>0 ? o.cmv/o.rb*100 : null;   // CMV sobre o bruto (base da meta)
+     o.cmoP = o.rl>0 ? o.cmo/o.rl*100 : null;
     o.calc = mandCalc({rb:o.rb, mc:o.mc, fixos:o.fixos});
     return o;
   }
@@ -4695,7 +4710,7 @@
       '<br><span class="mand-na">Estimativa com a estrutura e a margem observadas no período'+(m===-1 ? ' (acumulado: soma das competências e razões recalculadas sobre os totais)' : '')+'.</span></div>';
     h += '<div class="table-scroll" style="border:0;"><table><tr class="mg"><td>CMV, CMO e Prime Cost</td><td class="num">R$</td><td class="num">% receita líquida</td><td class="num">% do Prime Cost</td></tr>';
     var ppc = function(x){ return o.pc>0 ? fmt1.format(x/o.pc*100)+'%' : '—'; };
-    h += '<tr><td>CMV'+contas('cmv', o.cmv)+'</td><td class="num">'+dgR(o.cmv)+'</td><td class="num">'+pc(o.cmv)+' <span class="'+(o.cmvP!==null && o.cmvP<=SIG.cmv.g ? 'mand-ok' : 'mand-bad')+'">(meta ≤'+fmt1.format(SIG.cmv.g)+'%)</span></td><td class="num">'+ppc(o.cmv)+'</td></tr>';
+    h += '<tr><td>CMV'+contas('cmv', o.cmv)+'</td><td class="num">'+dgR(o.cmv)+'</td><td class="num">'+pc(o.cmv)+' <span class="'+(o.cmvP!==null && o.cmvP<=SIG.cmv.g ? 'mand-ok' : 'mand-bad')+'">('+(o.cmvP===null ? '—' : fmt1.format(o.cmvP))+'% do bruto · meta ≤'+fmt1.format(SIG.cmv.g)+'% s/ bruto)</span></td><td class="num">'+ppc(o.cmv)+'</td></tr>';
     h += '<tr><td>CMO — equipe fixa</td><td class="num">'+dgR(o.cmof)+'</td><td class="num">'+pc(o.cmof)+'</td><td class="num">'+ppc(o.cmof)+'</td></tr>';
     h += '<tr><td>CMO — Free</td><td class="num">'+dgR(o.cmov)+'</td><td class="num">'+pc(o.cmov)+'</td><td class="num">'+ppc(o.cmov)+'</td></tr>';
     h += '<tr class="mt"><td>CMO total</td><td class="num">'+dgR(o.cmo)+'</td><td class="num">'+pc(o.cmo)+' <span class="'+(o.cmoP!==null && o.cmoP<=SIG.cmo.g ? 'mand-ok' : 'mand-bad')+'">(meta ≤'+fmt1.format(SIG.cmo.g)+'%)</span></td><td class="num">'+ppc(o.cmo)+'</td></tr>';
@@ -4775,7 +4790,7 @@
     if(L.length===1) mandSel = L[0].t;
     var abx = L.filter(function(o){ return o.calc.st==='abaixo' || o.calc.st==='semPE'; }), acm = L.filter(function(o){ return o.calc.st==='acima' || o.calc.st==='eq'; }), nd = L.filter(function(o){ return o.calc.st==='na'; });
     var falta = L.reduce(function(a, o){ return a + (o.calc.st==='abaixo' ? -o.calc.dif : 0); }, 0);
-    var h = '<div class="mand-head"><h3>Mandala de Equilíbrio por Loja</h3><div class="mand-sub">'+scopeName(s)+' · '+periodName(m)+' · DRE gerencial de cada loja · venda mínima = custos fixos operacionais ÷ margem de contribuição sobre o faturamento bruto · CMV e CMO sobre a receita líquida gerencial (metas do sinaleiro: CMV ≤'+fmt1.format(SIG.cmv.g)+'%, CMO ≤'+fmt1.format(SIG.cmo.g)+'%) · ordem: maior falta de faturamento primeiro · clique numa loja para ver a memória de cálculo</div></div>';
+    var h = '<div class="mand-head"><h3>Mandala de Equilíbrio por Loja</h3><div class="mand-sub">'+scopeName(s)+' · '+periodName(m)+' · DRE gerencial de cada loja · venda mínima = custos fixos operacionais ÷ margem de contribuição sobre o faturamento bruto · CMV sobre o faturamento bruto e CMO sobre a receita líquida gerencial (metas do sinaleiro: CMV ≤'+fmt1.format(SIG.cmv.g)+'%, CMO ≤'+fmt1.format(SIG.cmo.g)+'%) · ordem: maior falta de faturamento primeiro · clique numa loja para ver a memória de cálculo</div></div>';
     if(L.length>1){
       h += '<div class="mand-sum"><span><b class="mand-bad">'+abx.length+'</b> abaixo do equilíbrio'+(falta>0 ? ' · faltam <b>'+brl0(falta)+'</b> somadas' : '')+'</span><span><b class="mand-ok">'+acm.length+'</b> acima ou no equilíbrio</span>'+(nd.length ? '<span><b>'+nd.length+'</b> sem dados</span>' : '')+'</div>';
       // lançamentos só da rede (não atribuídos às lojas) ficam no consolidado

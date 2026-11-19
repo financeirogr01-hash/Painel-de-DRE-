@@ -478,6 +478,7 @@
   /* ---------- clique no card -> linha da DRE ---------- */
   .sig-card .sig-bt{display:inline-block; margin-top:3px; padding:1px 7px; font:inherit; font-size:10.5px; font-weight:700; color:var(--ink-muted); background:transparent; border:1px solid var(--border); border-radius:999px; cursor:pointer;}
   .sig-card .sig-bt:hover, .sig-card .sig-bt.on{color:var(--ink); border-color:var(--sig-c);}
+  .sig-card .sig-base{font-size:10.5px; color:var(--ink-muted); margin-top:1px;}
   .sig-card .sig-bruto{font-size:11px; color:var(--ink-2); margin-top:3px;}
   .sig-card .sig-bruto b{font-size:13px; color:var(--ink);}
   .sig-card .sig-bruto span{color:var(--ink-muted);}
@@ -1180,7 +1181,7 @@
       <span><i class="sig-dot sig-warn"></i>Atenção</span>
       <span><i class="sig-dot sig-orange"></i>Alerta (só custos fixos)</span>
       <span><i class="sig-dot sig-bad"></i>Fora da meta</span>
-      <span>A cor da borda e da bolinha em cada linha da DRE é a mesma do "cada R$ 100".</span>
+      <span><b>Bases:</b> OPEX, CMV, CMO e custos fixos sobre a receita líquida; royalties, deduções, entregas e EBITDA sobre o faturamento bruto — cada um comparado com a meta da mesma base.</span>
     </div>
 
 
@@ -2379,9 +2380,9 @@
     lop:      {label:'EBITDA (resultado operacional)', color:'var(--accent)', base:'fb', dir:'high', g:8, y:0}
   };
   // deduções da receita da DRE gerencial (impostos, cancelamentos, descontos, comissões e taxas iFood…) — meta provisória ≤10% / atenção até 13%
-  SIG.ded = {label:'Deduções da receita', color:'var(--cat-4)', base:'fli', dir:'low', g:10, y:13};
+  SIG.ded = {label:'Deduções da receita', color:'var(--cat-4)', base:'fb', dir:'low', g:10, y:13};
   // despesas com entregas da DRE gerencial (TAON + iFood) — devoluções ficam nas deduções
-  SIG.ent = {label:'Despesas com entregas', color:'var(--cat-6)', base:'fli', dir:'low', g:2, y:3};
+  SIG.ent = {label:'Despesas com entregas', color:'var(--cat-6)', base:'fb', dir:'low', g:2, y:3};
   var SIG_ORDER = ['opex','roy','ded','ent','lop'];   // CMV, CMO e custos fixos ficam nos cartões do topo
   // linha da DRE Voxel -> indicador (a 1ª linha de cada indicador recebe o sinal; as demais, só a cor)
   var SIG_LINES = {
@@ -2431,18 +2432,20 @@
     var g = function(l){ return R.leaf[l]||0; }, v = R.v;
     var opex = -DG_OPEX.reduce(function(acc, l){ return acc + g(l); }, 0);
     // tudo sobre a receita líquida (igual à coluna % da DRE gerencial); royalties seguem sobre o faturamento bruto (contrato de 10,5%)
-    return {rbB:v.rb, fb:v.rl, fli:v.rl, flt:v.rl, cmv:-(v.cmv||0), cmo:-((v.cmof||0)+(v.cmov||0)), opex:opex, cfFix:-((v.ocu||0)+(v.ope||0)+(v.adm||0)) - opex,
-      roy:v.rb ? -(v.roy||0)*v.rl/v.rb : 0, ded:-(v.ded||0), ent:-(v.ent||0), desc:-g('Descontos'), cartao:-g('Taxas de Cartão e Apps de Delivery'), entregas:-(v.ent||0) - g('Devoluções de Vendas'), mc:v.mc, lop:v.ebitda};
+    return {rbB:v.rb, rlL:v.rl, fb:v.rb, fli:v.rl, flt:v.rl, cmv:-(v.cmv||0), cmo:-((v.cmof||0)+(v.cmov||0)), opex:opex, cfFix:-((v.ocu||0)+(v.ope||0)+(v.adm||0)) - opex,
+      roy:-(v.roy||0), ded:-(v.ded||0), ent:-(v.ent||0), desc:-g('Descontos'), cartao:-g('Taxas de Cartão e Apps de Delivery'), entregas:-(v.ent||0) - g('Devoluções de Vendas'), mc:v.mc, lop:v.ebitda};
   }
   // % sobre o faturamento bruto (clique no botão do card; o card em si continua levando à DRE gerencial)
   var sigBrutoOpen = {};
+  function sigBaseTxt(k){ return SIG[k] && SIG[k].base==='fb' ? 'faturamento bruto' : 'receita líquida'; }
   function sigBrutoHtml(k, p, M, MP){
-    if(p===null || k==='roy' || !M || !(M.rbB>0)) return '';
-    var pb = p*M.fli/M.rbB, ppb = null;
-    if(MP && MP.rbB>0){ var pp = sigPct(k, MP); if(pp!==null) ppb = pp*MP.fli/MP.rbB; }
-    var on = !!sigBrutoOpen[k];
-    return '<button type="button" class="sig-bt'+(on?' on':'')+'" data-sigb="'+k+'" aria-expanded="'+on+'" title="Mostrar o % sobre o faturamento bruto">'+(on ? '▾ ' : '▸ ')+'% s/ bruto</button>'+
-      (on ? '<div class="sig-bruto tabular"><b>'+fmt1.format(pb)+'%</b> do faturamento bruto'+(ppb!==null ? ' <span>· '+(VOXEL_MONTH_LABELS[voxelActiveMonth-1]||'').slice(0,3).toLowerCase()+' '+fmt1.format(ppb)+'%</span>' : '')+'</div>' : '');
+    if(p===null || !M || !(M.rbB>0) || !(M.rlL>0)) return '';
+    var noBruto = SIG[k].base==='fb', f = function(X){ return noBruto ? X.rbB/X.rlL : X.rlL/X.rbB; };
+    var pb = p*f(M), ppb = null;
+    if(MP && MP.rbB>0 && MP.rlL>0){ var pp = sigPct(k, MP); if(pp!==null) ppb = pp*f(MP); }
+    var on = !!sigBrutoOpen[k], outra = noBruto ? 'receita líquida' : 'faturamento bruto';
+    return '<button type="button" class="sig-bt'+(on?' on':'')+'" data-sigb="'+k+'" aria-expanded="'+on+'" title="Mostrar o % sobre a '+outra+' (sem meta nessa base)">'+(on ? '▾ ' : '▸ ')+'% s/ '+(noBruto ? 'líquida' : 'bruto')+'</button>'+
+      (on ? '<div class="sig-bruto tabular"><b>'+fmt1.format(pb)+'%</b> '+(noBruto ? 'da receita líquida' : 'do faturamento bruto')+' · só informativo'+(ppb!==null ? ' <span>· '+(VOXEL_MONTH_LABELS[voxelActiveMonth-1]||'').slice(0,3).toLowerCase()+' '+fmt1.format(ppb)+'%</span>' : '')+'</div>' : '');
   }
   document.addEventListener('click', function(e){ var b = e.target.closest && e.target.closest('[data-sigb]'); if(!b) return; e.stopPropagation(); var k = b.getAttribute('data-sigb'); sigBrutoOpen[k] = !sigBrutoOpen[k]; renderSigPanel(); var nb = document.querySelector('[data-sigb="'+k+'"]'); if(nb) nb.focus(); }, true);
   function renderSigPanel(){
@@ -2471,13 +2474,13 @@
             '<span class="mark" style="left:calc('+pos(d.g)+' - 1px)"></span></div>'+
           '<div class="sig-rm"><span>Meta</span><b>'+(d.dir==='low'?'≤ ':'≥ ')+fmt1.format(d.g)+'%</b></div>'+
           '<span class="sig-gap '+cls+'"><i class="sig-dot '+cls+'"></i>'+gapTxt+'</span>'+
-          '<div class="sig-foot" style="margin-top:4px;">'+rsTxt+' · '+(k==='roy' ? 'faturamento bruto' : 'receita líquida gerencial')+'</div>';
+          '<div class="sig-foot" style="margin-top:4px;">'+rsTxt+' · '+sigBaseTxt(k)+'</div>';
       } else {
         body = '<div class="sig-foot"><i class="sig-dot sig-na"></i>sem dados · '+sigMeta(k)+'</div>';
       }
       html += '<div class="sig-card" style="--sig-c:'+d.color+'" data-dgo="'+k+'" role="button" tabindex="0" title="'+d.label+(p!==null ? ': '+fmt1.format(p)+'% · '+(rsTxt||'') : '')+' — clique para ver o detalhamento na DRE gerencial">'+
         '<div class="sig-name"><span class="cat-dot" style="background:'+d.color+'"></span>'+d.label+'</div>'+
-        '<div class="sig-val tabular">'+(p===null?'—':fmt1.format(p)+'%')+' <span style="font-size:11.5px;font-weight:600;color:var(--ink-muted);">realizado</span></div>'+sigBrutoHtml(k, p, M, MP)+
+        '<div class="sig-val tabular">'+(p===null?'—':fmt1.format(p)+'%')+' <span style="font-size:11.5px;font-weight:600;color:var(--ink-muted);">realizado</span></div>'+'<div class="sig-base">% s/ '+sigBaseTxt(k)+' · meta na mesma base</div>'+sigBrutoHtml(k, p, M, MP)+
         (function(){ if(!M0 || M0===M || p===null) return ''; var p0 = sigPct(k, M0); return (p0===null || Math.abs(p0-p)<0.05) ? '' : estNote(fmt1.format(p0)+'%'); })()+
         (MP && p!==null ? (function(){ var pp = sigPct(k, MP); return pp===null ? '' : vsPrevHtml(p, pp, d.dir, 'pp', m, fmt1.format(pp)+'%'+''); })() : '')+body+'<div class="go-hint">Ver na DRE gerencial ↓</div></div>';
     });
@@ -3078,7 +3081,7 @@
       var p = sigPct(c.k, SM), cl = sigClass(c.k, p), col = SIG[c.k] ? SIG[c.k].color : 'var(--ink-muted)';
       html += '<div class="bn" data-dgo="'+c.k+'" role="button" tabindex="0" title="Ver '+c.label+' na DRE gerencial"><div class="bn-label"><span class="swatch" style="background:'+col+'"></span>'+c.label+'</div>'+
         '<div class="bn-value tabular">R$ '+fmt2.format(per)+'</div>'+bnVs(per, perP, true)+
-        (p!==null ? '<span class="sig-pill '+cl+'" title="Indicador do sinaleiro, sobre '+(c.k==='roy' ? 'o faturamento bruto' : 'a receita líquida gerencial')+'"><i class="sig-dot '+cl+'"></i><span class="tabular">'+fmt1.format(p)+'%</span><span class="sig-meta">meta ≤'+fmt1.format(SIG[c.k].g)+'%</span></span>' : '')+
+        (p!==null ? '<span class="sig-pill '+cl+'" title="Indicador do sinaleiro: realizado e meta sobre a '+sigBaseTxt(c.k)+'"><i class="sig-dot '+cl+'"></i><span class="tabular">'+fmt1.format(p)+'%</span><span class="sig-meta">s/ '+(SIG[c.k].base==='fb' ? 'bruto' : 'líquida')+' · meta ≤'+fmt1.format(SIG[c.k].g)+'%</span></span>' : '')+
         '<div class="bn-sub tabular">'+brl0(-v)+' no período</div></div>';
     });
     var perRes = R.ebitda/R.rb*100, perResP = RP ? RP.ebitda/RP.rb*100 : null, rc = sigClass('lop', sigPct('lop', SM));
@@ -3086,7 +3089,7 @@
       '<span class="sig-pill '+rc+'"><i class="sig-dot '+rc+'"></i><span class="tabular">'+pct(perRes)+'</span><span class="sig-meta">do faturamento bruto · meta ≥'+fmt1.format(SIG.lop.g)+'%</span></span>'+bnVs(perRes, perResP, false)+'</div>'+
       '<div class="bn-value tabular" style="color:'+(perRes<0?'var(--critical)':'var(--good)')+'">'+(perRes<0?'-':'+')+'R$ '+fmt2.format(Math.abs(perRes))+' <span class="bn-sub" style="font-weight:600;">a cada R$ 100</span></div></div>';
     grid.innerHTML = html;
-    foot.textContent = 'As seis fatias + o EBITDA somam R$ 100. Selo colorido = indicador do sinaleiro gerencial e sua meta.';
+    foot.textContent = 'Atenção às bases: os valores "a cada R$ 100" são sobre o faturamento bruto. O selo colorido repete o indicador do sinaleiro na base em que a meta foi definida — CMV, CMO e custos fixos sobre a receita líquida; deduções, royalties, entregas e EBITDA sobre o bruto. Por isso o % do selo pode diferir do valor a cada R$ 100.';
   }
 
   // better: 'high' = maior é melhor, 'low' = menor é melhor, null = neutro

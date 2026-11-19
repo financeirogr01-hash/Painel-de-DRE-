@@ -960,6 +960,13 @@
   .vx-mini b.up, .vx-b b.up, .vx-cmp-t .up{color:var(--good);} .vx-mini b.dn, .vx-b b.dn, .vx-cmp-t .dn{color:var(--critical);}
   .vx-brands{display:flex; flex-wrap:wrap; gap:6px 12px; font-size:13px; font-weight:700;}
   .vx-b i{font-style:normal; margin-right:3px;}
+.vx-open{display:flex; align-items:center; justify-content:space-between; gap:12px; padding:16px 18px; cursor:pointer; border-radius:16px; border:1px solid rgba(190,170,255,.3); transition:transform .12s ease, border-color .12s ease;}
+  .vx-open:hover{transform:translateY(-1px); border-color:var(--accent);}
+  .vx-open:focus-visible{outline:2px solid var(--accent); outline-offset:2px;}
+  .vx-open-t{font-size:17px; font-weight:800;}
+  .vx-open-s{font-size:12.5px; color:var(--ink-muted); margin-top:3px;}
+  .vx-open-a{font-size:18px; color:var(--ink-muted);}
+  #vxBody{margin-top:12px;}
 .dg-fbar{margin:22px 0 0; padding:10px 14px; border:1px solid var(--border); border-radius:14px; background:var(--surface);}
   .dg-cmp-wrap{margin:14px 0 0;}
   #dgCmp .cmp-bt{font:inherit; color:inherit; background:transparent; border:1px solid transparent; border-radius:999px; padding:3px 9px; cursor:pointer;}
@@ -1131,6 +1138,7 @@
       <a href="#resumo">Resumo da rede</a>
       <a href="#comparativo">Comparativo</a>
       <a href="#semanal">DRE semanal</a>
+      <a href="#voxel">DRE Voxel</a>
       <a href="#classificacao">Classificação</a>
       <a href="#lojas">As 17 lojas</a>
       <a href="#criticos">Pontos críticos</a>
@@ -1192,51 +1200,6 @@
       </div>
     </div>
 
-
-    <div class="section-head" style="margin-top:32px;">
-      <h3 style="font-size:17px; font-weight:800;">DRE Voxel — Regime de Competência</h3>
-    </div>
-    <div class="chart-note" style="margin:-4px 0 8px;">Indicadores calculados com a DRE da Voxel (histórico) — não incluem os ajustes da DRE gerencial.</div>
-    <div class="grid kpi-row vx-kpis" id="vxKpis"></div>
-    <div class="loss-panel" id="lossPanel" hidden></div>
-    <div class="pctop-panel" id="pcTopPanel" hidden></div>
-
-    <div id="voxelMonthTabs" hidden></div><!-- mês: filtro do topo -->
-    <div class="vx-bar" id="vxBar" style="grid-template-columns:1.25fr 1fr;"></div>
-
-    <div class="grid kpi-row voxel-kpi-row" id="voxelKpis" style="display:none;" aria-hidden="true"></div><!-- cards de KPI da DRE Voxel retirados do painel (a pedido) -->
-
-    <div id="voxelTabs" hidden></div><!-- lojas: cartão "Visão" -->
-
-    <div class="dre-tools">
-      <span class="dre-tools-hint">Em cada mês: <b>valor em R$</b> · <b>% do faturamento</b> (bruto do mês) · <b>vs. mês anterior</b> — nas margens: margem % e <b>Δ margem (p.p.)</b>. *Setembro x agosto no CMV e nos resultados: comparação sem o estoque inicial e final (agosto não tem contagem). Seta = aumento/redução; cor = melhora (verde) ou piora (vermelho). Clique num plano de contas para ver o que o compõe.</span>
-      <button type="button" class="dre-tool-btn" id="dreExpandAll">Expandir tudo</button>
-      <button type="button" class="dre-tool-btn" id="dreCollapseAll">Recolher tudo</button>
-    </div>
-    <div class="table-scroll dre-window" style="margin-top:8px;">
-      <table class="voxel-table" id="voxelTable">
-        <thead>
-          <tr>
-            <th><span id="voxelHeadCtx" class="dre-ctx">Plano de contas</span></th>
-            <th class="num" title="Valor em R$ · % do faturamento bruto do mês · variação vs. mês anterior">Jan<span class="thsub">R$ · % do fat. · vs. mês ant.</span></th>
-            <th class="num" title="Valor em R$ · % do faturamento bruto do mês · variação vs. mês anterior">Fev<span class="thsub">R$ · % do fat. · vs. mês ant.</span></th>
-            <th class="num" title="Valor em R$ · % do faturamento bruto do mês · variação vs. mês anterior">Mar<span class="thsub">R$ · % do fat. · vs. mês ant.</span></th>
-            <th class="num" title="Valor em R$ · % do faturamento bruto do mês · variação vs. mês anterior">Abr<span class="thsub">R$ · % do fat. · vs. mês ant.</span></th>
-            <th class="num" title="Valor em R$ · % do faturamento bruto do mês · variação vs. mês anterior">Mai<span class="thsub">R$ · % do fat. · vs. mês ant.</span></th>
-            <th class="num" title="Valor em R$ · % do faturamento bruto do mês · variação vs. mês anterior">Jun<span class="thsub">R$ · % do fat. · vs. mês ant.</span></th>
-            <th class="num" title="Valor em R$ · % do faturamento bruto do mês · variação vs. mês anterior">Jul<span class="thsub">R$ · % do fat. · vs. mês ant.</span></th>
-            <th class="num" title="Valor em R$ · % do faturamento bruto do mês · variação vs. mês anterior">Ago<span class="thsub">R$ · % do fat. · vs. mês ant.</span></th>
-            <th class="num" title="Valor em R$ · % do faturamento bruto do mês · variação vs. mês anterior">Set<span class="thsub">R$ · % do fat. · vs. mês ant.</span></th>
-            <th class="num" title="Valor em R$ · % do faturamento bruto do mês · variação vs. mês anterior">Out<span class="thsub">R$ · % do fat. · vs. mês ant.</span></th>
-            <th class="num" title="Soma do período · % sobre o faturamento bruto acumulado">Acumulado<span class="thsub">R$ · % do fat.</span></th>
-            <th class="num avg-col" id="voxelAvgHeader" title="Acumulado ÷ número de meses com dados">Média mensal</th>
-            <th class="num" id="voxelPctHeader">% do faturamento</th>
-            <th class="num sig-cell" id="voxelSigHeader" style="width:70px;">Sinal</th>
-          </tr>
-        </thead>
-        <tbody></tbody>
-      </table>
-    </div>
 
     <div id="fnBloco" hidden><!-- faturamento necessário por unidade e plano de redução: retirados do painel (a pedido) -->
     <div class="fn-head">
@@ -1338,6 +1301,57 @@
     </div>
     <div class="table-scroll dre-window" style="margin-top:8px;"><table class="voxel-table sm-table" id="smTable"><thead></thead><tbody></tbody></table></div>
     <p class="cl-note" style="margin-top:10px;"><b>Despesas pela data real de cada lançamento</b> — é o que efetivamente saiu em cada semana (salários, aluguel, royalties e impostos aparecem na semana em que foram lançados; CMV pela data da compra). Na semana 28/09–04/10, os dias 01–04/10 vêm dos lançamentos de outubro. <b>Faturamento, descontos e cartão/apps</b> pelo dia real das vendas (relatório de cupons do Cloudfy); nos dias 01–04/10, pela média diária de setembro até o relatório de outubro. Provisões da base Voxel (como 13º) ficam por dia. O <b>ajuste de estoque</b> é mensal e aparece só na coluna Setembro.</p>
+    </div>
+  </section>
+
+  <section id="voxel">
+    <div class="vx-open card" id="vxOpenCard" role="button" tabindex="0" aria-expanded="true" aria-controls="vxBody">
+      <div><div class="vx-open-t">DRE Voxel — Regime de Competência</div><div class="vx-open-s">Histórico da Voxel por loja e mês (não inclui os ajustes da DRE gerencial) · clique para recolher ou abrir</div></div>
+      <span class="vx-open-a" id="vxOpenArrow">▴</span>
+    </div>
+    <div id="vxBody">
+    <div class="chart-note" style="margin:-4px 0 8px;">Indicadores calculados com a DRE da Voxel (histórico) — não incluem os ajustes da DRE gerencial.</div>
+    <div class="grid kpi-row vx-kpis" id="vxKpis"></div>
+    <div class="loss-panel" id="lossPanel" hidden></div>
+    <div class="pctop-panel" id="pcTopPanel" hidden></div>
+
+    <div id="voxelMonthTabs" hidden></div><!-- mês: filtro do topo -->
+    <div class="vx-bar" id="vxBar" style="grid-template-columns:1.25fr 1fr;"></div>
+
+    <div class="grid kpi-row voxel-kpi-row" id="voxelKpis" style="display:none;" aria-hidden="true"></div><!-- cards de KPI da DRE Voxel retirados do painel (a pedido) -->
+
+    <div id="voxelTabs" hidden></div><!-- lojas: cartão "Visão" -->
+
+    <div class="dre-tools">
+      <span class="dre-tools-hint">Em cada mês: <b>valor em R$</b> · <b>% do faturamento</b> (bruto do mês) · <b>vs. mês anterior</b> — nas margens: margem % e <b>Δ margem (p.p.)</b>. *Setembro x agosto no CMV e nos resultados: comparação sem o estoque inicial e final (agosto não tem contagem). Seta = aumento/redução; cor = melhora (verde) ou piora (vermelho). Clique num plano de contas para ver o que o compõe.</span>
+      <button type="button" class="dre-tool-btn" id="dreExpandAll">Expandir tudo</button>
+      <button type="button" class="dre-tool-btn" id="dreCollapseAll">Recolher tudo</button>
+    </div>
+    <div class="table-scroll dre-window" style="margin-top:8px;">
+      <table class="voxel-table" id="voxelTable">
+        <thead>
+          <tr>
+            <th><span id="voxelHeadCtx" class="dre-ctx">Plano de contas</span></th>
+            <th class="num" title="Valor em R$ · % do faturamento bruto do mês · variação vs. mês anterior">Jan<span class="thsub">R$ · % do fat. · vs. mês ant.</span></th>
+            <th class="num" title="Valor em R$ · % do faturamento bruto do mês · variação vs. mês anterior">Fev<span class="thsub">R$ · % do fat. · vs. mês ant.</span></th>
+            <th class="num" title="Valor em R$ · % do faturamento bruto do mês · variação vs. mês anterior">Mar<span class="thsub">R$ · % do fat. · vs. mês ant.</span></th>
+            <th class="num" title="Valor em R$ · % do faturamento bruto do mês · variação vs. mês anterior">Abr<span class="thsub">R$ · % do fat. · vs. mês ant.</span></th>
+            <th class="num" title="Valor em R$ · % do faturamento bruto do mês · variação vs. mês anterior">Mai<span class="thsub">R$ · % do fat. · vs. mês ant.</span></th>
+            <th class="num" title="Valor em R$ · % do faturamento bruto do mês · variação vs. mês anterior">Jun<span class="thsub">R$ · % do fat. · vs. mês ant.</span></th>
+            <th class="num" title="Valor em R$ · % do faturamento bruto do mês · variação vs. mês anterior">Jul<span class="thsub">R$ · % do fat. · vs. mês ant.</span></th>
+            <th class="num" title="Valor em R$ · % do faturamento bruto do mês · variação vs. mês anterior">Ago<span class="thsub">R$ · % do fat. · vs. mês ant.</span></th>
+            <th class="num" title="Valor em R$ · % do faturamento bruto do mês · variação vs. mês anterior">Set<span class="thsub">R$ · % do fat. · vs. mês ant.</span></th>
+            <th class="num" title="Valor em R$ · % do faturamento bruto do mês · variação vs. mês anterior">Out<span class="thsub">R$ · % do fat. · vs. mês ant.</span></th>
+            <th class="num" title="Soma do período · % sobre o faturamento bruto acumulado">Acumulado<span class="thsub">R$ · % do fat.</span></th>
+            <th class="num avg-col" id="voxelAvgHeader" title="Acumulado ÷ número de meses com dados">Média mensal</th>
+            <th class="num" id="voxelPctHeader">% do faturamento</th>
+            <th class="num sig-cell" id="voxelSigHeader" style="width:70px;">Sinal</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+
     </div>
   </section>
 
@@ -1588,7 +1602,7 @@
     navLinks.forEach(function(a){ a.classList.toggle('active', a.getAttribute('href') === '#'+id); });
     // filtros de mês/loja só valem para o resumo e o comparativo
     var sb = document.getElementById('stickyBar');
-    if(sb){ if(id==='resumo' || id==='comparativo' || id==='lojas' || id==='semanal') sb.removeAttribute('data-nofilter'); else sb.setAttribute('data-nofilter',''); }
+    if(sb){ if(id==='resumo' || id==='comparativo' || id==='lojas' || id==='semanal' || id==='voxel') sb.removeAttribute('data-nofilter'); else sb.setAttribute('data-nofilter',''); }
     if(opts.scroll!==false){ window.scrollTo({top:0, behavior:'instant'}); }
   }
 
@@ -5241,7 +5255,11 @@
     mc:       ['Margem de Contribuição'],
     lop:      ['Lucro/Prejuízo Operacional']
   };
+  function vxAbrir(on){ var b = document.getElementById('vxBody'), c = document.getElementById('vxOpenCard'), ar = document.getElementById('vxOpenArrow'); if(!b) return; b.hidden = !on; if(c) c.setAttribute('aria-expanded', on); if(ar) ar.textContent = on ? '▴' : '▾'; }
+  document.addEventListener('click', function(e){ if(e.target.closest && e.target.closest('#vxOpenCard')){ var b = document.getElementById('vxBody'); vxAbrir(b.hidden); } });
+  document.addEventListener('keydown', function(e){ if((e.key==='Enter' || e.key===' ') && e.target.id==='vxOpenCard'){ e.preventDefault(); e.target.click(); } });
   function goToDreLine(k){
+    vxAbrir(true);
     var lines = GO_TARGETS[k]; if(!lines) return;
     var tbody = document.querySelector('#voxelTable tbody');
     var rows = [];

@@ -4134,7 +4134,7 @@
   DG_POR_LOJA['Promoção bancada pelo iFood'] = {'Biggs 07 e Açaí':-66162.29,'Biggs 04':-52731.72,'Biggs 05':-46363.09,'Biggs 01':-41827.27,'Isaías 01':-30048.63,'Biggs 12':-34880.98,'Biggs 11':-28207.66,'Biggs 02':-24780.71,'Biggs 06':-23271.93,'Isaías 02':-18002.21,'Biggs 03':-20685.99,'Biggs 13':-20061.53,'Robs':-16922.78,'Biggs 10':-13394.12,'Isaías 03':-6364.47,'Biggs 08 e 09':-6207.45,'Mapoli':0};
   DG_POR_LOJA['Ressarcimento de Pedido Cancelado'] = {'Biggs 07 e Açaí':-5177.76,'Biggs 04':-1609.89,'Biggs 05':-2852.39,'Biggs 01':-2303.39,'Isaías 01':-1385.78,'Biggs 12':-2410.34,'Biggs 11':471.5,'Biggs 02':-1297.74,'Biggs 06':-730.77,'Isaías 02':-1517.81,'Biggs 03':-1719.45,'Biggs 13':-662.95,'Robs':-650.24,'Biggs 10':936.16,'Isaías 03':-309.22,'Biggs 08 e 09':-1365.74,'Mapoli':0};
   // linhas de outubro que ainda usam a Voxel (provisório, até chegar o valor gerencial)
-  var DG_PROV = {'Manutenção Predial e de Equipamentos':1,'Endomarketing':1,'Pacote Anúncios Ifood':1};
+  var DG_PROV = {};   // sem sinalização de provisório na DRE gerencial (a pedido)
   function dgProv(scope, line, m){ return DG_PROV[line] && (m===DG_IFOOD_MES || (m===-1 && VOXEL_ACC_FIM>=DG_IFOOD_MES)) && !dgIfoodOn(scope, line, m) && !dgZ(dgLeaf(scope, line, m, false)); }
   // cancelamentos iFood de outubro por loja (relatório: soma −R$ 30.782,01), ajustados proporcionalmente ao total de −R$ 21.367,84
   DG_POR_LOJA['Diferença entre as fontes iFood'] = {'Biggs 07 e Açaí':3540.48,'Biggs 04':13481.8,'Biggs 05':757.06,'Biggs 01':9005.91,'Isaías 01':-7722.67,'Biggs 12':2599.29,'Biggs 11':1988.75,'Biggs 02':-822.91,'Biggs 06':3466.32,'Isaías 02':-5327.81,'Biggs 03':2311.39,'Biggs 13':1373.93,'Robs':1909.18,'Biggs 10':-2028.45,'Isaías 03':-1989.64,'Biggs 08 e 09':-1174.79,'Mapoli':0};
@@ -4410,7 +4410,6 @@
     if(!dgZ(cur.leaf['Pró-Labore e Despesas de Sócios'])) pend.push('Pró-labore e despesas de sócios '+dgR(cur.leaf['Pró-Labore e Despesas de Sócios'])+': conta agrupada — classificar antes de tratar todo o valor como CMO.');
     if(!dgZ(cur.leaf['Despesas a Identificar'])) pend.push('Despesas a identificar '+dgR(cur.leaf['Despesas a Identificar'])+': sem classificação na origem.');
     pend.push('Contas agrupadas na origem: taxas de cartão e apps; freelancers e terceirizados; segurança, telefonia e internet.');
-    pend.push('Entrega TAON = contas de entrega da Voxel; entrega iFood só no consolidado de outubro (relatório de repasses). IPTU e seguros do imóvel sem conta própria.');
     var semDado = []; DG.forEach(function(d){ if(d.c) d.c.forEach(function(c){ if(cur.leaf[c[0]]===null) semDado.push(c[0]); }); });
     if(semDado.length) pend.push('Contas sem dado na origem para este filtro: '+semDado.join(', ')+'.');
     if(comDados.length<grupo.length) pend.push('Cobertura incompleta: '+(grupo.length-comDados.length)+' loja(s) sem DRE no período.');

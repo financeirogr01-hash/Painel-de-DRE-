@@ -517,6 +517,26 @@
   .mand-det h4{font-size:14px; margin:0 0 6px;}
   .mand-form{font-size:12px; color:var(--ink-2); background:color-mix(in srgb, var(--ink) 5%, transparent); border-radius:10px; padding:8px 10px; margin:8px 0; line-height:1.5;}
   @media (max-width:420px){ .mand-grid{grid-template-columns:1fr;} .mand-body{grid-template-columns:1fr 100px 1fr; grid-template-rows:auto 100px auto;} .mand-ctr{width:100px; height:100px;} .mand-body::before{width:206px; height:206px;} }
+  .lv-card{margin-top:10px;}
+  .lv-sum{display:flex; flex-wrap:wrap; gap:8px; margin:6px 0 12px;}
+  .lv-sum span{font-size:12.5px; font-weight:700; border-radius:999px; padding:4px 12px;}
+  .lv-sum .neg{background:color-mix(in srgb, var(--critical) 15%, transparent); color:var(--critical);}
+  .lv-sum .pos{background:color-mix(in srgb, var(--good) 15%, transparent); color:var(--good);}
+  .lv-head{display:grid; grid-template-columns:minmax(96px,150px) 1fr 1fr; font-size:11px; font-weight:700; color:var(--ink-muted); text-transform:uppercase; letter-spacing:.04em; margin-bottom:4px;}
+  .lv-head span:nth-child(2){text-align:right; padding-right:8px;} .lv-head span:nth-child(3){padding-left:8px;}
+  .lv-row{display:grid; grid-template-columns:minmax(96px,150px) 1fr 1fr; align-items:center; min-height:26px;}
+  .lv-row:nth-child(even){background:color-mix(in srgb, var(--ink) 3%, transparent);}
+  .lv-nome{font-size:12.5px; font-weight:700; padding-right:8px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+  .lv-neg, .lv-pos{position:relative; height:26px; display:flex; align-items:center;}
+  .lv-neg{justify-content:flex-end; border-right:2px solid var(--ink-muted);}
+  .lv-bar{height:16px; border-radius:4px; animation:lvGrow .5s ease-out;}
+  .lv-neg .lv-bar{background:var(--critical); border-radius:4px 0 0 4px; transform-origin:right;}
+  .lv-pos .lv-bar{background:var(--good); border-radius:0 4px 4px 0; transform-origin:left;}
+  .lv-val{font-size:11.5px; font-weight:700; white-space:nowrap; padding:0 6px; font-variant-numeric:tabular-nums;}
+  .lv-neg .lv-val{color:var(--critical);} .lv-pos .lv-val{color:var(--good);}
+  @keyframes lvGrow{from{transform:scaleX(0);} to{transform:scaleX(1);}}
+  @media (prefers-reduced-motion: reduce){ .lv-bar{animation:none;} }
+  @media (max-width:560px){ .lv-head, .lv-row{grid-template-columns:84px 1fr 1fr;} .lv-val{font-size:10.5px; padding:0 3px;} }
   [data-dgo]{cursor:pointer; transition:transform .12s ease, border-color .12s ease;}
   [data-dgo]:hover{transform:translateY(-2px);}
   [data-dgo]:hover .go-hint{opacity:1;}
@@ -2823,6 +2843,21 @@
     try { renderResumoVoxelBase(); } finally { voxelData.stores = svS; voxelBiggs13Months = svB; }
   }
   var lossGerOpen = false;
+  function lossVisHtml(L, s, m){
+    var ord = L.slice().sort(function(a, b){ return a.v - b.v; });
+    var neg = ord.filter(function(x){ return x.v<0; }), pos = ord.filter(function(x){ return x.v>=0; });
+    var max = ord.reduce(function(a, x){ return Math.max(a, Math.abs(x.v)); }, 0) || 1;
+    var sN = neg.reduce(function(a, x){ return a + x.v; }, 0), sP = pos.reduce(function(a, x){ return a + x.v; }, 0);
+    var h = '<div class="card lv-card"><div class="chart-title">EBITDA gerencial por loja · '+scopeName(s)+' · '+periodName(m)+'</div>'+
+      '<div class="lv-sum"><span class="neg">🔴 '+neg.length+' no prejuízo · '+brl0(sN)+'</span><span class="pos">🟢 '+pos.length+' no positivo · '+brl0(sP)+'</span></div>'+
+      '<div class="lv-head"><span>Loja</span><span>Prejuízo</span><span>Lucro</span></div>';
+    ord.forEach(function(x){
+      var w = (Math.abs(x.v)/max).toFixed(4), val = '<span class="lv-val">'+brl0(x.v)+'</span>', bar = '<span class="lv-bar" style="width:calc((100% - 84px) * '+w+'); min-width:3px; flex:none;"></span>';
+      h += '<div class="lv-row" title="'+clEsc(x.t)+': EBITDA '+brl0(x.v)+'"><span class="lv-nome">'+clEsc(x.t)+'</span>'+
+        '<span class="lv-neg">'+(x.v<0 ? val+bar : '')+'</span><span class="lv-pos">'+(x.v>=0 ? bar+val : '')+'</span></div>';
+    });
+    return h + '<p class="chart-note" style="margin:8px 0 0;">Do maior prejuízo ao maior lucro. Barras proporcionais ao EBITDA da DRE gerencial de cada loja.</p></div>';
+  }
   function renderKpiGer(s, m){
     var box = document.getElementById('resumoKpis'); if(!box) return;
     var cur = dgCalc(s, m, false);
@@ -2843,12 +2878,12 @@
       var negP = temPrev ? scopeStores(s).filter(function(t){ return scopeHasData(t, m-1); }).map(function(t){ return dgCalc(t, m-1, prevNoEst(m)).v.ebitda; }).filter(function(v){ return v!==null && v<0; }).length : null;
       html += kpiCard('Lojas no prejuízo', neg.length+' <span class="kpi-of">/ '+L.length+'</span>', null,
         'EBITDA gerencial por loja'+(negP!==null ? vsPrevHtml(neg.length, negP, 'low', 'n', m, negP+' lojas') : '')+
-        (s==='Consolidado' ? '<div class="kpi-desp" style="font-size:11px;">ajustes lançados só na rede (iFood, contabilidade etc.) não entram por loja</div>' : ''),
+        '',
         '<div class="kpi-hint">'+(lossGerOpen ? 'Ocultar lojas ▴' : 'Ver lojas e resultado ▾')+'</div>').replace('<div class="card kpi">', '<div class="card kpi kpi-click" id="lossCardGer" role="button" tabindex="0" aria-expanded="'+lossGerOpen+'" aria-controls="lossPanelGer">');
       var pn = document.getElementById('lossPanelGer');
       if(pn){
         if(lossGerOpen){ var ord = L.slice().sort(function(a, b){ return a.v - b.v; });
-          pn.innerHTML = '<div class="card" style="margin-top:10px;"><div class="chart-title">EBITDA gerencial por loja · '+periodName(m)+'</div><div class="table-scroll"><table class="dg-table" style="min-width:0;"><tbody>'+ord.map(function(x){ return '<tr><td>'+clEsc(x.t)+'</td><td class="num tabular" style="color:'+(x.v<0?'var(--critical)':'var(--good)')+'">'+dgR(x.v)+'</td></tr>'; }).join('')+'</tbody></table></div></div>';
+          pn.innerHTML = lossVisHtml(L, s, m);
           pn.hidden = false; }
         else { pn.hidden = true; pn.innerHTML = ''; }
       }
@@ -2869,7 +2904,7 @@
     }
     box.innerHTML = html;
   }
-  document.addEventListener('click', function(e){ if(e.target.closest && e.target.closest('#lossCardGer')){ lossGerOpen = !lossGerOpen; renderKpiGer(fState.scope, fState.month); } });
+  document.addEventListener('click', function(e){ if(e.target.closest && e.target.closest('#lossCardGer')){ lossGerOpen = !lossGerOpen; renderKpiGer(fState.scope, fState.month); var lp = document.getElementById('lossPanelGer'); if(lossGerOpen && lp && !lp.hidden) lp.scrollIntoView({behavior:'smooth', block:'nearest'}); } });
   var pcTopOpen = false;
   document.addEventListener('click', function(e){ if(e.target.closest('#pcTopCard')){ pcTopOpen = !pcTopOpen; renderResumo(); } });
   document.addEventListener('keydown', function(e){ if((e.key==='Enter' || e.key===' ') && e.target.id==='pcTopCard'){ e.preventDefault(); pcTopOpen = !pcTopOpen; renderResumo(); var c = document.getElementById('pcTopCard'); if(c) c.focus(); } });

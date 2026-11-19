@@ -681,7 +681,8 @@
   .rd-diff{margin:10px 0; padding:10px 12px; border:1px solid var(--warning); border-radius:10px; background:color-mix(in srgb, var(--warning) 10%, var(--surface)); font-size:12.5px;}
   .rd-msg{font-size:12px; font-weight:700; margin-left:4px;}
   /* ---------- sinaleiro compacto: uma única fileira ---------- */
-  .sig-panel{display:grid; grid-template-columns:repeat(8, minmax(112px, 1fr)); gap:6px; overflow-x:auto; padding-bottom:4px; scrollbar-width:thin;}
+  .sig-panel{display:flex; flex-wrap:wrap; justify-content:center; gap:8px; padding-bottom:4px;}
+  .sig-panel .sig-card{flex:0 1 200px; min-width:150px;}
   .sig-panel .sig-card{flex:none; padding:8px 9px; border-radius:10px; border-left-width:3px;}
   .sig-panel .sig-card:hover{transform:none;}
   .sig-card .sig-name{font-size:11px; gap:5px; line-height:1.2; min-height:2.4em; align-items:flex-start;}
@@ -1150,7 +1151,7 @@
 
     <div class="hero-wrap"><div class="hero-fat" id="heroFat"></div><div class="grid kpi-row" id="resumoKpis"></div></div>
     <div class="loss-panel" id="lossPanelGer" hidden></div>
-    <div class="chart-title" style="margin-top:18px;" id="sigTitle">Sinaleiro da DRE</div>
+    <div class="chart-title" style="margin-top:18px; text-align:center;" id="sigTitle">Sinaleiro da DRE</div>
     <div class="sig-panel" id="sigPanel"></div>
     <div class="sig-legend" style="justify-content:center;">
       <span><i class="sig-dot sig-good"></i>Dentro da meta</span>

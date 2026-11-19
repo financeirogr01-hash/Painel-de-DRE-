@@ -2349,7 +2349,7 @@
   SIG.ded = {label:'Deduções da receita', color:'var(--cat-4)', base:'fli', dir:'low', g:10, y:13};
   // despesas com entregas da DRE gerencial (TAON + iFood) — devoluções ficam nas deduções
   SIG.ent = {label:'Despesas com entregas', color:'var(--cat-6)', base:'fli', dir:'low', g:2, y:3};
-  var SIG_ORDER = ['cmv','cmo','cf','opex','roy','ded','ent','lop'];
+  var SIG_ORDER = ['opex','roy','ded','ent','lop'];   // CMV, CMO e custos fixos ficam nos cartões do topo
   // linha da DRE Voxel -> indicador (a 1ª linha de cada indicador recebe o sinal; as demais, só a cor)
   var SIG_LINES = {
     'CMV - Custo da Mercadoria Vendida':{k:'cmv', sig:true}, 'Insumos':{k:'cmv'}, 'Embalagens':{k:'cmv'}, 'Produtos para Comercialização':{k:'cmv'},

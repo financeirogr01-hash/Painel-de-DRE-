@@ -687,7 +687,10 @@
   .rd-msg{font-size:12px; font-weight:700; margin-left:4px;}
   /* ---------- sinaleiro compacto: uma única fileira ---------- */
   .sig-panel{display:flex; flex-wrap:wrap; justify-content:center; gap:8px; padding-bottom:4px;}
-  .sig-panel .sig-card{flex:0 1 200px; min-width:150px;}
+  #sigPanel.sig-panel{flex-wrap:nowrap;}
+  #sigPanel .sig-card{flex:1 1 0; min-width:0; max-width:250px;}
+  .sig-card .sig-base{white-space:normal; overflow-wrap:anywhere;}
+  @media (max-width:760px){ #sigPanel.sig-panel{flex-wrap:wrap;} #sigPanel .sig-card{flex:1 1 150px;} }
   .sig-panel .sig-card{flex:none; padding:8px 9px; border-radius:10px; border-left-width:3px;}
   .sig-panel .sig-card:hover{transform:none;}
   .sig-card .sig-name{font-size:11px; gap:5px; line-height:1.2; min-height:2.4em; align-items:flex-start;}

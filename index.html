@@ -2978,12 +2978,16 @@
       html += kpiCard('Margem de contribuição', brl0(cur.v.mc), null, (mcp===null ? '—' : fmt1.format(mcp)+'% da receita líquida')+(mcpP!==null ? vsPrevHtml(mcp, mcpP, 'high', 'pp', m, fmt1.format(mcpP)+'%') : ''));
     }
     // 3) Prime Cost gerencial = CMV + CMO (fixo + Free) sobre a receita líquida gerencial
-    function pcG(x){ if(!x || !(x.v.rl>0)) return null; var cmv = -(x.v.cmv||0), cmo = -((x.v.cmof||0)+(x.v.cmov||0)); return {cmv:cmv, cmo:cmo, cmvP:cmv/x.v.rl*100, cmoP:cmo/x.v.rl*100, pc:(cmv+cmo)/x.v.rl*100}; }
+    function pcG(x){ if(!x || !(x.v.rb>0) || !(x.v.rl>0)) return null; var cmv = -(x.v.cmv||0), cmo = -((x.v.cmof||0)+(x.v.cmov||0)), b = x.v.rb, l = x.v.rl;
+      return {cmv:cmv, cmo:cmo, cmvP:cmv/b*100, cmoP:cmo/b*100, pc:(cmv+cmo)/b*100, cmvL:cmv/l*100, cmoL:cmo/l*100, pcL:(cmv+cmo)/l*100}; }   // destaque sobre o bruto
     var P = pcG(cur), PP = pcG(prev);
     if(P){
       var cl = pcCls(P.pc), dpc = P.pc - PC_META;
       html += kpiCard((s==='Consolidado' ? 'Prime Cost da rede' : 'Prime Cost')+' (CMV + CMO)', fmt1.format(P.pc)+'%', pcColor(P.pc),
-        'CMV '+fmt1.format(P.cmvP)+'% + CMO '+fmt1.format(P.cmoP)+'% · meta ≤'+PC_META+'% · sobre a receita líquida gerencial'+(PP ? vsPrevHtml(P.pc, PP.pc, 'low', 'pp', m, fmt1.format(PP.pc)+'%') : '')+
+        'CMV '+fmt1.format(P.cmvP)+'% + CMO '+fmt1.format(P.cmoP)+'% · meta ≤'+PC_META+'% · % sobre o faturamento bruto'+
+        '<div class="kpi-alt"><button type="button" class="sig-bt'+(kpiAltOpen.pc?' on':'')+'" data-kalt="pc" aria-expanded="'+!!kpiAltOpen.pc+'">'+(kpiAltOpen.pc?'▾':'▸')+' % s/ receita líquida</button>'+
+        (kpiAltOpen.pc ? '<div class="kpi-alt-v"><b>'+fmt1.format(P.pcL)+'%</b> da receita líquida (CMV '+fmt1.format(P.cmvL)+'% + CMO '+fmt1.format(P.cmoL)+'%)'+(PP ? ' <span>· '+VOXEL_MONTH_LABELS[m-1].slice(0,3).toLowerCase()+' '+fmt1.format(PP.pcL)+'%</span>' : '')+' · só informativo (meta sobre o bruto)</div>' : '')+'</div>'+
+        (PP ? vsPrevHtml(P.pc, PP.pc, 'low', 'pp', m, fmt1.format(PP.pc)+'%') : '')+
         '<div class="kpi-desp">CMV '+brl0(P.cmv)+' · CMO '+brl0(P.cmo)+'</div>',
         '<span class="chip '+(cl==='sig-good'?'good':(cl==='sig-warn'?'warning':'critical'))+'">'+(dpc>0.05 ? '+'+fmt1.format(dpc)+'pp acima da meta' : 'dentro da meta')+'</span>');
     }

@@ -1174,8 +1174,8 @@
 
     <div class="grid two-col" style="margin-top:14px;">
       <div class="card lc-card">
-        <div class="chart-title">Resultado operacional da rede (% do faturamento bruto)</div>
-        <div class="chart-note">Janeiro a outubro de 2026, 16 lojas com histórico completo + Biggs 13 a partir de agosto · setembro pelos lançamentos completos (com estoque), outubro pela DRE Voxel · rótulo mostra quantas fecharam o mês no prejuízo</div>
+        <div class="chart-title">Resultado operacional da rede · EBITDA gerencial (% do faturamento bruto)</div>
+        <div class="chart-note">Janeiro a outubro de 2026 pela DRE gerencial da rede (jan–set = histórico Voxel; out = DRE gerencial) · Biggs 13 a partir de agosto · passe o mouse no ponto para ver quantas lojas fecharam no prejuízo</div>
         <div class="lc-wrap"><svg id="lineChart" class="linechart"></svg></div>
       </div>
       <div class="card">
@@ -3005,34 +3005,59 @@
     {k:'roy', label:'Royalties + taxa de marketing', color:'var(--cat-5)'},
     {k:'entregas', label:'Entregas + devoluções', color:'var(--cat-6)'}
   ];
+  // série mensal da rede pela DRE gerencial (para o gráfico de resultado)
+  function dgTrend(){
+    var out = [];
+    for(var i=0; i<=VOXEL_ACC_FIM; i++){
+      if(!scopeHasData('Consolidado', i)) continue;
+      var v = dgCalc('Consolidado', i, false).v; if(v.rb===null || !(v.rb>0)) continue;
+      var lojas = voxelTabsList.filter(function(t){ return scopeHasData(t, i); });
+      out.push({mes:VOXEL_MONTH_LABELS[i], pct_lucro_operacional:v.ebitda/v.rb*100, lucro_operacional:v.ebitda,
+        n_lojas:lojas.length, n_lojas_prejuizo:lojas.filter(function(t){ var e = dgCalc(t, i, false).v.ebitda; return e!==null && e<0; }).length,
+        pct_cmv:-(v.cmv||0)/v.rb*100, pct_cmo:-((v.cmof||0)+(v.cmov||0))/v.rb*100, pct_ded:-(v.ded||0)/v.rb*100});
+    }
+    return out;
+  }
+  // cada R$ 100 de faturamento bruto, pelos grupos da DRE gerencial (a soma das fatias + EBITDA = R$ 100)
+  var BN_GER = [
+    {k:'cmv', label:'CMV (insumos, embalagens)', g:['cmv']},
+    {k:'cmo', label:'CMO (equipe fixa + Free)', g:['cmof','cmov']},
+    {k:'cf', label:'Custos fixos (ocupação, operacionais, adm.)', g:['ocu','ope','adm']},
+    {k:'ded', label:'Deduções da receita (inclui taxas iFood)', g:['ded']},
+    {k:'roy', label:'Royalties', g:['roy']},
+    {k:'ent', label:'Despesas com entregas', g:['ent']}
+  ];
   function renderBigNumbers(){
-    var s = fState.scope, m = fState.month, M0 = storeMetrics(s, m), M = cmpM(M0, m);
-    document.getElementById('bnTitle').textContent = 'Para onde foi cada R$ 100 faturados ('+periodShort(m)+')';
+    var s = fState.scope, m = fState.month;
+    document.getElementById('bnTitle').textContent = 'Para onde foi cada R$ 100 faturados · DRE gerencial ('+periodShort(m)+')';
     var grid = document.getElementById('bnGrid'), foot = document.getElementById('bnFoot'), note = document.getElementById('bnNote');
-    if(!M){ grid.innerHTML = '<div class="bn">Sem dados neste período.</div>'; foot.textContent = ''; note.textContent = ''; return; }
-    var n = scopeStores(s).filter(function(t){ return storeMetrics(t, m); }).length;
-    note.textContent = (s==='Consolidado' ? 'Rede consolidada, '+n+' lojas' : (isBrandScope(s) ? scopeName(s)+(n>1?', '+n+' lojas':'') : s)) + ' · sobre o faturamento bruto de '+brl0(M.fb);
-    var html = '', MP = (m>0 && scopeHasData(s, m-1)) ? prevM(s, m) : null;
-    // comparação com o mês anterior, em R$ a cada R$ 100 faturados
+    var R = scopeHasData(s, m) ? dgCalc(s, m, false).v : null;
+    if(!R || R.rb===null || !(R.rb>0)){ grid.innerHTML = '<div class="bn">Sem dados neste período.</div>'; foot.textContent = ''; note.textContent = ''; return; }
+    var RP = (m>0 && scopeHasData(s, m-1)) ? dgCalc(s, m-1, false).v : null; if(RP && !(RP.rb>0)) RP = null;
+    var SM = dgSigM(s, m);
+    var n = scopeStores(s).filter(function(t){ return scopeHasData(t, m); }).length;
+    note.textContent = (s==='Consolidado' ? 'Rede consolidada, '+n+' lojas' : (isBrandScope(s) ? scopeName(s)+(n>1?', '+n+' lojas':'') : s)) + ' · sobre o faturamento bruto de '+brl0(R.rb)+' · grupos da DRE gerencial';
+    function soma(V, g){ return -g.reduce(function(a, id){ return a + (V[id]||0); }, 0); }
     function bnVs(cur, prev, dirLow){
       if(prev===null) return '';
       var d = cur - prev, eq = Math.abs(d) < 0.005, good = dirLow ? d<0 : d>0;
       return '<div class="vs-prev '+(eq?'':(good?'better':'worse'))+'"><b>'+(eq?'＝':(d>0?'▲ +':'▼ −'))+'R$ '+fmt2.format(Math.abs(d))+'</b> vs. '+VOXEL_MONTH_LABELS[m-1].toLowerCase()+' <span class="vs-was">('+(prev<0?'-':'')+'R$ '+fmt2.format(Math.abs(prev))+')</span></div>';
     }
-    BN_CATS.forEach(function(c){
-      var v = M[c.k] || 0, per = (v/M.fb*100) || 0, perP = MP ? ((MP[c.k]||0)/MP.fb*100) : null, perC = ((cmpM(M, m)[c.k]||0)/M.fb*100) || 0;
-      html += '<div class="bn" data-go="'+(c.k==='cf' ? 'cfTotal' : c.k)+'" role="button" tabindex="0" title="Ver '+c.label+' na DRE"><div class="bn-label"><span class="swatch" style="background:'+c.color+'"></span>'+c.label+'</div>'+
-        '<div class="bn-value tabular">R$ '+fmt2.format(per)+'</div>'+((M0 && M0!==M && Math.abs((M0[c.k]||0)-(M[c.k]||0))>=0.5) ? estNote('R$ '+fmt2.format((M0[c.k]||0)/M0.fb*100)) : '')+bnVs(perC, perP, true)+
-        '<span class="sig-pill '+sigClass(c.k, sigPct(c.k, M))+'"'+(c.k==='cf'?' title="Custos fixos sem pessoal, sobre o faturamento líquido"':'')+'><i class="sig-dot '+sigClass(c.k, sigPct(c.k, M))+'"></i><span class="tabular">'+fmt1.format(c.k==='cf' ? sigPct('cf', M) : per)+'%</span><span class="sig-meta">'+(c.k==='cf'?'sem pessoal · ':'')+sigMeta(c.k)+'</span></span>'+
+    var html = '';
+    BN_GER.forEach(function(c){
+      var v = soma(R, c.g), per = v/R.rb*100, perP = RP ? soma(RP, c.g)/RP.rb*100 : null;
+      var p = sigPct(c.k, SM), cl = sigClass(c.k, p), col = SIG[c.k] ? SIG[c.k].color : 'var(--ink-muted)';
+      html += '<div class="bn" data-dgo="'+c.k+'" role="button" tabindex="0" title="Ver '+c.label+' na DRE gerencial"><div class="bn-label"><span class="swatch" style="background:'+col+'"></span>'+c.label+'</div>'+
+        '<div class="bn-value tabular">R$ '+fmt2.format(per)+'</div>'+bnVs(per, perP, true)+
+        (p!==null ? '<span class="sig-pill '+cl+'" title="Indicador do sinaleiro, sobre '+(c.k==='roy' ? 'o faturamento bruto' : 'a receita líquida gerencial')+'"><i class="sig-dot '+cl+'"></i><span class="tabular">'+fmt1.format(p)+'%</span><span class="sig-meta">meta ≤'+fmt1.format(SIG[c.k].g)+'%</span></span>' : '')+
         '<div class="bn-sub tabular">'+brl0(-v)+' no período</div></div>';
     });
-    var perRes = M.lop/M.fb*100;
-    var rc = sigClass('lop', perRes);
-    html += '<div class="bn result" data-go="lop" role="button" tabindex="0" title="Ver resultado operacional na DRE"><div><div class="bn-label">Resultado operacional</div><div class="bn-sub tabular">'+brl0(M.lop)+' no período</div>'+
-      '<span class="sig-pill '+rc+'"><i class="sig-dot '+rc+'"></i><span class="tabular">'+pct(perRes)+'</span><span class="sig-meta">'+sigMeta('lop')+'</span></span>'+(MP ? bnVs(cmpM(M, m).lop/M.fb*100, MP.lop/MP.fb*100, false) : '')+((M0 && M0!==M) ? estNote(brl0(M0.lop)+' · '+(M0.lop<0?'-':'+')+'R$ '+fmt2.format(Math.abs(M0.lop/M0.fb*100))+' a cada R$ 100') : '')+'</div>'+
+    var perRes = R.ebitda/R.rb*100, perResP = RP ? RP.ebitda/RP.rb*100 : null, rc = sigClass('lop', sigPct('lop', SM));
+    html += '<div class="bn result" data-dgo="lop" role="button" tabindex="0" title="Ver o EBITDA na DRE gerencial"><div><div class="bn-label">Resultado operacional · EBITDA gerencial</div><div class="bn-sub tabular">'+brl0(R.ebitda)+' no período</div>'+
+      '<span class="sig-pill '+rc+'"><i class="sig-dot '+rc+'"></i><span class="tabular">'+pct(perRes)+'</span><span class="sig-meta">do faturamento bruto · meta ≥'+fmt1.format(SIG.lop.g)+'%</span></span>'+bnVs(perRes, perResP, false)+'</div>'+
       '<div class="bn-value tabular" style="color:'+(perRes<0?'var(--critical)':'var(--good)')+'">'+(perRes<0?'-':'+')+'R$ '+fmt2.format(Math.abs(perRes))+' <span class="bn-sub" style="font-weight:600;">a cada R$ 100</span></div></div>';
     grid.innerHTML = html;
-    foot.textContent = '';
+    foot.textContent = 'As seis fatias + o EBITDA somam R$ 100. Selo colorido = indicador do sinaleiro gerencial e sua meta.';
   }
 
   // better: 'high' = maior é melhor, 'low' = menor é melhor, null = neutro
@@ -5249,6 +5274,7 @@
   (function(){
     var svg = document.getElementById('lineChart'), wrapLC = svg.parentNode, lastWH = '';
     function drawLine(){
+    if(!drawLine.ger){ drawLine.ger = true; trend = dgTrend(); }
     var bx = wrapLC.getBoundingClientRect();
     var W = Math.max(300, Math.round(bx.width)), H = Math.max(200, Math.round(bx.height));
     if(W+'x'+H === lastWH) return; lastWH = W+'x'+H;
@@ -5301,7 +5327,7 @@
       svg.appendChild(xlbl);
       var hit = el('circle',{cx:cx,cy:cy,r:16,class:'lc-hit'});
       hit.addEventListener('mousemove', function(evt){
-        showTip(evt, '<b>'+d.mes+'/2026</b>Resultado operacional: '+pct(d.pct_lucro_operacional)+' ('+brl(d.lucro_operacional)+')<br>Lojas no prejuízo: '+d.n_lojas_prejuizo+' de 16<br>CMV: '+fmt1.format(Math.abs(d.pct_cmv))+'% · Descontos: '+fmt1.format(Math.abs(d.pct_desconto))+'% · Cartão/apps: '+fmt1.format(Math.abs(d.pct_cartao_apps))+'%');
+        showTip(evt, '<b>'+d.mes+'/2026 · DRE gerencial</b>EBITDA: '+pct(d.pct_lucro_operacional)+' do faturamento bruto ('+brl(d.lucro_operacional)+')<br>Lojas no prejuízo: '+d.n_lojas_prejuizo+' de '+d.n_lojas+'<br>CMV: '+fmt1.format(d.pct_cmv)+'% · CMO: '+fmt1.format(d.pct_cmo)+'% · Deduções: '+fmt1.format(d.pct_ded)+'% (do bruto)');
       });
       hit.addEventListener('mouseleave', hideTip);
       svg.appendChild(hit);

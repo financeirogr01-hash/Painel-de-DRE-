@@ -2934,6 +2934,19 @@
         '<div class="kpi-desp">CMV '+brl0(P.cmv)+' · CMO '+brl0(P.cmo)+'</div>',
         '<span class="chip '+(cl==='sig-good'?'good':(cl==='sig-warn'?'warning':'critical'))+'">'+(dpc>0.05 ? '+'+fmt1.format(dpc)+'pp acima da meta' : 'dentro da meta')+'</span>');
     }
+    // 4–6) CMV, CMO e custos fixos pela DRE gerencial (mesma base e metas do sinaleiro); clique leva à linha da DRE gerencial
+    var SM = dgSigM(s, m), SP = temPrev ? dgSigM(s, m-1) : null;
+    [['cmv','CMV','CMV R$ '], ['cmo','CMO (equipe fixa + Free)','CMO R$ '], ['cf','Custos fixos (sem pessoal)','ocupação, operacionais e administrativas sem OPEX · R$ ']].forEach(function(it){
+      var k = it[0], d = SIG[k], p = sigPct(k, SM); if(p===null) return;
+      var pp = SP ? sigPct(k, SP) : null, cls = sigClass(k, p), dif = p - d.g, rs = k==='cf' ? SM.cfFix : SM[k];
+      var cor = cls==='sig-good' ? 'var(--good)' : (cls==='sig-warn' ? 'var(--warning)' : (cls==='sig-orange' ? '#ff8a3d' : 'var(--critical)'));
+      var chip = cls==='sig-good' ? 'good' : (cls==='sig-warn' || cls==='sig-orange' ? 'warning' : 'critical');
+      html += kpiCard(it[1], fmt1.format(p)+'%', cor,
+        'meta ≤'+fmt1.format(d.g)+'% · sobre a receita líquida gerencial'+(pp!==null ? vsPrevHtml(p, pp, 'low', 'pp', m, fmt1.format(pp)+'%') : '')+
+        '<div class="kpi-desp">'+it[2]+brl0(rs).replace('R$ ','')+'</div>',
+        '<span class="chip '+chip+'">'+(dif>0.05 ? '+'+fmt1.format(dif)+'pp acima da meta' : (dif< -0.05 ? '−'+fmt1.format(-dif)+'pp abaixo da meta' : 'na meta'))+'</span><div class="kpi-hint">Ver na DRE gerencial ↓</div>')
+        .replace('<div class="card kpi">', '<div class="card kpi kpi-click" data-dgo="'+k+'" role="button" tabindex="0" style="--kc:'+d.color+';" title="Ver '+it[1]+' na DRE gerencial">');
+    });
     box.innerHTML = html;
     lossPos();
   }

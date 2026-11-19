@@ -960,7 +960,8 @@
   .vx-mini b.up, .vx-b b.up, .vx-cmp-t .up{color:var(--good);} .vx-mini b.dn, .vx-b b.dn, .vx-cmp-t .dn{color:var(--critical);}
   .vx-brands{display:flex; flex-wrap:wrap; gap:6px 12px; font-size:13px; font-weight:700;}
   .vx-b i{font-style:normal; margin-right:3px;}
-.dg-cmp-wrap{margin:14px 0 0;}
+.dg-fbar{margin:22px 0 0; padding:10px 14px; border:1px solid var(--border); border-radius:14px; background:var(--surface);}
+  .dg-cmp-wrap{margin:14px 0 0;}
   #dgCmp .cmp-bt{font:inherit; color:inherit; background:transparent; border:1px solid transparent; border-radius:999px; padding:3px 9px; cursor:pointer;}
   #dgCmp .cmp-bt:hover, #dgCmp .cmp-bt.on{border-color:rgba(61,220,151,.55); background:rgba(61,220,151,.08);}
   #dgCmp .cmp-bt small{font-size:10px; color:var(--ink-muted);}
@@ -1167,6 +1168,11 @@
     </div>
 
 
+    <div class="filterbar dg-fbar" role="region" aria-label="Filtros de mês e loja (DRE gerencial)">
+      <div class="filter-group"><span class="filter-label">Mês</span><div class="voxel-tabs" id="fMonth2"></div></div>
+      <div class="filter-group"><label class="filter-label" for="fBrand2">Marca</label><select id="fBrand2" autocomplete="off" class="fselect" style="min-width:130px;"></select></div>
+      <div class="filter-group"><label class="filter-label" for="fStore2">Loja</label><select id="fStore2" autocomplete="off" class="fselect"></select></div>
+    </div>
     <div class="dg-cmp-wrap"><div id="dgCmp"></div><div class="vx-cmp-panel" id="dgCmpPanel" hidden></div></div>
     <div class="card dg-card" id="dgCard"></div>
     <div class="card mand-card" id="mandCard"></div>
@@ -2742,8 +2748,9 @@
     sel.appendChild(gL);
   }
 
-  function renderFilterBar(){
-    var selB = document.getElementById('fBrand'), sel = document.getElementById('fStore');
+  function renderFilterBar(){ fbFill('fBrand', 'fStore', 'fMonth'); fbFill('fBrand2', 'fStore2', 'fMonth2'); }
+  function fbFill(idB, idS, idM){
+    var selB = document.getElementById(idB), sel = document.getElementById(idS); if(!selB || !sel) return;
     if(!selB.options.length){
       [['Todas','Todas as marcas']].concat(BRANDS.map(function(b){ return [b.id, b.id]; })).forEach(function(p){
         var o = document.createElement('option'); o.value = p[0]; o.textContent = p[1]; selB.appendChild(o);
@@ -2758,7 +2765,7 @@
     sel.innerHTML = opts.map(function(p){ return '<option value="'+p[0]+'">'+p[1]+'</option>'; }).join('');
     sel.value = fState.scope;
     if(sel.value!==fState.scope && brandStores(brand).length===1){ sel.value = 'Marca:'+brand; }
-    var wrap = document.getElementById('fMonth');
+    var wrap = document.getElementById(idM);
     var isB13 = fState.scope==='Biggs 13';
     var html = '';
     VOXEL_MONTH_LABELS.forEach(function(lbl, i){

@@ -476,6 +476,12 @@
   .sig-gap .rs{font-weight:600; opacity:.9;}
 
   /* ---------- clique no card -> linha da DRE ---------- */
+  [data-dgo]{cursor:pointer; transition:transform .12s ease, border-color .12s ease;}
+  [data-dgo]:hover{transform:translateY(-2px);}
+  [data-dgo]:hover .go-hint{opacity:1;}
+  #dgCard tr.dg-cat > td:first-child{box-shadow:inset 3px 0 0 var(--row-cat);}
+  #dgCard .dg-cdot{display:inline-block; width:9px; height:9px; border-radius:50%; margin-right:6px; vertical-align:middle;}
+  #dgCard tr.dg-flash td{animation:rowFlash 2.2s ease-out;}
   [data-go]{cursor:pointer; transition:transform .12s ease, border-color .12s ease;}
   [data-go]:hover{transform:translateY(-2px); border-color:color-mix(in srgb, var(--ink) 30%, transparent);}
   [data-go]:focus-visible{outline:2px solid var(--accent); outline-offset:2px;}
@@ -2351,11 +2357,11 @@
       } else {
         body = '<div class="sig-foot"><i class="sig-dot sig-na"></i>sem dados · '+sigMeta(k)+'</div>';
       }
-      html += '<div class="sig-card" style="--sig-c:'+d.color+'" data-go="'+k+'" role="button" tabindex="0" title="'+d.label+(p!==null ? ': '+fmt1.format(p)+'% · '+(rsTxt||'') : '')+' — clique para ver na DRE">'+
+      html += '<div class="sig-card" style="--sig-c:'+d.color+'" data-dgo="'+k+'" role="button" tabindex="0" title="'+d.label+(p!==null ? ': '+fmt1.format(p)+'% · '+(rsTxt||'') : '')+' — clique para ver o detalhamento na DRE gerencial">'+
         '<div class="sig-name"><span class="cat-dot" style="background:'+d.color+'"></span>'+d.label+'</div>'+
         '<div class="sig-val tabular">'+(p===null?'—':fmt1.format(p)+'%')+' <span style="font-size:11.5px;font-weight:600;color:var(--ink-muted);">realizado</span></div>'+
         (function(){ if(!M0 || M0===M || p===null) return ''; var p0 = sigPct(k, M0); return (p0===null || Math.abs(p0-p)<0.05) ? '' : estNote(fmt1.format(p0)+'%'); })()+
-        (MP && p!==null ? (function(){ var pp = sigPct(k, MP); return pp===null ? '' : vsPrevHtml(p, pp, d.dir, 'pp', m, fmt1.format(pp)+'%'+''); })() : '')+body+'<div class="go-hint">Ver na DRE ↓</div></div>';
+        (MP && p!==null ? (function(){ var pp = sigPct(k, MP); return pp===null ? '' : vsPrevHtml(p, pp, d.dir, 'pp', m, fmt1.format(pp)+'%'+''); })() : '')+body+'<div class="go-hint">Ver na DRE gerencial ↓</div></div>';
     });
     document.getElementById('sigPanel').innerHTML = html;
   }
@@ -4058,7 +4064,7 @@
         if(DG_OCULTA[line] && dgIfoodOn(s, line, m)) return;
         if(!dgZero && dgZ(v) && dgZ(p) && !((line==='Promoção bancada pelo iFood' || line==='Taxa de serviço iFood' || line==='Ressarcimento de Pedido Cancelado') && dgIfoodOn(s, line, m))) return;
         shown++;
-        h += '<tr class="dg-leaf"'+(line==='Impostos Sobre Salários' && dgIfoodOn(s, line, m) ? clk(key, 'Ver a composição do FGTS') : (multi && !(s==='Consolidado' && dgEncTarget(s, line)!==undefined) ? clk(key, 'Ver por loja') : ''))+'><td>'+((line==='Impostos Sobre Salários' && dgIfoodOn(s, line, m)) || (multi && !(s==='Consolidado' && dgEncTarget(s, line)!==undefined)) ? ar(key) : '')+(line==='Royalties contratuais' ? dgRoyNome(s, m) : (dgIfoodOn(s, line, m) && DG_IFOOD_NOME[line] ? clEsc(DG_IFOOD_NOME[line])+(DG_IFOOD_TAG[line]==='iFood' || line==='Taxa de serviço iFood' || line==='Ressarcimento de Pedido Cancelado' ? ' — iFood' : '') : clEsc(line)))+(line==='Entrega TAON' && dgIfoodOn(s, 'Combustível e Entregas', m) ? '<span class="dg-tag">Extratos</span><span class="dg-note">Taon Pay Gestão Financeira · pagamentos nos extratos Sicredi out/26 · Voxel: '+dgR((v||0) - ['Combustível e Entregas','Frete Aplicativos','Serviços Logísticos','Reembolso de Cobrança de Frete'].reduce(function(a, l){ return a + dgIfoodDelta(s, l, m); }, 0))+'</span>' : '')+(dgProv(s, line, m) ? '<span class="dg-tag dg-prov">Voxel — provisório</span><span class="dg-note">valor da Voxel até você enviar o valor gerencial</span>' : '')+(dgIfoodOn(s, line, m) ? '<span class="dg-tag">'+DG_IFOOD_TAG[line]+'</span><span class="dg-note">'+( line==='Aluguel e Condomínio' ? 'aluguel '+dgR(dgSoma(DG_ALUG, s))+' + condomínio '+dgR(dgSoma(DG_COND, s))+' · Sicredi out/26 (ressalva: favorecido bancário diferente do fornecedor em alguns pagamentos)' : line==='IPTU e encargos do imóvel' ? (function(){ var it = []; scopeStores(s).forEach(function(t){ if(DG_ENC_IMOVEL_NOTA[t] && it.indexOf(DG_ENC_IMOVEL_NOTA[t])<0) it.push(DG_ENC_IMOVEL_NOTA[t]); }); return (it.join(', ') || 'sem encargos') + ' · Sicredi out/26'; })() : line==='Materiais de Escritório' ? 'Sicredi '+dgR(dgSoma(DG_ESC_SIC, s))+' + caixa '+dgR(dgSoma(DG_ESC_CX, s)) : line==='Segurança' && s==='Consolidado' ? 'Sicredi R$ 6.807,34 + Caixa Financeiro R$ 14.750,75 · inclui R$ 930,00 retirados do CMO Free · parte do caixa rateada pelo faturamento bruto' : line==='Freelancers e Terceirizados' && s==='Consolidado' ? 'pagamentos registrados − R$ 930,00 de segurança (movidos para Segurança, rateados pela participação no Free)' : line==='Vale Transporte' ? dgVtNota(s) : (line==='Salários' && s!=='Consolidado' ? 'inclui salários, pensões, adiantamentos e empréstimos a funcionários' : DG_IFOOD_LBL[line]))+' · Voxel: '+dgR(v - dgIfoodDelta(s, line, m))+'</span>' : (c[1] ? '<span class="dg-note">'+c[1]+'</span>' : ''))+'</td>'+
+        h += '<tr class="dg-leaf" data-leaf="'+clEsc(line)+'"'+(line==='Impostos Sobre Salários' && dgIfoodOn(s, line, m) ? clk(key, 'Ver a composição do FGTS') : (multi && !(s==='Consolidado' && dgEncTarget(s, line)!==undefined) ? clk(key, 'Ver por loja') : ''))+'><td>'+((line==='Impostos Sobre Salários' && dgIfoodOn(s, line, m)) || (multi && !(s==='Consolidado' && dgEncTarget(s, line)!==undefined)) ? ar(key) : '')+(line==='Royalties contratuais' ? dgRoyNome(s, m) : (dgIfoodOn(s, line, m) && DG_IFOOD_NOME[line] ? clEsc(DG_IFOOD_NOME[line])+(DG_IFOOD_TAG[line]==='iFood' || line==='Taxa de serviço iFood' || line==='Ressarcimento de Pedido Cancelado' ? ' — iFood' : '') : clEsc(line)))+(line==='Entrega TAON' && dgIfoodOn(s, 'Combustível e Entregas', m) ? '<span class="dg-tag">Extratos</span><span class="dg-note">Taon Pay Gestão Financeira · pagamentos nos extratos Sicredi out/26 · Voxel: '+dgR((v||0) - ['Combustível e Entregas','Frete Aplicativos','Serviços Logísticos','Reembolso de Cobrança de Frete'].reduce(function(a, l){ return a + dgIfoodDelta(s, l, m); }, 0))+'</span>' : '')+(dgProv(s, line, m) ? '<span class="dg-tag dg-prov">Voxel — provisório</span><span class="dg-note">valor da Voxel até você enviar o valor gerencial</span>' : '')+(dgIfoodOn(s, line, m) ? '<span class="dg-tag">'+DG_IFOOD_TAG[line]+'</span><span class="dg-note">'+( line==='Aluguel e Condomínio' ? 'aluguel '+dgR(dgSoma(DG_ALUG, s))+' + condomínio '+dgR(dgSoma(DG_COND, s))+' · Sicredi out/26 (ressalva: favorecido bancário diferente do fornecedor em alguns pagamentos)' : line==='IPTU e encargos do imóvel' ? (function(){ var it = []; scopeStores(s).forEach(function(t){ if(DG_ENC_IMOVEL_NOTA[t] && it.indexOf(DG_ENC_IMOVEL_NOTA[t])<0) it.push(DG_ENC_IMOVEL_NOTA[t]); }); return (it.join(', ') || 'sem encargos') + ' · Sicredi out/26'; })() : line==='Materiais de Escritório' ? 'Sicredi '+dgR(dgSoma(DG_ESC_SIC, s))+' + caixa '+dgR(dgSoma(DG_ESC_CX, s)) : line==='Segurança' && s==='Consolidado' ? 'Sicredi R$ 6.807,34 + Caixa Financeiro R$ 14.750,75 · inclui R$ 930,00 retirados do CMO Free · parte do caixa rateada pelo faturamento bruto' : line==='Freelancers e Terceirizados' && s==='Consolidado' ? 'pagamentos registrados − R$ 930,00 de segurança (movidos para Segurança, rateados pela participação no Free)' : line==='Vale Transporte' ? dgVtNota(s) : (line==='Salários' && s!=='Consolidado' ? 'inclui salários, pensões, adiantamentos e empréstimos a funcionários' : DG_IFOOD_LBL[line]))+' · Voxel: '+dgR(v - dgIfoodDelta(s, line, m))+'</span>' : (c[1] ? '<span class="dg-note">'+c[1]+'</span>' : ''))+'</td>'+
           '<td class="num tabular">'+(v===null ? '<span class="dg-aus">sem dado</span>' : dgR(v))+'</td><td class="num tabular">'+pc(v)+'</td>'+prevTd(p)+dgVarTd(curC.leaf[line], p, null, naoAplic)+'</tr>';
         if(line==='Impostos Sobre Salários' && dgIfoodOn(s, line, m) && dgOpen[key]){
           var fg = dgFgts(s);
@@ -4219,6 +4225,7 @@
     h += '<details class="dg-det"'+(dgOpen.__det?' open':'')+'><summary>Conferência com a DRE Voxel, pendências e movimentações fora da DRE</summary><div class="dg-foot">'+conf+ind+pen+fr+'</div></details>';
     box.innerHTML = h;
     dgPops(cur, prev, m);
+    dgDecorar();
   }
   document.addEventListener('click', function(e){
     var b = e.target.closest && e.target.closest('#dgCard [data-dg]');
@@ -4339,6 +4346,54 @@
     });
   }
   // DRE gerencial: passar o mouse numa categoria mostra a composição
+  // indicador do sinaleiro -> linhas da DRE gerencial (mesma cor de bolinha nos dois)
+  var DG_SIG_ROW = {cmv:'cmv', cmof:'cmo', cmov:'cmo', ocu:'cf', ope:'cf', adm:'cf', roy:'roy', ent:'entregas', ebitda:'lop', ebp:'lop'};
+  var DG_SIG_LEAF = {'Descontos':'desc', 'Devoluções de Vendas':'entregas'};
+  DG_OPEX.forEach(function(l){ DG_SIG_LEAF[l] = 'opex'; });
+  var DG_SIG_GO = {cmv:{open:['cmv'], rows:['cmv']}, cmo:{open:['cmof','cmov'], rows:['cmof','cmov']}, cf:{open:['ocu','ope','adm'], rows:['ocu','ope','adm']},
+    opex:{open:['ope','adm'], leaf:'opex'}, roy:{open:['roy'], rows:['roy']}, desc:{open:['ded'], leaf:'desc'}, entregas:{open:['ent','ded'], rows:['ent'], leaf:'entregas'}, lop:{open:[], rows:['ebitda','ebp']}};
+  function dgLeafName(tr){ if(tr.hasAttribute('data-leaf')) return tr.getAttribute('data-leaf'); var td = tr.querySelector('td'); if(!td) return ''; var c = td.firstChild; while(c && c.nodeType!==3) c = c.nextSibling; return c ? c.textContent.trim() : td.textContent.trim(); }
+  function dgDecorar(){
+    Array.prototype.forEach.call(document.querySelectorAll('#dgCard tbody tr'), function(tr){
+      var id = tr.getAttribute('data-dg'), k = null;
+      if(id && DG_SIG_ROW[id] && (tr.classList.contains('dg-macro') || tr.classList.contains('dg-tot'))) k = DG_SIG_ROW[id];
+      else if(tr.classList.contains('dg-pct') && /EBITDA/.test(tr.textContent)) k = 'lop';
+      else if(tr.classList.contains('dg-leaf')) k = DG_SIG_LEAF[dgLeafName(tr)] || null;
+      if(!k || !SIG[k]) return;
+      tr.classList.add('dg-cat'); tr.setAttribute('data-sig', k); tr.style.setProperty('--row-cat', SIG[k].color);
+      var td = tr.querySelector('td'), ar = td.querySelector('.dg-ar'), dot = document.createElement('span');
+      dot.className = 'dg-cdot'; dot.style.background = SIG[k].color; dot.title = SIG[k].label;
+      if(ar && ar.nextSibling) td.insertBefore(dot, ar.nextSibling); else td.insertBefore(dot, td.firstChild);
+    });
+  }
+  function goToDgLine(k){
+    var g = DG_SIG_GO[k]; if(!g) return;
+    g.open.forEach(function(id){ dgOpen[id] = true; }); renderDreGer();
+    var rows = [];
+    Array.prototype.forEach.call(document.querySelectorAll('#dgCard tbody tr'), function(tr){
+      var id = tr.getAttribute('data-dg');
+      if(g.rows && id && g.rows.indexOf(id)>-1 && !tr.classList.contains('dg-leaf')) rows.push(tr);
+      else if(k==='lop' && tr.classList.contains('dg-pct') && /EBITDA/.test(tr.textContent)) rows.push(tr);
+      else if(g.leaf && tr.classList.contains('dg-leaf') && tr.getAttribute('data-sig')===g.leaf) rows.push(tr);
+      else if(g.rows && tr.classList.contains('dg-leaf') && g.open.indexOf(k)<0 && false) rows.push(tr);
+    });
+    // inclui as contas abertas logo abaixo de cada categoria-alvo
+    var extra = [];
+    rows.forEach(function(tr){ if(!tr.classList.contains('dg-macro')) return; var n = tr.nextElementSibling; while(n && !n.classList.contains('dg-macro') && !n.classList.contains('dg-tot') && !n.classList.contains('dg-pct')){ extra.push(n); n = n.nextElementSibling; } });
+    rows = rows.concat(extra);
+    if(!rows.length){ var c = document.getElementById('dgCard'); if(c) c.scrollIntoView({behavior:'smooth', block:'start'}); return; }
+    rows.sort(function(a, b){ return a.compareDocumentPosition(b) & 4 ? -1 : 1; });
+    rows.forEach(function(row){ row.classList.remove('dg-flash'); void row.offsetWidth; row.classList.add('dg-flash'); });
+    clearTimeout(goToDgLine._t); goToDgLine._t = setTimeout(function(){ rows.forEach(function(row){ row.classList.remove('dg-flash'); }); }, 2600);
+    var first = rows[0], last = rows[rows.length-1];
+    var bar = document.getElementById('stickyBar'), barH = bar ? bar.getBoundingClientRect().height : 0;
+    var top = first.getBoundingClientRect().top + window.scrollY, bottom = last.getBoundingClientRect().bottom + window.scrollY;
+    var avail = window.innerHeight - barH, blockH = bottom - top;
+    var y = blockH > avail - 24 ? top - barH - 12 : top - barH - Math.max(12, (avail - blockH)/2);
+    window.scrollTo({top: Math.max(0, y), behavior: 'smooth'});
+  }
+  document.addEventListener('click', function(e){ var el = e.target.closest && e.target.closest('[data-dgo]'); if(el) goToDgLine(el.getAttribute('data-dgo')); });
+  document.addEventListener('keydown', function(e){ if(e.key!=='Enter' && e.key!==' ') return; var el = e.target.closest && e.target.closest('[data-dgo]'); if(el){ e.preventDefault(); goToDgLine(el.getAttribute('data-dgo')); } });
   function dgPops(cur, prev, m){
     Array.prototype.forEach.call(document.querySelectorAll('#dgCard tr.dg-macro, #dgCard tr.dg-tot'), function(tr){
       var id = tr.getAttribute('data-dg'), d = dgDef(id); if(!d) return;

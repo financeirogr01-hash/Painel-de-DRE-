@@ -1187,7 +1187,7 @@
       <span><i class="sig-dot sig-warn"></i>Atenção</span>
       <span><i class="sig-dot sig-orange"></i>Alerta (só custos fixos)</span>
       <span><i class="sig-dot sig-bad"></i>Fora da meta</span>
-      <span><b>Bases:</b> OPEX, CMO e custos fixos sobre a receita líquida; CMV, royalties, deduções, entregas e EBITDA sobre o faturamento bruto — cada um comparado com a meta da mesma base.</span>
+      <span><b>Bases:</b> OPEX e custos fixos sobre a receita líquida; CMV, CMO, royalties, deduções, entregas e EBITDA sobre o faturamento bruto — cada um comparado com a meta da mesma base.</span>
     </div>
 
 
@@ -2381,7 +2381,7 @@
     desc:     {label:'Descontos', color:'var(--cat-4)', base:'fb', dir:'low', g:3, y:6},
     roy:      {label:'Royalties', color:'var(--cat-5)', base:'fb', dir:'low', g:9, y:12},
     entregas: {label:'Entregas + devoluções', color:'var(--cat-6)', base:'fb', dir:'low', g:2, y:3},
-    cmo:      {label:'Pessoal (CMO)', color:'var(--ink-muted)', base:'fli', dir:'low', g:22, y:25},
+    cmo:      {label:'Pessoal (CMO)', color:'var(--ink-muted)', base:'fb', dir:'low', g:22, y:25},
     mc:       {label:'Margem de contribuição', color:'var(--accent)', base:'flt', dir:'high', g:50, y:40},
     lop:      {label:'EBITDA (resultado operacional)', color:'var(--accent)', base:'fb', dir:'high', g:8, y:0}
   };
@@ -3110,7 +3110,7 @@
       '<span class="sig-pill '+rc+'"><i class="sig-dot '+rc+'"></i><span class="tabular">'+pct(perRes)+'</span><span class="sig-meta">do faturamento bruto · meta ≥'+fmt1.format(SIG.lop.g)+'%</span></span>'+bnVs(perRes, perResP, false)+'</div>'+
       '<div class="bn-value tabular" style="color:'+(perRes<0?'var(--critical)':'var(--good)')+'">'+(perRes<0?'-':'+')+'R$ '+fmt2.format(Math.abs(perRes))+' <span class="bn-sub" style="font-weight:600;">a cada R$ 100</span></div></div>';
     grid.innerHTML = html;
-    foot.textContent = 'Atenção às bases: os valores "a cada R$ 100" são sobre o faturamento bruto. O selo colorido repete o indicador do sinaleiro na base em que a meta foi definida — CMO e custos fixos sobre a receita líquida; CMV, deduções, royalties, entregas e EBITDA sobre o bruto. Por isso o % do selo pode diferir do valor a cada R$ 100.';
+    foot.textContent = 'Atenção às bases: os valores "a cada R$ 100" são sobre o faturamento bruto. O selo colorido repete o indicador do sinaleiro na base em que a meta foi definida — custos fixos sobre a receita líquida; CMV, CMO, deduções, royalties, entregas e EBITDA sobre o bruto. Por isso o % do selo pode diferir do valor a cada R$ 100.';
   }
 
   // better: 'high' = maior é melhor, 'low' = menor é melhor, null = neutro
@@ -4652,7 +4652,7 @@
     o.grupos = MAND_FIXOS.map(function(g){ return {id:g[0], t:g[1], v:-(v[g[0]]||0)}; });
     o.fixos = o.grupos.reduce(function(a, g){ return a + g.v; }, 0);
     o.cmvP = o.rb>0 ? o.cmv/o.rb*100 : null;   // CMV sobre o bruto (base da meta)
-     o.cmoP = o.rl>0 ? o.cmo/o.rl*100 : null;
+     o.cmoP = o.rb>0 ? o.cmo/o.rb*100 : null;   // CMO sobre o bruto (base da meta)
     o.calc = mandCalc({rb:o.rb, mc:o.mc, fixos:o.fixos});
     return o;
   }
@@ -4717,7 +4717,7 @@
     h += '<tr><td>CMV'+contas('cmv', o.cmv)+'</td><td class="num">'+dgR(o.cmv)+'</td><td class="num">'+pc(o.cmv)+' <span class="'+(o.cmvP!==null && o.cmvP<=SIG.cmv.g ? 'mand-ok' : 'mand-bad')+'">('+(o.cmvP===null ? '—' : fmt1.format(o.cmvP))+'% do bruto · meta ≤'+fmt1.format(SIG.cmv.g)+'% s/ bruto)</span></td><td class="num">'+ppc(o.cmv)+'</td></tr>';
     h += '<tr><td>CMO — equipe fixa</td><td class="num">'+dgR(o.cmof)+'</td><td class="num">'+pc(o.cmof)+'</td><td class="num">'+ppc(o.cmof)+'</td></tr>';
     h += '<tr><td>CMO — Free</td><td class="num">'+dgR(o.cmov)+'</td><td class="num">'+pc(o.cmov)+'</td><td class="num">'+ppc(o.cmov)+'</td></tr>';
-    h += '<tr class="mt"><td>CMO total</td><td class="num">'+dgR(o.cmo)+'</td><td class="num">'+pc(o.cmo)+' <span class="'+(o.cmoP!==null && o.cmoP<=SIG.cmo.g ? 'mand-ok' : 'mand-bad')+'">(meta ≤'+fmt1.format(SIG.cmo.g)+'%)</span></td><td class="num">'+ppc(o.cmo)+'</td></tr>';
+    h += '<tr class="mt"><td>CMO total</td><td class="num">'+dgR(o.cmo)+'</td><td class="num">'+pc(o.cmo)+' <span class="'+(o.cmoP!==null && o.cmoP<=SIG.cmo.g ? 'mand-ok' : 'mand-bad')+'">('+(o.cmoP===null ? '—' : fmt1.format(o.cmoP))+'% do bruto · meta ≤'+fmt1.format(SIG.cmo.g)+'% s/ bruto)</span></td><td class="num">'+ppc(o.cmo)+'</td></tr>';
     h += '<tr class="mt"><td>Prime Cost (CMV + CMO)</td><td class="num">'+dgR(o.pc)+'</td><td class="num">'+pc(o.pc)+' (meta ≤'+PC_META+'%)</td><td class="num">100%</td></tr>';
     h += '</table></div></div>';
     return h;
@@ -4794,7 +4794,7 @@
     if(L.length===1) mandSel = L[0].t;
     var abx = L.filter(function(o){ return o.calc.st==='abaixo' || o.calc.st==='semPE'; }), acm = L.filter(function(o){ return o.calc.st==='acima' || o.calc.st==='eq'; }), nd = L.filter(function(o){ return o.calc.st==='na'; });
     var falta = L.reduce(function(a, o){ return a + (o.calc.st==='abaixo' ? -o.calc.dif : 0); }, 0);
-    var h = '<div class="mand-head"><h3>Mandala de Equilíbrio por Loja</h3><div class="mand-sub">'+scopeName(s)+' · '+periodName(m)+' · DRE gerencial de cada loja · venda mínima = custos fixos operacionais ÷ margem de contribuição sobre o faturamento bruto · CMV sobre o faturamento bruto e CMO sobre a receita líquida gerencial (metas do sinaleiro: CMV ≤'+fmt1.format(SIG.cmv.g)+'%, CMO ≤'+fmt1.format(SIG.cmo.g)+'%) · ordem: maior falta de faturamento primeiro · clique numa loja para ver a memória de cálculo</div></div>';
+    var h = '<div class="mand-head"><h3>Mandala de Equilíbrio por Loja</h3><div class="mand-sub">'+scopeName(s)+' · '+periodName(m)+' · DRE gerencial de cada loja · venda mínima = custos fixos operacionais ÷ margem de contribuição sobre o faturamento bruto · CMV e CMO sobre o faturamento bruto (metas do sinaleiro: CMV ≤'+fmt1.format(SIG.cmv.g)+'%, CMO ≤'+fmt1.format(SIG.cmo.g)+'%) · ordem: maior falta de faturamento primeiro · clique numa loja para ver a memória de cálculo</div></div>';
     if(L.length>1){
       h += '<div class="mand-sum"><span><b class="mand-bad">'+abx.length+'</b> abaixo do equilíbrio'+(falta>0 ? ' · faltam <b>'+brl0(falta)+'</b> somadas' : '')+'</span><span><b class="mand-ok">'+acm.length+'</b> acima ou no equilíbrio</span>'+(nd.length ? '<span><b>'+nd.length+'</b> sem dados</span>' : '')+'</div>';
       // lançamentos só da rede (não atribuídos às lojas) ficam no consolidado

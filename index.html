@@ -476,6 +476,11 @@
   .sig-gap .rs{font-weight:600; opacity:.9;}
 
   /* ---------- clique no card -> linha da DRE ---------- */
+  .sig-card .sig-bt{display:inline-block; margin-top:3px; padding:1px 7px; font:inherit; font-size:10.5px; font-weight:700; color:var(--ink-muted); background:transparent; border:1px solid var(--border); border-radius:999px; cursor:pointer;}
+  .sig-card .sig-bt:hover, .sig-card .sig-bt.on{color:var(--ink); border-color:var(--sig-c);}
+  .sig-card .sig-bruto{font-size:11px; color:var(--ink-2); margin-top:3px;}
+  .sig-card .sig-bruto b{font-size:13px; color:var(--ink);}
+  .sig-card .sig-bruto span{color:var(--ink-muted);}
   [data-dgo]{cursor:pointer; transition:transform .12s ease, border-color .12s ease;}
   [data-dgo]:hover{transform:translateY(-2px);}
   [data-dgo]:hover .go-hint{opacity:1;}
@@ -2324,9 +2329,20 @@
     var g = function(l){ return R.leaf[l]||0; }, v = R.v;
     var opex = -DG_OPEX.reduce(function(acc, l){ return acc + g(l); }, 0);
     // tudo sobre a receita líquida (igual à coluna % da DRE gerencial); royalties seguem sobre o faturamento bruto (contrato de 10,5%)
-    return {fb:v.rl, fli:v.rl, flt:v.rl, cmv:-(v.cmv||0), cmo:-((v.cmof||0)+(v.cmov||0)), opex:opex, cfFix:-((v.ocu||0)+(v.ope||0)+(v.adm||0)) - opex,
+    return {rbB:v.rb, fb:v.rl, fli:v.rl, flt:v.rl, cmv:-(v.cmv||0), cmo:-((v.cmof||0)+(v.cmov||0)), opex:opex, cfFix:-((v.ocu||0)+(v.ope||0)+(v.adm||0)) - opex,
       roy:v.rb ? -(v.roy||0)*v.rl/v.rb : 0, desc:-g('Descontos'), cartao:-g('Taxas de Cartão e Apps de Delivery'), entregas:-(v.ent||0) - g('Devoluções de Vendas'), mc:v.mc, lop:v.ebitda};
   }
+  // % sobre o faturamento bruto (clique no botão do card; o card em si continua levando à DRE gerencial)
+  var sigBrutoOpen = {};
+  function sigBrutoHtml(k, p, M, MP){
+    if(p===null || k==='roy' || !M || !(M.rbB>0)) return '';
+    var pb = p*M.fli/M.rbB, ppb = null;
+    if(MP && MP.rbB>0){ var pp = sigPct(k, MP); if(pp!==null) ppb = pp*MP.fli/MP.rbB; }
+    var on = !!sigBrutoOpen[k];
+    return '<button type="button" class="sig-bt'+(on?' on':'')+'" data-sigb="'+k+'" aria-expanded="'+on+'" title="Mostrar o % sobre o faturamento bruto">'+(on ? '▾ ' : '▸ ')+'% s/ bruto</button>'+
+      (on ? '<div class="sig-bruto tabular"><b>'+fmt1.format(pb)+'%</b> do faturamento bruto'+(ppb!==null ? ' <span>· '+(VOXEL_MONTH_LABELS[voxelActiveMonth-1]||'').slice(0,3).toLowerCase()+' '+fmt1.format(ppb)+'%</span>' : '')+'</div>' : '');
+  }
+  document.addEventListener('click', function(e){ var b = e.target.closest && e.target.closest('[data-sigb]'); if(!b) return; e.stopPropagation(); var k = b.getAttribute('data-sigb'); sigBrutoOpen[k] = !sigBrutoOpen[k]; renderSigPanel(); var nb = document.querySelector('[data-sigb="'+k+'"]'); if(nb) nb.focus(); }, true);
   function renderSigPanel(){
     var s = voxelActiveScope, m = voxelActiveMonth, M0 = dgSigM(s, m), M = M0;
     var MP = (m>0 && scopeHasData(s, m-1)) ? dgSigM(s, m-1) : null;
@@ -2359,7 +2375,7 @@
       }
       html += '<div class="sig-card" style="--sig-c:'+d.color+'" data-dgo="'+k+'" role="button" tabindex="0" title="'+d.label+(p!==null ? ': '+fmt1.format(p)+'% · '+(rsTxt||'') : '')+' — clique para ver o detalhamento na DRE gerencial">'+
         '<div class="sig-name"><span class="cat-dot" style="background:'+d.color+'"></span>'+d.label+'</div>'+
-        '<div class="sig-val tabular">'+(p===null?'—':fmt1.format(p)+'%')+' <span style="font-size:11.5px;font-weight:600;color:var(--ink-muted);">realizado</span></div>'+
+        '<div class="sig-val tabular">'+(p===null?'—':fmt1.format(p)+'%')+' <span style="font-size:11.5px;font-weight:600;color:var(--ink-muted);">realizado</span></div>'+sigBrutoHtml(k, p, M, MP)+
         (function(){ if(!M0 || M0===M || p===null) return ''; var p0 = sigPct(k, M0); return (p0===null || Math.abs(p0-p)<0.05) ? '' : estNote(fmt1.format(p0)+'%'); })()+
         (MP && p!==null ? (function(){ var pp = sigPct(k, MP); return pp===null ? '' : vsPrevHtml(p, pp, d.dir, 'pp', m, fmt1.format(pp)+'%'+''); })() : '')+body+'<div class="go-hint">Ver na DRE gerencial ↓</div></div>';
     });
@@ -4393,7 +4409,7 @@
     window.scrollTo({top: Math.max(0, y), behavior: 'smooth'});
   }
   document.addEventListener('click', function(e){ var el = e.target.closest && e.target.closest('[data-dgo]'); if(el) goToDgLine(el.getAttribute('data-dgo')); });
-  document.addEventListener('keydown', function(e){ if(e.key!=='Enter' && e.key!==' ') return; var el = e.target.closest && e.target.closest('[data-dgo]'); if(el){ e.preventDefault(); goToDgLine(el.getAttribute('data-dgo')); } });
+  document.addEventListener('keydown', function(e){ if(e.key!=='Enter' && e.key!==' ') return; if(e.target.closest && e.target.closest('[data-sigb]')) return; var el = e.target.closest && e.target.closest('[data-dgo]'); if(el){ e.preventDefault(); goToDgLine(el.getAttribute('data-dgo')); } });
   function dgPops(cur, prev, m){
     Array.prototype.forEach.call(document.querySelectorAll('#dgCard tr.dg-macro, #dgCard tr.dg-tot'), function(tr){
       var id = tr.getAttribute('data-dg'), d = dgDef(id); if(!d) return;

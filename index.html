@@ -930,6 +930,9 @@
   .vx-mini b.up, .vx-b b.up, .vx-cmp-t .up{color:var(--good);} .vx-mini b.dn, .vx-b b.dn, .vx-cmp-t .dn{color:var(--critical);}
   .vx-brands{display:flex; flex-wrap:wrap; gap:6px 12px; font-size:13px; font-weight:700;}
   .vx-b i{font-style:normal; margin-right:3px;}
+.dg-cmp-wrap{margin:14px 0 0;}
+  #dgCmp .vx-card{box-shadow:0 0 22px -8px rgba(61,220,151,.55); border-color:rgba(61,220,151,.38); cursor:pointer; width:100%;}
+  #dgCmp .vx-card:hover{transform:translateY(-1px);}
   .vx-cmp-panel{margin:10px 0 4px; padding:14px; border-radius:16px; border:1px solid rgba(61,220,151,.3); background:linear-gradient(160deg, rgba(30,24,58,.95), rgba(18,13,36,.95));}
   .vx-cmp-h{font-size:14px; font-weight:800; margin-bottom:8px;} .vx-cmp-h span{font-size:12px; font-weight:600; color:var(--ink-muted); margin-left:6px;}
   .vx-cmp-t{width:100%; border-collapse:collapse; font-size:13px; min-width:640px;}
@@ -1134,6 +1137,7 @@
       <p class="chart-note" style="margin-top:6px;">Clique na loja para ver as contas de CMV e CMO e a comparação com o mês anterior. Base: faturamento líquido de itens · meta ≤ 53% · 🟢 até 53% · 🟡 até 60% · 🔴 acima de 60%.</p>
     </div>
 
+    <div class="dg-cmp-wrap"><div id="dgCmp"></div><div class="vx-cmp-panel" id="dgCmpPanel" hidden></div></div>
     <div class="card dg-card" id="dgCard"></div>
     <div class="card mand-card" id="mandCard"></div>
 
@@ -1162,8 +1166,7 @@
     <div class="pctop-panel" id="pcTopPanel" hidden></div>
 
     <div id="voxelMonthTabs" hidden></div><!-- mês: filtro do topo -->
-    <div class="vx-bar" id="vxBar"></div>
-    <div class="vx-cmp-panel" id="vxCmpPanel" hidden></div>
+    <div class="vx-bar" id="vxBar" style="grid-template-columns:1.25fr 1fr;"></div>
 
     <div class="grid kpi-row voxel-kpi-row" id="voxelKpis" style="display:none;" aria-hidden="true"></div><!-- cards de KPI da DRE Voxel retirados do painel (a pedido) -->
 
@@ -4554,6 +4557,50 @@
     h += '</table></div></div>';
     return h;
   }
+  // ---------------- comparativo por marca (DRE gerencial) ----------------
+  var dgCmpOpen = false;
+  function dgCmpM(sc, mm){
+    if(!scopeHasData(sc, mm)) return null;
+    var v = dgCalc(sc, mm, false).v; if(v.rb===null || !(v.rb>0)) return null;
+    var rl = v.rl, cmv = -(v.cmv||0), cmo = -((v.cmof||0)+(v.cmov||0));
+    var lojas = scopeStores(sc).filter(function(t){ return scopeHasData(t, mm); });
+    return {fb:v.rb, rl:rl, lop:v.ebitda, ll:v.ll, pctLop:v.ebitda/v.rb*100, pctMc:rl>0 ? v.mc/rl*100 : null, pctCmv:rl>0 ? cmv/rl*100 : null, pctCmo:rl>0 ? cmo/rl*100 : null, pctPc:rl>0 ? (cmv+cmo)/rl*100 : null,
+      n:lojas.length, neg:lojas.filter(function(t){ var e = dgCalc(t, mm, false).v.ebitda; return e!==null && e<0; }).length};
+  }
+  function renderDgCmp(){
+    var box = document.getElementById('dgCmp'); if(!box) return;
+    var m = fState.month;
+    var L = BRANDS.map(function(b){ var M = dgCmpM('Marca:'+b.id, m); return M ? {b:b.id, M:M, P:(m>0 ? dgCmpM('Marca:'+b.id, m-1) : null)} : null; }).filter(Boolean);
+    var best = L.slice().sort(function(a, b){ return b.M.pctLop - a.M.pctLop; })[0];
+    box.innerHTML = '<button type="button" class="vx-card vx-cmp" id="dgCmpBtn" aria-expanded="'+dgCmpOpen+'" aria-controls="dgCmpPanel"><div class="vx-t">Comparativo por marca · DRE gerencial · '+periodName(m)+' <span>'+(dgCmpOpen?'ocultar ▴':'ver ▾')+'</span></div>'+
+      '<div class="vx-brands">'+L.map(function(x){ return '<span class="vx-b"><i>'+brandIcon(x.b)+'</i>'+x.b+' <b class="'+(x.M.lop<0?'dn':'up')+'">'+fmt1.format(x.M.pctLop)+'%</b></span>'; }).join('')+'</div>'+
+      '<div class="vx-mini">EBITDA gerencial em % do faturamento bruto'+(best ? ' · melhor resultado: <b>'+best.b+'</b> ('+fmt1.format(best.M.pctLop)+'%)' : '')+'</div></button>';
+    var pn = document.getElementById('dgCmpPanel'); if(!pn) return;
+    if(!dgCmpOpen){ pn.hidden = true; pn.innerHTML = ''; return; }
+    var R = dgCmpM('Consolidado', m), cols = L.concat(R ? [{b:'Rede', M:R, P:(m>0 ? dgCmpM('Consolidado', m-1) : null)}] : []);
+    function pp(a, b, low){ if(b===null || b===undefined || a===null) return ''; var d = a - b; if(Math.abs(d)<0.05) return '<small class="eq">＝</small>'; var good = low ? d<0 : d>0; return '<small class="'+(good?'up':'dn')+'">'+(d>0?'▲ +':'▼ −')+fmt1.format(Math.abs(d))+' p.p.</small>'; }
+    function rv(a, b){ if(!b) return ''; var p = (a-b)/Math.abs(b)*100; return '<small class="'+(a>=b?'up':'dn')+'">'+(p>=0?'▲ ':'▼ ')+fmt1.format(Math.abs(p))+'%</small>'; }
+    function pc(v){ return v===null ? '—' : fmt1.format(v)+'%'; }
+    var rows = [
+      ['Faturamento bruto', function(x){ return brl0(x.M.fb)+rv(x.M.fb, x.P && x.P.fb); }],
+      ['Participação na rede', function(x){ return R && R.fb ? fmt1.format(x.M.fb/R.fb*100)+'%' : '—'; }],
+      ['Receita líquida', function(x){ return brl0(x.M.rl)+rv(x.M.rl, x.P && x.P.rl); }],
+      ['EBITDA gerencial', function(x){ return '<span class="'+(x.M.lop<0?'dn':'up')+'">'+brl0(x.M.lop)+'</span>'; }],
+      ['EBITDA % do faturamento bruto', function(x){ return pc(x.M.pctLop)+pp(x.M.pctLop, x.P && x.P.pctLop); }],
+      ['Margem de contribuição (% receita líquida)', function(x){ return pc(x.M.pctMc)+pp(x.M.pctMc, x.P && x.P.pctMc); }],
+      ['CMV (% receita líquida)', function(x){ return pc(x.M.pctCmv)+pp(x.M.pctCmv, x.P && x.P.pctCmv, true); }],
+      ['CMO (% receita líquida)', function(x){ return pc(x.M.pctCmo)+pp(x.M.pctCmo, x.P && x.P.pctCmo, true); }],
+      ['Prime Cost (% receita líquida)', function(x){ return pc(x.M.pctPc)+pp(x.M.pctPc, x.P && x.P.pctPc, true); }],
+      ['Resultado líquido', function(x){ return '<span class="'+(x.M.ll<0?'dn':'up')+'">'+brl0(x.M.ll)+'</span>'; }],
+      ['Lojas no prejuízo (EBITDA)', function(x){ return x.M.neg+' de '+x.M.n; }]
+    ];
+    pn.innerHTML = '<div class="vx-cmp-h">Comparativo por marca · DRE gerencial · '+periodName(m)+(m>0 ? ' <span>variação vs '+VOXEL_MONTH_LABELS[m-1].toLowerCase()+'</span>' : '')+'</div>'+
+      '<div class="table-scroll"><table class="vx-cmp-t"><thead><tr><th>Indicador</th>'+cols.map(function(x){ return '<th class="num">'+(x.b==='Rede' ? 'Rede' : brandIcon(x.b)+' '+x.b)+'<span>'+x.M.n+(x.M.n>1?' lojas':' loja')+'</span></th>'; }).join('')+'</tr></thead><tbody>'+
+      rows.map(function(rw){ return '<tr><td>'+rw[0]+'</td>'+cols.map(function(x){ return '<td class="num tabular">'+rw[1](x)+'</td>'; }).join('')+'</tr>'; }).join('')+'</tbody></table></div>'+
+      '<p class="chart-note" style="margin:6px 0 0;">Valores da DRE gerencial no período do filtro, somando as lojas de cada marca (percentuais sobre os totais, sem média das lojas). A DRE Voxel continua como histórico.</p>';
+    pn.hidden = false;
+  }
+  document.addEventListener('click', function(e){ if(e.target.closest && e.target.closest('#dgCmpBtn')){ dgCmpOpen = !dgCmpOpen; renderDgCmp(); } });
   function renderMandala(){
     var box = document.getElementById('mandCard'); if(!box) return;
     var s = fState.scope, m = fState.month;
@@ -4670,7 +4717,7 @@
     var c3 = '<button type="button" class="vx-card vx-cmp" id="vxCmpBtn" aria-expanded="'+vxCmpOpen+'"><div class="vx-t">Comparativo por marca <span>'+(vxCmpOpen?'ocultar ▴':'ver ▾')+'</span></div>'+
       '<div class="vx-brands">'+L.map(function(x){ return '<span class="vx-b"><i>'+brandIcon(x.b)+'</i>'+x.b+' <b class="'+(x.M.lop<0?'dn':'up')+'">'+fmt1.format(x.M.pctLop)+'%</b></span>'; }).join('')+'</div>'+
       '<div class="vx-mini">'+(best ? 'Melhor resultado: <b>'+best.b+'</b> ('+fmt1.format(best.M.pctLop)+'% do faturamento)' : '')+'</div></button>';
-    box.innerHTML = c1 + c2 + c3;
+    box.innerHTML = c1 + c2;   // comparativo por marca agora na DRE gerencial
     var sel = document.getElementById('vxScope'); sel.value = s;
     // painel do comparativo
     var pn = document.getElementById('vxCmpPanel');
@@ -4714,6 +4761,7 @@
     renderFilterBar();
     renderResumo();
     renderDreGer();
+    renderDgCmp();
     renderMandala();
     renderBigNumbers();
     renderCompare();

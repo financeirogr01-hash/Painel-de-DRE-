@@ -985,6 +985,8 @@
   .pz-card{margin-top:12px; padding:14px 16px;}
   #fatAnoPanel{position:fixed; z-index:80; overflow:auto; border-radius:16px; box-shadow:0 18px 50px rgba(0,0,0,.55); animation:lvPop .16s ease-out;}
   #fatAnoPanel .lv-card{margin:0;}
+  #difPop{position:fixed; z-index:80; overflow:auto; border-radius:16px; box-shadow:0 18px 50px rgba(0,0,0,.55); animation:lvPop .16s ease-out;} #difPop .lv-card{margin:0; padding:14px 16px;}
+  .dc-l{display:flex; justify-content:space-between; gap:8px; font-size:12px; margin-top:3px;} .dc-l small{color:var(--ink-muted); font-size:10.5px;} .dc-l b{font-variant-numeric:tabular-nums;}
   .fa-bar{display:block; height:10px; border-radius:3px; min-width:3px;} .fa-bar.up{background:var(--good);} .fa-bar.dn{background:var(--critical);}
   .lt-head{display:flex; justify-content:space-between; align-items:center; gap:12px; cursor:pointer;} .lt-head:focus-visible{outline:2px solid var(--accent); outline-offset:3px;}
   .lt-res{display:flex; flex-wrap:wrap; gap:6px 16px; font-size:12.5px; color:var(--ink-2); margin-top:3px;} .lt-res b{color:var(--ink);}
@@ -1223,6 +1225,7 @@
     <div class="hero-wrap"><div class="hero-fat" id="heroFat"></div><div class="grid kpi-row" id="resumoKpis"></div></div>
     <div class="loss-panel" id="lossPanelGer" hidden></div>
     <div class="fa-pop" id="fatAnoPanel" hidden></div>
+    <div class="fa-pop" id="difPop" hidden></div>
     <div class="card pz-card" id="leitura"></div>
     <div class="card pz-card" id="fatCmp"></div>
     <div class="card pz-card" id="difPanel"></div>
@@ -2999,12 +3002,43 @@
     if(lojas.length>1) h += '<div class="dif-st">Por loja (diferença contra a meta de cada loja)</div><table class="pz-t4"><tbody>'+lojas.map(function(x){ return '<tr><td>'+clEsc(x.t)+'</td><td class="num tabular">'+(x.p===null?'—':fmt1.format(x.p)+'%')+'</td><td class="num tabular '+(x.d>0?'pz-dn':'pz-up')+'">'+(x.d>0?'+':'−')+brl0(Math.abs(x.d))+'</td></tr>'; }).join('')+'</tbody></table>';
     return h + '</div>';
   }
-  function renderDifPanel(s, m){
-    var box = document.getElementById('difPanel'); if(!box) return;
-    if(!scopeHasData(s, m)){ box.hidden = true; return; } box.hidden = false;
-    box.innerHTML = '<div class="pz-t">De quem é a diferença · '+scopeName(s)+' · '+periodName(m)+'</div><div class="chart-note" style="margin:2px 0 10px;">CMV e CMO sobre o faturamento bruto, abertos por conta e por loja. A divisão por área (cozinha, salão, bar, delivery) depende de um rateio que a base ainda não traz.</div>'+
+  function renderDifPanel(s, m){ var box = document.getElementById('difPanel'); if(box){ box.hidden = true; box.innerHTML = ''; } }
+  function difPanelHtml(s, m){
+    if(!scopeHasData(s, m)) return '';
+    return '<div class="pz-t">De quem é a diferença · '+scopeName(s)+' · '+periodName(m)+'</div><div class="chart-note" style="margin:2px 0 10px;">CMV e CMO sobre o faturamento bruto, abertos por conta e por loja. A divisão por área (cozinha, salão, bar, delivery) depende de um rateio que a base ainda não traz.</div>'+
       '<div class="dif-grid">'+difBloco(s, m, 'CMV', SIG.cmv.g, ['cmv'])+difBloco(s, m, 'CMO', SIG.cmo.g, ['cmof','cmov'])+'</div>';
   }
+  var difOpen = false;
+  function difCardHtml(s, m){
+    if(!scopeHasData(s, m)) return '';
+    var v = dgCalc(s, m, false).v, rb = v.rb; if(!(rb>0)) return '';
+    var cmv = -(v.cmv||0), cmo = -((v.cmof||0)+(v.cmov||0)), dV = cmv - SIG.cmv.g/100*rb, dO = cmo - SIG.cmo.g/100*rb, dP = dV + dO;
+    var linha = function(nome, d, meta){ return '<div class="dc-l"><span>'+nome+' <small>meta '+meta+'%</small></span><b class="'+(d>0?'pz-dn':'pz-up')+'">'+(d>0?'+':'−')+brl0(Math.abs(d))+'</b></div>'; };
+    return '<div class="card kpi kpi-click" id="difCard" role="button" tabindex="0" aria-expanded="'+difOpen+'" aria-controls="difPop"><div class="kpi-label">De quem é a diferença</div>'+
+      '<div class="kpi-value tabular" style="color:'+(dP>0?'var(--critical)':'var(--good)')+'">'+(dP>0?'+':'−')+brl0(Math.abs(dP))+'</div>'+
+      '<div class="kpi-sub">Prime Cost '+(dP>0?'acima':'abaixo')+' da meta de '+PC_META+'%</div>'+
+      linha('CMV', dV, SIG.cmv.g)+linha('CMO', dO, SIG.cmo.g)+
+      '<div class="kpi-desp">'+(dV>0 && dO<=0 ? 'O estouro está no CMV; o CMO segura parte dele.' : (dO>0 && dV<=0 ? 'O estouro está no CMO.' : (dV>0 ? 'CMV e CMO acima da meta.' : 'CMV e CMO dentro da meta.')))+'</div>'+
+      '<div class="kpi-hint">'+(difOpen ? 'Fechar detalhe ▴' : 'Ver por conta e por loja ▾')+'</div></div>';
+  }
+  function difPos(){
+    var pn = document.getElementById('difPop'), cd = document.getElementById('difCard');
+    if(!pn) return;
+    if(!difOpen || !cd){ pn.hidden = true; pn.innerHTML = ''; return; }
+    if(pn.parentNode!==document.body) document.body.appendChild(pn);
+    pn.innerHTML = '<div class="card lv-card"><button type="button" class="lv-x" data-difclose aria-label="Fechar">✕</button>'+difPanelHtml(fState.scope, fState.month)+'</div>'; pn.hidden = false;
+    var rc = cd.getBoundingClientRect(), vw = window.innerWidth, vh = window.innerHeight, w = Math.min(980, vw - 32);
+    var left = Math.max(16, Math.min(rc.left - 120, vw - w - 16)), top = rc.bottom + 8;
+    if(vh - top < 360) top = Math.max(16, vh - Math.min(700, vh - 32) - 16);
+    pn.style.left = left+'px'; pn.style.top = top+'px'; pn.style.width = w+'px'; pn.style.maxHeight = (vh - top - 16)+'px';
+  }
+  window.addEventListener('resize', function(){ if(difOpen) difPos(); });
+  document.addEventListener('click', function(e){
+    if(!e.target.closest) return;
+    if(e.target.closest('#difCard')){ difOpen = !difOpen; renderKpiGer(fState.scope, fState.month); return; }
+    if(difOpen && (e.target.closest('[data-difclose]') || !e.target.closest('#difPop'))){ difOpen = false; renderKpiGer(fState.scope, fState.month); }
+  });
+  document.addEventListener('keydown', function(e){ if(e.key==='Escape' && difOpen){ difOpen = false; renderKpiGer(fState.scope, fState.month); } if((e.key==='Enter' || e.key===' ') && e.target.id==='difCard'){ e.preventDefault(); e.target.click(); } });
   // cartão de conta variável aberta
   var LEIT_DONO = {rb:'Luiz Otávio · Receita', ded:'Financeiro', cmv:'Compras e Operações (Daiane)', cmo:'RH (Vitória) e Operações (Felipe)', pc:'Operações, com Compras e RH', ent:'Operações', cf:'Financeiro · contratos e reajustes', var:'Financeiro (Larissa abre e explica)', ebitda:'todos', r13:'Financeiro', imp:'Financeiro', sob:'todos', roy:'diretoria', ret:'diretoria', fim:'diretoria'};
   function farol(p, g, dir){ if(p===null || g===null) return ''; var ok = dir==='high' ? p>=g : p<=g, warn = dir==='high' ? p>=g*0.9 : p<=g*1.1; return ok ? 'f-ok' : (warn ? 'f-warn' : 'f-bad'); }
@@ -3181,28 +3215,9 @@
     var rb = cur.v.rb, eb = cur.v.ebitda, rl = cur.v.rl, html = '';
     // 1) faturamento contra o mesmo período do ano anterior (ano-1), separando as lojas que não existiam
     html += fatAno1Card(s, m);
-    // 2) lojas no prejuízo (EBITDA gerencial por loja) ou, numa loja, margem de contribuição
-    var grupo = scopeStores(s).filter(function(t){ return scopeHasData(t, m); });
-    if(grupo.length>1){
-      var L = grupo.map(function(t){ return {t:t, v:dgCalc(t, m, false).v.ebitda}; }).filter(function(x){ return x.v!==null; });
-      var neg = L.filter(function(x){ return x.v<0; });
-      var negP = temPrev ? scopeStores(s).filter(function(t){ return scopeHasData(t, m-1); }).map(function(t){ return dgCalc(t, m-1, prevNoEst(m)).v.ebitda; }).filter(function(v){ return v!==null && v<0; }).length : null;
-      html += kpiCard('Lojas no prejuízo', neg.length+' <span class="kpi-of">/ '+L.length+'</span>', null,
-        'margem operacional por loja (antes de royalties)'+(negP!==null ? vsPrevHtml(neg.length, negP, 'low', 'n', m, negP+' lojas') : '')+
-        lossMovHtml(s, m, L),
-        '<div class="kpi-hint">'+(lossGerOpen ? 'Ocultar lojas ▴' : 'Ver lojas e resultado ▾')+'</div>').replace('<div class="card kpi">', '<div class="card kpi kpi-click" id="lossCardGer" role="button" tabindex="0" aria-expanded="'+lossGerOpen+'" aria-controls="lossPanelGer">');
-      var pn = document.getElementById('lossPanelGer');
-      if(pn){
-        if(lossGerOpen){ var ord = L.slice().sort(function(a, b){ return a.v - b.v; });
-          pn.innerHTML = lossVisHtml(L, s, m);
-          pn.hidden = false; }
-        else { pn.hidden = true; pn.innerHTML = ''; }
-      }
-    } else {
-      var pnx = document.getElementById('lossPanelGer'); if(pnx){ pnx.hidden = true; pnx.innerHTML = ''; }
-      var mcp = rl>0 ? cur.v.mc/rl*100 : null, mcpP = prev && prev.v.rl>0 ? prev.v.mc/prev.v.rl*100 : null;
-      html += kpiCard('Margem de contribuição', brl0(cur.v.mc), null, (mcp===null ? '—' : fmt1.format(mcp)+'% da receita líquida')+(mcpP!==null ? vsPrevHtml(mcp, mcpP, 'high', 'pp', m, fmt1.format(mcpP)+'%') : ''));
-    }
+    // 2) de quem é a diferença: CMV contra 30% e CMO contra 25% do faturamento bruto (detalhe ao clicar)
+    lossGerOpen = false; var pnx = document.getElementById('lossPanelGer'); if(pnx){ pnx.hidden = true; pnx.innerHTML = ''; }
+    html += difCardHtml(s, m);
     // 3) Prime Cost gerencial = CMV + CMO (fixo + Free) sobre a receita líquida gerencial
     function pcG(x){ if(!x || !(x.v.rb>0) || !(x.v.rl>0)) return null; var cmv = -(x.v.cmv||0), cmo = -((x.v.cmof||0)+(x.v.cmov||0)), b = x.v.rb, l = x.v.rl;
       return {rb:b, cmv:cmv, cmo:cmo, cmvP:cmv/b*100, cmoP:cmo/b*100, pc:(cmv+cmo)/b*100, cmvL:cmv/l*100, cmoL:cmo/l*100, pcL:(cmv+cmo)/l*100}; }   // destaque sobre o bruto
@@ -3230,7 +3245,7 @@
     });
     html += contaVarCard(s, m);
     box.innerHTML = html;
-    lossPos(); fatAnoPos();
+    lossPos(); fatAnoPos(); difPos();
     renderLeitura(s, m); renderFatCmp(s, m); renderDifPanel(s, m);
   }
   document.addEventListener('click', function(e){ if(e.target.closest && e.target.closest('#lossCardGer')){ lossGerOpen = !lossGerOpen; renderKpiGer(fState.scope, fState.month); return; }

@@ -999,6 +999,26 @@
   .dif-col{min-width:0;} .dif-h{font-size:13px; color:var(--ink-2);} .dif-big{font-size:20px; font-weight:800; margin:2px 0;} .dif-sub{font-size:12px; color:var(--ink-muted);}
   .dif-st{font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.04em; color:var(--ink-muted); margin:10px 0 2px;}
   .kv-t{width:100%; border-collapse:collapse; font-size:12px; margin-top:6px;} .kv-t td{padding:3px 0; border-top:1px solid var(--border);} .kv-t td.num{text-align:right; padding-left:8px;} .kv-memo td{color:var(--ink-muted);} .kv-memo small{font-size:10.5px;}
+  /* cartões do topo: compactos, 4 colunas iguais, faturamento em destaque */
+  .hero-wrap{grid-template-columns:300px minmax(0,1fr); gap:20px; align-items:center;}
+  .hero-wrap #resumoKpis{grid-template-columns:repeat(4, minmax(0,1fr)); gap:10px; align-items:stretch;}
+  @media (max-width:1200px){ .hero-wrap #resumoKpis{grid-template-columns:repeat(2, minmax(0,1fr));} }
+  @media (max-width:980px){ .hero-wrap{grid-template-columns:1fr;} }
+  @media (max-width:560px){ .hero-wrap #resumoKpis{grid-template-columns:1fr;} }
+  #resumoKpis .card.kpi{padding:10px 12px; min-width:0; display:flex; flex-direction:column;}
+  #resumoKpis .kpi-label{font-size:10.5px; line-height:1.3;}
+  #resumoKpis .kpi-label span{display:block; font-size:10.5px;}
+  #resumoKpis .kpi-value{font-size:21px; margin-top:2px;}
+  #resumoKpis .kpi-sub{font-size:11.5px; margin-top:2px; line-height:1.35;}
+  #resumoKpis .kpi-desp{font-size:11px; margin-top:3px; line-height:1.35;}
+  #resumoKpis .vs-prev{font-size:11px; margin-top:2px;}
+  #resumoKpis .chip{margin-top:6px; font-size:11px; align-self:flex-start;}
+  #resumoKpis .kpi-hint{margin-top:auto; padding-top:6px; font-size:11px;}
+  #resumoKpis .lv-mov{margin-top:4px; font-size:11px; gap:2px;}
+  #resumoKpis .lv-ml{line-height:1.4;} #resumoKpis .lv-mt{font-size:10.5px; text-transform:none; letter-spacing:0;}
+  #resumoKpis .kv-card{grid-column:span 2;} @media (max-width:560px){ #resumoKpis .kv-card{grid-column:auto;} }
+  #resumoKpis .kv-t{font-size:11px; margin-top:4px;} #resumoKpis .kv-t td{padding:2px 0;}
+  #heroFat.hero-fat{max-width:300px;} #heroFat .val{font-size:clamp(26px,2.4vw,34px);}
   .dg-fbar{margin:10px 0 0; padding:10px 14px; border:1px solid var(--border); border-radius:14px; background:var(--surface);}
   .dg-cmp-wrap{margin:22px 0 0;}
   #dgCmp .cmp-bt{font:inherit; color:inherit; background:transparent; border:1px solid transparent; border-radius:999px; padding:3px 9px; cursor:pointer;}
@@ -2992,7 +3012,7 @@
       ['ded', 'Taxas e deduções', 'sem régua', neg(v.ded), null],
       ['cmv', 'CMV', '30%', neg(v.cmv), 30],
       ['cmo', 'CMO (equipe fixa + freelancers)', '25%', neg((v.cmof||0)+(v.cmov||0)), 25],
-      ['pc', 'Prime Cost (CMV + CMO)', '55% (mira 50%)', neg((v.cmv||0)+(v.cmof||0)+(v.cmov||0)), 55],
+      ['pc', 'Prime Cost (CMV + CMO)', '55%', neg((v.cmv||0)+(v.cmof||0)+(v.cmov||0)), 55],
       ['ent', 'Entregas', 'sem régua', neg(v.ent), null],
       ['cf', 'Conta fixa', '10%', neg((v.ocu||0)+(v.ope||0)+(v.adm||0)), 10],
       ['var', 'Conta variável', '5%', neg(v['var']), 5],
@@ -3011,7 +3031,7 @@
       var cls = x[5]!==undefined && x[5]!==null ? x[5] : (g!==null && g!==undefined ? farol(p, g, dir) : '');
       var dif = '';
       if(id==='rb' && x[6]!==null && x[6]!==undefined) dif = (x[6]>=0?'+':'−')+brl0(Math.abs(x[6]))+' ('+fmt1.format(rb/meta*100)+'% da meta)';
-      else if(g!==null && g!==undefined){ var d = p - g, rs = d/100*rb; dif = (d>=0?'+':'−')+fmt1.format(Math.abs(d))+' pts · '+(d>=0?'+':'−')+brl0(Math.abs(rs)); if(id==='pc'){ var d2 = p - 50; dif += '<span class="pz-obs">contra 50%: '+(d2>=0?'+':'−')+fmt1.format(Math.abs(d2))+' pts · '+brl0(Math.abs(d2/100*rb))+'</span>'; } }
+      else if(g!==null && g!==undefined){ var d = p - g, rs = d/100*rb; dif = (d>=0?'+':'−')+fmt1.format(Math.abs(d))+' pts · '+(d>=0?'+':'−')+brl0(Math.abs(rs)); }
       h += '<tr class="'+(x[7]?'lt-tot ':'')+cls+'"><td>'+(cls ? '<i class="lt-dot"></i>' : '')+x[1]+(id==='cmo' ? '<span class="pz-obs">sem os encargos da parte da empresa</span>' : '')+'</td><td>'+x[2]+'</td><td class="num tabular">'+(id==='rb' ? '100%' : fmt1.format(p)+'%')+'</td><td class="num tabular">'+brl0(val)+'</td><td class="num tabular">'+dif+'</td><td class="lt-dono">'+(LEIT_DONO[id]||'')+'</td></tr>';
     });
     box.innerHTML = h + '</tbody></table></div>';
@@ -3020,14 +3040,14 @@
     var R = dgCalc(s, m, false), rb = R.v.rb; if(!(rb>0)) return '';
     var tot = 0, linhas = DG_VAR_GR.map(function(g){ var v = -g[1].reduce(function(a, l){ return a + (R.leaf[l]||0); }, 0); tot += v; return [g[0], v]; });
     var jur = -(R.leaf['Ações trabalhistas']||0);
-    return '<div class="card kpi" style="--kc:rgba(255,184,77,.6);"><div class="kpi-label">Conta variável</div><div class="kpi-value tabular">'+brl0(tot)+'</div>'+
+    return '<div class="card kpi kv-card" style="--kc:rgba(255,184,77,.6);"><div class="kpi-label">Conta variável</div><div class="kpi-value tabular">'+brl0(tot)+'</div>'+
       '<div class="kpi-sub">'+fmt1.format(tot/rb*100)+'% do faturamento bruto · meta ≤5% <b style="color:'+(tot/rb*100<=5?'var(--good)':'var(--critical)')+'">'+brl0(Math.abs(tot - 0.05*rb))+(tot/rb*100<=5?' abaixo':' acima')+'</b></div>'+
       '<table class="kv-t">'+linhas.map(function(x){ return '<tr><td>'+x[0]+'</td><td class="num tabular">'+brl0(x[1])+'</td><td class="num tabular">'+fmt1.format(x[1]/rb*100)+'%</td></tr>'; }).join('')+
       '<tr class="kv-memo"><td>Jurídico (ações trabalhistas)<br><small>já está no CMO, não somado aqui</small></td><td class="num tabular">'+brl0(jur)+'</td><td class="num tabular">'+fmt1.format(jur/rb*100)+'%</td></tr></table></div>';
   }
   function pcMetasHtml(P){
     var a = (P.pc - PC_META)/100*P.rb, b = (P.pc - PC_META2)/100*P.rb;
-    return '<div class="kpi-desp" style="font-weight:700;"><span style="color:'+(a>0?'var(--critical)':'var(--good)')+'">'+brl0(Math.abs(a))+(a>0?' acima':' abaixo')+' de '+PC_META+'%</span> · <span style="color:'+(b>0?'var(--critical)':'var(--good)')+'">'+brl0(Math.abs(b))+(b>0?' acima':' abaixo')+' de '+PC_META2+'%</span></div>';
+    return '<div class="kpi-desp" style="font-weight:700;"><span style="color:'+(a>0?'var(--critical)':'var(--good)')+'">'+brl0(Math.abs(a))+(a>0?' acima':' abaixo')+' de '+PC_META+'%</span></div>';
   }
   // % do indicador na outra base (sem meta nessa base) — abre ao clicar, sem sair do card
   var kpiAltOpen = {};
@@ -3046,10 +3066,10 @@
     var ant = {}; scopeStores(s).forEach(function(t){ if(scopeHasData(t, m-1)){ var e = dgCalc(t, m-1, prevNoEst(m)).v.ebitda; if(e!==null) ant[t] = e; } });
     var sai = L.filter(function(x){ return x.v>=0 && ant[x.t]!==undefined && ant[x.t]<0; }), ent = L.filter(function(x){ return x.v<0 && ant[x.t]!==undefined && ant[x.t]>=0; });
     if(!sai.length && !ent.length) return '<div class="kpi-desp lv-mov">mesmas lojas no prejuízo de '+VOXEL_MONTH_LABELS[m-1].toLowerCase()+'</div>';
-    var item = function(x, up){ return '<span class="lv-mi '+(up?'up':'dn')+'" title="'+clEsc(x.t)+': '+brl0(ant[x.t])+' em '+VOXEL_MONTH_LABELS[m-1].toLowerCase()+' → '+brl0(x.v)+'">'+clEsc(x.t)+' <small>'+brl0(ant[x.t])+' → '+brl0(x.v)+'</small></span>'; };
+    var item = function(x, up){ return '<span class="lv-mi '+(up?'up':'dn')+'" title="'+clEsc(x.t)+': '+brl0(ant[x.t])+' em '+VOXEL_MONTH_LABELS[m-1].toLowerCase()+' → '+brl0(x.v)+'">'+clEsc(x.t)+'</span>'; };
     return '<div class="lv-mov">'+
-      (sai.length ? '<div class="lv-mt up">▲ Saíram do prejuízo ('+sai.length+')</div>'+sai.map(function(x){ return item(x, true); }).join('') : '')+
-      (ent.length ? '<div class="lv-mt dn">▼ Entraram no prejuízo ('+ent.length+')</div>'+ent.map(function(x){ return item(x, false); }).join('') : '')+'</div>';
+      (sai.length ? '<div class="lv-ml"><b class="lv-mt up">▲ Saíram:</b> '+sai.map(function(x){ return item(x, true); }).join(', ')+'</div>' : '')+
+      (ent.length ? '<div class="lv-ml"><b class="lv-mt dn">▼ Entraram:</b> '+ent.map(function(x){ return item(x, false); }).join(', ')+'</div>' : '')+'</div>';
   }
   // painel flutuante: abre na hora, colado ao card, sem empurrar a página
   function lossPos(){
@@ -3122,7 +3142,7 @@
     if(P){
       var cl = pcCls(P.pc), dpc = P.pc - PC_META;
       html += kpiCard((s==='Consolidado' ? 'Prime Cost da rede' : 'Prime Cost')+' (CMV + CMO)', fmt1.format(P.pc)+'%', pcColor(P.pc),
-        'CMV '+fmt1.format(P.cmvP)+'% + CMO '+fmt1.format(P.cmoP)+'% · metas ≤'+PC_META+'% e ≤'+PC_META2+'% · % sobre o faturamento bruto'+
+        'CMV '+fmt1.format(P.cmvP)+'% + CMO '+fmt1.format(P.cmoP)+'% · meta ≤'+PC_META+'% · % sobre o faturamento bruto'+
         (PP ? vsPrevHtml(P.pc, PP.pc, 'low', 'pp', m, fmt1.format(PP.pc)+'%') : '')+
         '<div class="kpi-desp">CMV '+brl0(P.cmv)+' · CMO '+brl0(P.cmo)+'</div>'+pcMetasHtml(P)+'<div class="kpi-desp">Mercado (Vox): 65% Brasil · 70% média de Londrina</div>',
         '<span class="chip '+(cl==='sig-good'?'good':(cl==='sig-warn'?'warning':'critical'))+'">'+(dpc>0.05 ? '+'+fmt1.format(dpc)+'pp acima da meta de '+PC_META+'%' : 'dentro da meta de '+PC_META+'%')+'</span>');

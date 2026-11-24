@@ -983,6 +983,9 @@
   #resumo{padding-top:8px;}
   #resumo > .section-head{margin-top:0; margin-bottom:6px;}
   .pz-card{margin-top:12px; padding:14px 16px;}
+  .lt-head{display:flex; justify-content:space-between; align-items:center; gap:12px; cursor:pointer;} .lt-head:focus-visible{outline:2px solid var(--accent); outline-offset:3px;}
+  .lt-res{display:flex; flex-wrap:wrap; gap:6px 16px; font-size:12.5px; color:var(--ink-2); margin-top:3px;} .lt-res b{color:var(--ink);}
+  .lt-ar{font-size:12px; font-weight:700; color:var(--accent); white-space:nowrap;}
   .lt-t td{white-space:nowrap;} .lt-t td:first-child{white-space:normal;} .lt-tot td{font-weight:800; border-top:1px solid var(--border);}
   .lt-dot{display:inline-block; width:9px; height:9px; border-radius:50%; margin-right:6px; background:var(--ink-muted); vertical-align:middle;}
   .f-ok .lt-dot{background:var(--good);} .f-warn .lt-dot{background:var(--warning);} .f-bad .lt-dot{background:var(--critical);}
@@ -3001,6 +3004,7 @@
   // cartão de conta variável aberta
   var LEIT_DONO = {rb:'Luiz Otávio · Receita', ded:'Financeiro', cmv:'Compras e Operações (Daiane)', cmo:'RH (Vitória) e Operações (Felipe)', pc:'Operações, com Compras e RH', ent:'Operações', cf:'Financeiro · contratos e reajustes', var:'Financeiro (Larissa abre e explica)', ebitda:'todos', r13:'Financeiro', imp:'Financeiro', sob:'todos', roy:'diretoria', ret:'diretoria', fim:'diretoria'};
   function farol(p, g, dir){ if(p===null || g===null) return ''; var ok = dir==='high' ? p>=g : p<=g, warn = dir==='high' ? p>=g*0.9 : p<=g*1.1; return ok ? 'f-ok' : (warn ? 'f-warn' : 'f-bad'); }
+  var leituraOpen = false;
   function renderLeitura(s, m){
     var box = document.getElementById('leitura'); if(!box) return;
     if(!scopeHasData(s, m)){ box.hidden = true; return; } box.hidden = false;
@@ -3024,7 +3028,10 @@
       ['ret', 'Retiradas', 'sem régua', neg(v.ret), null],
       ['fim', 'Resultado final', '', v.fim, null, null, null, true]
     ].filter(function(x){ return !(dgLojaVer && (x[0]==='roy' || x[0]==='ret' || x[0]==='fim')); });
-    var h = '<div class="pz-t">Leitura do mês · '+scopeName(s)+' · '+periodName(m)+'</div><div class="chart-note" style="margin:2px 0 8px;">Regime de competência (o caixa é outra apresentação) · tudo em % do faturamento bruto, com R$ ao lado · farol: verde na meta, amarelo até 10% pior, vermelho além disso.</div>'+
+    var resumo = L.filter(function(x){ return ['rb','pc','sob'].indexOf(x[0])>=0; }).map(function(x){ var p = x[3]/rb*100; return '<span>'+x[1].replace(' (CMV + CMO)','')+' <b>'+(x[0]==='rb' ? brl0(x[3]) : fmt1.format(p)+'%')+'</b></span>'; }).join('');
+    var h = '<div class="lt-head" id="leituraBtn" role="button" tabindex="0" aria-expanded="'+leituraOpen+'"><div><div class="pz-t">Leitura do mês · '+scopeName(s)+' · '+periodName(m)+'</div><div class="lt-res">'+resumo+'</div></div><span class="lt-ar">'+(leituraOpen ? 'recolher ▴' : 'abrir a leitura linha a linha ▾')+'</span></div>';
+    if(!leituraOpen){ box.innerHTML = h; return; }
+    h += '<div class="chart-note" style="margin:8px 0 8px;">Regime de competência (o caixa é outra apresentação) · tudo em % do faturamento bruto, com R$ ao lado · farol: verde na meta, amarelo até 10% pior, vermelho além disso.</div>'+
       '<div class="table-scroll"><table class="pz-t4 lt-t"><thead><tr><th>Linha</th><th>Régua</th><th class="num">Realizado</th><th class="num">R$</th><th class="num">Diferença</th><th>Quem responde</th></tr></thead><tbody>';
     L.forEach(function(x){
       var id = x[0], val = x[3], p = val/rb*100, g = x[4], dir = x[8] || 'low';
@@ -3054,6 +3061,8 @@
       (novas.length ? '<div class="kpi-desp">Com '+novas.join(', ')+' (não existia em 2025): '+brl0(tot)+' · '+((tot-ant)>=0?'+':'−')+fmt1.format(Math.abs((tot-ant)/ant*100))+'%</div>' : ''),
       '<span class="chip '+(d>=0?'good':'critical')+'">'+(d>=0?'cresceram':'caíram')+' contra '+per+'</span>');
   }
+  document.addEventListener('click', function(e){ if(e.target.closest && e.target.closest('#leituraBtn')){ leituraOpen = !leituraOpen; renderLeitura(fState.scope, fState.month); } });
+  document.addEventListener('keydown', function(e){ if((e.key==='Enter' || e.key===' ') && e.target.id==='leituraBtn'){ e.preventDefault(); e.target.click(); } });
   function contaVarCard(s, m){
     var R = dgCalc(s, m, false), rb = R.v.rb; if(!(rb>0)) return '';
     var tot = 0, linhas = DG_VAR_GR.map(function(g){ var v = -g[1].reduce(function(a, l){ return a + (R.leaf[l]||0); }, 0); tot += v; return [g[0], v]; });

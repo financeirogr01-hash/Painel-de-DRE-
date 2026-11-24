@@ -983,6 +983,9 @@
   #resumo{padding-top:8px;}
   #resumo > .section-head{margin-top:0; margin-bottom:6px;}
   .pz-card{margin-top:12px; padding:14px 16px;}
+  #fatAnoPanel{position:fixed; z-index:80; overflow:auto; border-radius:16px; box-shadow:0 18px 50px rgba(0,0,0,.55); animation:lvPop .16s ease-out;}
+  #fatAnoPanel .lv-card{margin:0;}
+  .fa-bar{display:block; height:10px; border-radius:3px; min-width:3px;} .fa-bar.up{background:var(--good);} .fa-bar.dn{background:var(--critical);}
   .lt-head{display:flex; justify-content:space-between; align-items:center; gap:12px; cursor:pointer;} .lt-head:focus-visible{outline:2px solid var(--accent); outline-offset:3px;}
   .lt-res{display:flex; flex-wrap:wrap; gap:6px 16px; font-size:12.5px; color:var(--ink-2); margin-top:3px;} .lt-res b{color:var(--ink);}
   .lt-ar{font-size:12px; font-weight:700; color:var(--accent); white-space:nowrap;}
@@ -1219,6 +1222,7 @@
 
     <div class="hero-wrap"><div class="hero-fat" id="heroFat"></div><div class="grid kpi-row" id="resumoKpis"></div></div>
     <div class="loss-panel" id="lossPanelGer" hidden></div>
+    <div class="fa-pop" id="fatAnoPanel" hidden></div>
     <div class="card pz-card" id="leitura"></div>
     <div class="card pz-card" id="fatCmp"></div>
     <div class="card pz-card" id="difPanel"></div>
@@ -3043,6 +3047,44 @@
     });
     box.innerHTML = h + '</tbody></table></div>';
   }
+  var fatAnoOpen = false;
+  function fatAnoPanelHtml(s, m){
+    var meses = m===-1 ? (function(){ var a = []; for(var i=0;i<=VOXEL_ACC_FIM;i++) a.push(i); return a; })() : [m];
+    var per = m===-1 ? 'jan–'+VOXEL_MONTH_LABELS[VOXEL_ACC_FIM].toLowerCase()+'/25' : VOXEL_MONTH_LABELS[m].toLowerCase()+'/25';
+    var per26 = m===-1 ? 'jan–'+VOXEL_MONTH_LABELS[VOXEL_ACC_FIM].toLowerCase()+'/26' : VOXEL_MONTH_LABELS[m].toLowerCase()+'/26';
+    var L = scopeStores(s).filter(function(t){ return scopeHasData(t, m); }).map(function(t){ var v = fatRb(t, m)||0, a = FAT25[t] ? meses.reduce(function(acc, i){ return acc + (FAT25[t][i]||0); }, 0) : 0; return {t:t, v:v, a:a, d:a>0 ? v-a : null, p:a>0 ? (v-a)/a*100 : null}; });
+    var mesm = L.filter(function(x){ return x.a>0; }), novas = L.filter(function(x){ return !(x.a>0); });
+    mesm.sort(function(a, b){ return a.p - b.p; });
+    var sv = mesm.reduce(function(a, x){ return a + x.v; }, 0), sa = mesm.reduce(function(a, x){ return a + x.a; }, 0);
+    var max = mesm.reduce(function(a, x){ return Math.max(a, Math.abs(x.p)); }, 0) || 1;
+    var cai = mesm.filter(function(x){ return x.d<0; }).length;
+    var h = '<div class="card lv-card"><button type="button" class="lv-x" data-faclose aria-label="Fechar">✕</button><div class="chart-title">Faturamento x ano anterior · '+scopeName(s)+' · '+per26+' contra '+per+'</div>'+
+      '<div class="lv-sum"><span class="neg">🔴 '+cai+' caíram</span><span class="pos">🟢 '+(mesm.length-cai)+' cresceram</span></div>'+
+      '<div class="table-scroll"><table class="pz-t4"><thead><tr><th>Loja</th><th class="num">'+per26+'</th><th class="num">'+per+'</th><th class="num">Diferença</th><th class="num">%</th><th style="width:28%;"></th></tr></thead><tbody>';
+    mesm.forEach(function(x){ var w = (Math.abs(x.p)/max*100).toFixed(1); h += '<tr><td>'+clEsc(x.t)+'</td><td class="num tabular">'+brl0(x.v)+'</td><td class="num tabular">'+brl0(x.a)+'</td><td class="num tabular '+(x.d>=0?'pz-up':'pz-dn')+'">'+(x.d>=0?'+':'−')+brl0(Math.abs(x.d))+'</td><td class="num tabular '+(x.d>=0?'pz-up':'pz-dn')+'">'+(x.p>=0?'+':'−')+fmt1.format(Math.abs(x.p))+'%</td><td><span class="fa-bar '+(x.d>=0?'up':'dn')+'" style="width:'+w+'%"></span></td></tr>'; });
+    h += '<tr class="lt-tot"><td>Mesmas lojas ('+mesm.length+')</td><td class="num tabular">'+brl0(sv)+'</td><td class="num tabular">'+brl0(sa)+'</td><td class="num tabular '+(sv>=sa?'pz-up':'pz-dn')+'">'+(sv>=sa?'+':'−')+brl0(Math.abs(sv-sa))+'</td><td class="num tabular '+(sv>=sa?'pz-up':'pz-dn')+'">'+(sa ? ((sv>=sa?'+':'−')+fmt1.format(Math.abs((sv-sa)/sa*100))+'%') : '—')+'</td><td></td></tr>';
+    novas.forEach(function(x){ h += '<tr><td>'+clEsc(x.t)+' <span class="pz-na">loja nova</span></td><td class="num tabular">'+brl0(x.v)+'</td><td class="num tabular">—</td><td class="num">—</td><td class="num">—</td><td></td></tr>'; });
+    if(novas.length){ var tv = sv + novas.reduce(function(a, x){ return a + x.v; }, 0); h += '<tr class="lt-tot"><td>Total com lojas novas</td><td class="num tabular">'+brl0(tv)+'</td><td class="num tabular">'+brl0(sa)+'</td><td class="num tabular '+(tv>=sa?'pz-up':'pz-dn')+'">'+(tv>=sa?'+':'−')+brl0(Math.abs(tv-sa))+'</td><td class="num tabular '+(tv>=sa?'pz-up':'pz-dn')+'">'+(sa ? ((tv>=sa?'+':'−')+fmt1.format(Math.abs((tv-sa)/sa*100))+'%') : '—')+'</td><td></td></tr>'; }
+    return h + '</tbody></table></div><p class="chart-note" style="margin:8px 0 0;">Da loja que mais caiu para a que mais cresceu. 2025: painel de vendas.</p></div>';
+  }
+  function fatAnoPos(){
+    var pn = document.getElementById('fatAnoPanel'), cd = document.getElementById('fatAnoCard');
+    if(!pn) return;
+    if(!fatAnoOpen || !cd){ pn.hidden = true; pn.innerHTML = ''; return; }
+    if(pn.parentNode!==document.body) document.body.appendChild(pn);
+    pn.innerHTML = fatAnoPanelHtml(fState.scope, fState.month); pn.hidden = false;
+    var rc = cd.getBoundingClientRect(), vw = window.innerWidth, vh = window.innerHeight, w = Math.min(640, vw - 32);
+    var left = Math.max(16, Math.min(rc.left, vw - w - 16)), top = rc.bottom + 8;
+    if(vh - top < 320) top = Math.max(16, vh - Math.min(640, vh - 32) - 16);
+    pn.style.left = left+'px'; pn.style.top = top+'px'; pn.style.width = w+'px'; pn.style.maxHeight = (vh - top - 16)+'px';
+  }
+  window.addEventListener('resize', function(){ if(fatAnoOpen) fatAnoPos(); });
+  document.addEventListener('click', function(e){
+    if(!e.target.closest) return;
+    if(e.target.closest('#fatAnoCard')){ fatAnoOpen = !fatAnoOpen; renderKpiGer(fState.scope, fState.month); return; }
+    if(fatAnoOpen && (e.target.closest('[data-faclose]') || !e.target.closest('#fatAnoPanel'))){ fatAnoOpen = false; renderKpiGer(fState.scope, fState.month); }
+  });
+  document.addEventListener('keydown', function(e){ if(e.key==='Escape' && fatAnoOpen){ fatAnoOpen = false; renderKpiGer(fState.scope, fState.month); } if((e.key==='Enter' || e.key===' ') && e.target.id==='fatAnoCard'){ e.preventDefault(); e.target.click(); } });
   function fatAno1Card(s, m){
     var meses = m===-1 ? (function(){ var a = []; for(var i=0;i<=VOXEL_ACC_FIM;i++) a.push(i); return a; })() : [m];
     var lojas = scopeStores(s).filter(function(t){ return scopeHasData(t, m); });
@@ -3059,7 +3101,8 @@
       '<b>'+brl0(mesm)+'</b> contra <b>'+brl0(ant)+'</b> em '+per+
       '<div class="kpi-desp" style="font-weight:700;color:'+cor+';">'+(d>=0?'+':'−')+brl0(Math.abs(d))+(d>=0?' a mais':' a menos')+' nas mesmas lojas</div>'+
       (novas.length ? '<div class="kpi-desp">Com '+novas.join(', ')+' (não existia em 2025): '+brl0(tot)+' · '+((tot-ant)>=0?'+':'−')+fmt1.format(Math.abs((tot-ant)/ant*100))+'%</div>' : ''),
-      '<span class="chip '+(d>=0?'good':'critical')+'">'+(d>=0?'cresceram':'caíram')+' contra '+per+'</span>');
+      '<span class="chip '+(d>=0?'good':'critical')+'">'+(d>=0?'cresceram':'caíram')+' contra '+per+'</span><div class="kpi-hint">'+(fatAnoOpen ? 'Fechar detalhe ▴' : 'Ver por loja ▾')+'</div>')
+      .replace('<div class="card kpi">', '<div class="card kpi kpi-click" id="fatAnoCard" role="button" tabindex="0" aria-expanded="'+fatAnoOpen+'" aria-controls="fatAnoPanel">');
   }
   document.addEventListener('click', function(e){ if(e.target.closest && e.target.closest('#leituraBtn')){ leituraOpen = !leituraOpen; renderLeitura(fState.scope, fState.month); } });
   document.addEventListener('keydown', function(e){ if((e.key==='Enter' || e.key===' ') && e.target.id==='leituraBtn'){ e.preventDefault(); e.target.click(); } });
@@ -3185,7 +3228,7 @@
     });
     html += contaVarCard(s, m);
     box.innerHTML = html;
-    lossPos();
+    lossPos(); fatAnoPos();
     renderLeitura(s, m); renderFatCmp(s, m); renderDifPanel(s, m);
   }
   document.addEventListener('click', function(e){ if(e.target.closest && e.target.closest('#lossCardGer')){ lossGerOpen = !lossGerOpen; renderKpiGer(fState.scope, fState.month); return; }

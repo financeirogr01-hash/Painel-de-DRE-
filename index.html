@@ -5023,6 +5023,7 @@
   document.addEventListener('keydown', function(e){ if(e.key!=='Enter' && e.key!==' ') return; if(e.target.closest && e.target.closest('[data-sigb]')) return; var el = e.target.closest && e.target.closest('[data-dgo]'); if(el){ e.preventDefault(); goToDgLine(el.getAttribute('data-dgo')); } });
   // ---------------- Mandala de Equilíbrio por Loja ----------------
   // venda mínima = custos fixos operacionais ÷ (margem de contribuição ÷ faturamento bruto)
+  var MAND_META = {cmv:33, cmo:25};   // metas da mandala (CMV 33% e CMO 25% sobre o faturamento bruto)
   function mandCalc(o){
     var x = {rb:o.rb, mc:o.mc, fixos:o.fixos, mcB:null, vm:null, dif:null, ating:null, st:'na', motivo:null};
     if(o.rb===null || o.rb===undefined || !(o.rb>0)){ x.motivo = 'faturamento bruto indisponível'; return x; }
@@ -5071,7 +5072,7 @@
   }
   function mandStatusTxt(c){ return c.st==='acima' ? 'acima do equilíbrio' : c.st==='abaixo' ? 'abaixo do equilíbrio' : c.st==='eq' ? 'no equilíbrio' : c.st==='semPE' ? 'sem ponto de equilíbrio com a margem atual' : 'sem dados'; }
   function mandCard(o){
-    var c = o.calc, gM = SIG.cmv.g, oM = SIG.cmo.g;
+    var c = o.calc, gM = MAND_META.cmv, oM = MAND_META.cmo;
     var lbl = o.t+': '+mandStatusTxt(c)+(c.st==='abaixo' ? ', faltam '+brl0(-c.dif) : (c.st==='acima' ? ', '+brl0(c.dif)+' acima' : ''));
     return '<div class="mand st-'+c.st+(mandSel===o.t?' on':'')+'" data-mand="'+clEsc(o.t)+'" role="button" tabindex="0" aria-expanded="'+(mandSel===o.t)+'" aria-controls="mandDet" title="'+clEsc(lbl)+' — clique para ver a memória de cálculo">'+
       '<div class="mand-nome">'+clEsc(o.t)+'</div><div class="mand-body">'+
@@ -5108,10 +5109,10 @@
       '<br><span class="mand-na">Estimativa com a estrutura e a margem observadas no período'+(m===-1 ? ' (acumulado: soma das competências e razões recalculadas sobre os totais)' : '')+'.</span></div>';
     h += '<div class="table-scroll" style="border:0;"><table><tr class="mg"><td>CMV, CMO e Prime Cost</td><td class="num">R$</td><td class="num">% do faturamento bruto</td><td class="num">% do Prime Cost</td></tr>';
     var ppc = function(x){ return o.pc>0 ? fmt1.format(x/o.pc*100)+'%' : '—'; };
-    h += '<tr><td>CMV'+contas('cmv', o.cmv)+'</td><td class="num">'+dgR(o.cmv)+'</td><td class="num">'+pc(o.cmv)+' <span class="'+(o.cmvP!==null && o.cmvP<=SIG.cmv.g ? 'mand-ok' : 'mand-bad')+'">('+(o.cmvP===null ? '—' : fmt1.format(o.cmvP))+'% do bruto · meta ≤'+fmt1.format(SIG.cmv.g)+'% s/ bruto)</span></td><td class="num">'+ppc(o.cmv)+'</td></tr>';
+    h += '<tr><td>CMV'+contas('cmv', o.cmv)+'</td><td class="num">'+dgR(o.cmv)+'</td><td class="num">'+pc(o.cmv)+' <span class="'+(o.cmvP!==null && o.cmvP<=MAND_META.cmv ? 'mand-ok' : 'mand-bad')+'">('+(o.cmvP===null ? '—' : fmt1.format(o.cmvP))+'% do bruto · meta ≤'+fmt1.format(MAND_META.cmv)+'% s/ bruto)</span></td><td class="num">'+ppc(o.cmv)+'</td></tr>';
     h += '<tr><td>CMO — equipe fixa</td><td class="num">'+dgR(o.cmof)+'</td><td class="num">'+pc(o.cmof)+'</td><td class="num">'+ppc(o.cmof)+'</td></tr>';
     h += '<tr><td>CMO — Free</td><td class="num">'+dgR(o.cmov)+'</td><td class="num">'+pc(o.cmov)+'</td><td class="num">'+ppc(o.cmov)+'</td></tr>';
-    h += '<tr class="mt"><td>CMO total</td><td class="num">'+dgR(o.cmo)+'</td><td class="num">'+pc(o.cmo)+' <span class="'+(o.cmoP!==null && o.cmoP<=SIG.cmo.g ? 'mand-ok' : 'mand-bad')+'">('+(o.cmoP===null ? '—' : fmt1.format(o.cmoP))+'% do bruto · meta ≤'+fmt1.format(SIG.cmo.g)+'% s/ bruto)</span></td><td class="num">'+ppc(o.cmo)+'</td></tr>';
+    h += '<tr class="mt"><td>CMO total</td><td class="num">'+dgR(o.cmo)+'</td><td class="num">'+pc(o.cmo)+' <span class="'+(o.cmoP!==null && o.cmoP<=MAND_META.cmo ? 'mand-ok' : 'mand-bad')+'">('+(o.cmoP===null ? '—' : fmt1.format(o.cmoP))+'% do bruto · meta ≤'+fmt1.format(MAND_META.cmo)+'% s/ bruto)</span></td><td class="num">'+ppc(o.cmo)+'</td></tr>';
     h += '<tr class="mt"><td>Prime Cost (CMV + CMO)</td><td class="num">'+dgR(o.pc)+'</td><td class="num">'+pc(o.pc)+' (meta ≤'+PC_META+'%)</td><td class="num">100%</td></tr>';
     h += '</table></div></div>';
     return h;
@@ -5188,7 +5189,7 @@
     if(L.length===1) mandSel = L[0].t;
     var abx = L.filter(function(o){ return o.calc.st==='abaixo' || o.calc.st==='semPE'; }), acm = L.filter(function(o){ return o.calc.st==='acima' || o.calc.st==='eq'; }), nd = L.filter(function(o){ return o.calc.st==='na'; });
     var falta = L.reduce(function(a, o){ return a + (o.calc.st==='abaixo' ? -o.calc.dif : 0); }, 0);
-    var h = '<div class="mand-head"><h3>Mandala de Equilíbrio por Loja</h3><div class="mand-sub">'+scopeName(s)+' · '+periodName(m)+' · DRE gerencial de cada loja · venda mínima = custos fixos operacionais ÷ margem de contribuição sobre o faturamento bruto · CMV e CMO sobre o faturamento bruto (metas do sinaleiro: CMV ≤'+fmt1.format(SIG.cmv.g)+'%, CMO ≤'+fmt1.format(SIG.cmo.g)+'%) · ordem: maior falta de faturamento primeiro · clique numa loja para ver a memória de cálculo</div></div>';
+    var h = '<div class="mand-head"><h3>Mandala de Equilíbrio por Loja</h3><div class="mand-sub">'+scopeName(s)+' · '+periodName(m)+' · DRE gerencial de cada loja · venda mínima = custos fixos operacionais ÷ margem de contribuição sobre o faturamento bruto · CMV e CMO sobre o faturamento bruto (metas da mandala: CMV ≤'+fmt1.format(MAND_META.cmv)+'%, CMO ≤'+fmt1.format(MAND_META.cmo)+'%) · ordem: maior falta de faturamento primeiro · clique numa loja para ver a memória de cálculo</div></div>';
     if(L.length>1){
       h += '<div class="mand-sum"><span><b class="mand-bad">'+abx.length+'</b> abaixo do equilíbrio'+(falta>0 ? ' · faltam <b>'+brl0(falta)+'</b> somadas' : '')+'</span><span><b class="mand-ok">'+acm.length+'</b> acima ou no equilíbrio</span>'+(nd.length ? '<span><b>'+nd.length+'</b> sem dados</span>' : '')+'</div>';
       // lançamentos só da rede (não atribuídos às lojas) ficam no consolidado

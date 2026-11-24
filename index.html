@@ -1227,8 +1227,6 @@
     <div class="fa-pop" id="fatAnoPanel" hidden></div>
     <div class="fa-pop" id="difPop" hidden></div>
     <div class="card pz-card" id="leitura"></div>
-    <div class="card pz-card" id="fatCmp"></div>
-    <div class="card pz-card" id="difPanel"></div>
     <div class="chart-title" style="margin-top:18px; text-align:center;" id="sigTitle">Sinaleiro da DRE</div>
     <div class="sig-panel" id="sigPanel"></div>
     <div class="sig-legend" style="justify-content:center;">
@@ -1248,6 +1246,8 @@
       <div class="filter-group"><label class="filter-label" for="fStore2">Loja</label><select id="fStore2" autocomplete="off" class="fselect"></select></div>
     </div>
     <div class="card dg-card" id="dgCard"></div>
+    <div class="card pz-card" id="fatCmp"></div>
+    <div class="card pz-card" id="difPanel"></div>
     <div class="card mand-card" id="mandCard"></div>
 
 
@@ -3002,7 +3002,7 @@
     if(lojas.length>1) h += '<div class="dif-st">Por loja (diferença contra a meta de cada loja)</div><table class="pz-t4"><tbody>'+lojas.map(function(x){ return '<tr><td>'+clEsc(x.t)+'</td><td class="num tabular">'+(x.p===null?'—':fmt1.format(x.p)+'%')+'</td><td class="num tabular '+(x.d>0?'pz-dn':'pz-up')+'">'+(x.d>0?'+':'−')+brl0(Math.abs(x.d))+'</td></tr>'; }).join('')+'</tbody></table>';
     return h + '</div>';
   }
-  function renderDifPanel(s, m){ var box = document.getElementById('difPanel'); if(box){ box.hidden = true; box.innerHTML = ''; } }
+  function renderDifPanel(s, m){ var box = document.getElementById('difPanel'); if(!box) return; var h = difPanelHtml(s, m); box.hidden = !h; box.innerHTML = h; }
   function difPanelHtml(s, m){
     if(!scopeHasData(s, m)) return '';
     return '<div class="pz-t">De quem é a diferença · '+scopeName(s)+' · '+periodName(m)+'</div><div class="chart-note" style="margin:2px 0 10px;">CMV e CMO sobre o faturamento bruto, abertos por conta e por loja. A divisão por área (cozinha, salão, bar, delivery) depende de um rateio que a base ainda não traz.</div>'+

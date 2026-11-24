@@ -3036,6 +3036,24 @@
     });
     box.innerHTML = h + '</tbody></table></div>';
   }
+  function fatAno1Card(s, m){
+    var meses = m===-1 ? (function(){ var a = []; for(var i=0;i<=VOXEL_ACC_FIM;i++) a.push(i); return a; })() : [m];
+    var lojas = scopeStores(s).filter(function(t){ return scopeHasData(t, m); });
+    var tot = 0, mesm = 0, ant = 0, novas = [];
+    lojas.forEach(function(t){
+      var v = fatRb(t, m) || 0; tot += v;
+      var a = FAT25[t] ? meses.reduce(function(acc, i){ return acc + (FAT25[t][i]||0); }, 0) : 0;
+      if(a>0){ mesm += v; ant += a; } else novas.push(t);
+    });
+    var per = m===-1 ? 'jan–'+VOXEL_MONTH_LABELS[VOXEL_ACC_FIM].toLowerCase()+'/2025' : MONTH_FULL[m].toLowerCase()+'/2025';
+    if(!(ant>0)) return kpiCard('Faturamento x ano anterior', '—', null, 'sem faturamento de '+per+' para comparar');
+    var d = mesm - ant, p = d/ant*100, cor = d>=0 ? 'var(--good)' : 'var(--critical)';
+    return kpiCard('Faturamento x ano anterior <span style="font-weight:600;color:var(--ink-muted);text-transform:none;letter-spacing:0;">· mesmas lojas</span>', (p>=0?'+':'−')+fmt1.format(Math.abs(p))+'%', cor,
+      '<b>'+brl0(mesm)+'</b> contra <b>'+brl0(ant)+'</b> em '+per+
+      '<div class="kpi-desp" style="font-weight:700;color:'+cor+';">'+(d>=0?'+':'−')+brl0(Math.abs(d))+(d>=0?' a mais':' a menos')+' nas mesmas lojas</div>'+
+      (novas.length ? '<div class="kpi-desp">Com '+novas.join(', ')+' (não existia em 2025): '+brl0(tot)+' · '+((tot-ant)>=0?'+':'−')+fmt1.format(Math.abs((tot-ant)/ant*100))+'%</div>' : ''),
+      '<span class="chip '+(d>=0?'good':'critical')+'">'+(d>=0?'cresceram':'caíram')+' contra '+per+'</span>');
+  }
   function contaVarCard(s, m){
     var R = dgCalc(s, m, false), rb = R.v.rb; if(!(rb>0)) return '';
     var tot = 0, linhas = DG_VAR_GR.map(function(g){ var v = -g[1].reduce(function(a, l){ return a + (R.leaf[l]||0); }, 0); tot += v; return [g[0], v]; });
@@ -3107,12 +3125,8 @@
     if(cur.v.rb===null){ box.innerHTML = '<div class="card kpi" style="grid-column:1/-1;">Sem dados de '+scopeName(s)+' em '+periodName(m)+'.</div>'; return; }
     var temPrev = m>0 && scopeHasData(s, m-1), prev = temPrev ? dgCalc(s, m-1, prevNoEst(m)) : null;
     var rb = cur.v.rb, eb = cur.v.ebitda, rl = cur.v.rl, html = '';
-    // 1) resultado operacional = EBITDA da DRE gerencial
-    var desp = rb - eb;
-    html += kpiCard('Margem operacional <span style="font-weight:600;color:var(--ink-muted);text-transform:none;letter-spacing:0;">· antes de royalties</span>', brl0(eb), eb<0 ? 'var(--critical)' : 'var(--good)',
-      fmt1.format(eb/rb*100)+'% do faturamento bruto'+(prev ? vsPrevHtml(eb, prev.v.ebitda, 'high', 'brl', m, brl0(prev.v.ebitda)) : '')+
-      '<div class="kpi-desp">Faturamento '+brl0(rb)+' − despesas <b>'+brl0(desp)+'</b> ('+fmt1.format(desp/rb*100)+'%)</div>'+(cur.v.fim!==null && cur.v.fim!==undefined ? '<div class="kpi-desp">Depois das reservas (13º e imposto), royalties e retiradas: <b style="color:'+(cur.v.fim<0?'var(--critical)':'var(--good)')+'">'+brl0(cur.v.fim)+'</b></div>' : ''),
-      prev ? '<span class="chip '+((eb/rb - prev.v.ebitda/prev.v.rb)>=0?'good':'critical')+'">'+((eb/rb - prev.v.ebitda/prev.v.rb)>=0?'+':'−')+fmt1.format(Math.abs(eb/rb - prev.v.ebitda/prev.v.rb)*100)+' pp vs. '+VOXEL_MONTH_LABELS[m-1].toLowerCase()+'</span>' : '');
+    // 1) faturamento contra o mesmo período do ano anterior (ano-1), separando as lojas que não existiam
+    html += fatAno1Card(s, m);
     // 2) lojas no prejuízo (EBITDA gerencial por loja) ou, numa loja, margem de contribuição
     var grupo = scopeStores(s).filter(function(t){ return scopeHasData(t, m); });
     if(grupo.length>1){

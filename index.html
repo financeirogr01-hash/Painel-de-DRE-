@@ -1046,6 +1046,10 @@
   :is(#resumoKpis,#resumoKpis2) .kv-t td{padding:3px 0; vertical-align:top; line-height:1.3;}
   :is(#resumoKpis,#resumoKpis2) .kv-t td.num{padding-left:10px; white-space:nowrap; width:1%;}
   :is(#resumoKpis,#resumoKpis2) .kv-t td:first-child{overflow-wrap:anywhere;}
+  .kpi-dono{font-size:10.5px; color:var(--accent); font-weight:700; margin-top:3px;}
+  .sig-card .sig-rs{font-size:10.5px; font-weight:700; margin-top:4px;} .sig-card .sig-rs.ok{color:var(--good);} .sig-card .sig-rs.bad{color:var(--critical);}
+  .sig-card .sig-dono{font-size:10px; color:var(--accent); font-weight:700; margin-top:2px;}
+  .dg-mc{display:inline-block; margin-left:8px; padding:1px 8px; border-radius:999px; font-size:10.5px; font-weight:700; vertical-align:middle;} .dg-mc.ok{background:color-mix(in srgb, var(--good) 14%, transparent); color:var(--good);} .dg-mc.bad{background:color-mix(in srgb, var(--critical) 14%, transparent); color:var(--critical);}
   .dg-fbar{margin:10px 0 0; padding:10px 14px; border:1px solid var(--border); border-radius:14px; background:var(--surface);}
   .dg-cmp-wrap{margin:22px 0 0;}
   #dgCmp .cmp-bt{font:inherit; color:inherit; background:transparent; border:1px solid transparent; border-radius:999px; padding:3px 9px; cursor:pointer;}
@@ -2551,6 +2555,7 @@
             '<span class="mark" style="left:calc('+pos(d.g)+' - 1px)"></span></div>'+
           '<div class="sig-rm"><span>Meta</span><b>'+(d.dir==='low'?'≤ ':'≥ ')+fmt1.format(d.g)+'%</b></div>'+
           '<span class="sig-gap '+cls+'"><i class="sig-dot '+cls+'"></i>'+gapTxt+'</span>'+
+          '<div class="sig-rs '+(ok?'ok':'bad')+'">'+rsTxt+'</div>'+(donoDe(k) ? '<div class="sig-dono">Dono: '+donoDe(k)+'</div>' : '')+
           '<div class="sig-foot" style="margin-top:4px;">'+rsTxt+' · '+sigBaseTxt(k)+'</div>';
       } else {
         body = '<div class="sig-foot"><i class="sig-dot sig-na"></i>sem dados · '+sigMeta(k)+'</div>';
@@ -3015,7 +3020,7 @@
     contas.sort(function(a, b){ return Math.abs(b.v) - Math.abs(a.v); });
     var lojas = scopeStores(s).filter(function(t){ return scopeHasData(t, m); }).map(function(t){ var v = dgCalc(t, m, false).v, c = -ids.reduce(function(a, id){ return a + (v[id]||0); }, 0); return {t:t, c:c, p:v.rb>0 ? c/v.rb*100 : null, d:c - meta/100*(v.rb||0)}; });
     lojas.sort(function(a, b){ return b.d - a.d; });
-    var h = '<div class="dif-col"><div class="dif-h">'+nome+' <b class="tabular">'+fmt1.format(tot/rb*100)+'%</b> do faturamento · meta '+meta+'%</div>'+
+    var h = '<div class="dif-col"><div class="dif-h">'+nome+' <b class="tabular">'+fmt1.format(tot/rb*100)+'%</b> do faturamento · meta '+meta+'%</div><div class="kpi-dono">Dono: '+(nome==='CMV' ? LEIT_DONO.cmv : LEIT_DONO.cmo)+'</div>'+
       '<div class="dif-big '+(dif>0?'pz-dn':'pz-up')+'">'+brl0(Math.abs(dif))+(dif>0?' acima':' abaixo')+' da meta</div>'+
       '<div class="dif-sub">'+brl0(tot)+' realizados contra '+brl0(alvo)+' permitidos pela meta</div>'+
       '<div class="dif-st">Por conta</div><table class="pz-t4"><tbody>'+contas.map(function(c){ return '<tr><td>'+clEsc(c.n)+'<span class="pz-obs">'+(DIF_EXPL[c.n]||'')+'</span></td><td class="num tabular">'+brl0(c.v)+'</td><td class="num tabular">'+fmt1.format(c.v/rb*100)+'%</td></tr>'; }).join('')+'</tbody></table>';
@@ -3033,7 +3038,7 @@
     if(!scopeHasData(s, m)) return '';
     var v = dgCalc(s, m, false).v, rb = v.rb; if(!(rb>0)) return '';
     var cmv = -(v.cmv||0), cmo = -((v.cmof||0)+(v.cmov||0)), dV = cmv - SIG.cmv.g/100*rb, dO = cmo - SIG.cmo.g/100*rb, dP = dV + dO;
-    var linha = function(nome, d, meta){ return '<div class="dc-l"><span>'+nome+' <small>meta '+meta+'%</small></span><b class="'+(d>0?'pz-dn':'pz-up')+'">'+(d>0?'+':'−')+brl0(Math.abs(d))+'</b></div>'; };
+    var linha = function(nome, d, meta){ return '<div class="dc-l"><span>'+nome+' <small>meta '+meta+'% · '+(nome==='CMV' ? 'Compras e Operações' : 'RH e Operações')+'</small></span><b class="'+(d>0?'pz-dn':'pz-up')+'">'+(d>0?'+':'−')+brl0(Math.abs(d))+'</b></div>'; };
     return '<div class="card kpi kpi-click" id="difCard" role="button" tabindex="0" aria-expanded="'+difOpen+'" aria-controls="difPop"><div class="kpi-label">De quem é a diferença</div>'+
       '<div class="kpi-value tabular" style="color:'+(dP>0?'var(--critical)':'var(--good)')+'">'+(dP>0?'+':'−')+brl0(Math.abs(dP))+'</div>'+
       '<div class="kpi-sub">Prime Cost '+(dP>0?'acima':'abaixo')+' da meta de '+PC_META+'%</div>'+
@@ -3159,6 +3164,7 @@
   }
   function c1r(x){ return Math.round(x).toString(); }
   // cartão de conta variável aberta
+  function donoDe(k){ var mp = {lop:'ebitda', cf:'cf', opex:'var'}; return LEIT_DONO[mp[k]||k] || ''; }
   var LEIT_DONO = {rb:'Luiz Otávio · Receita', ded:'Financeiro', cmv:'Compras e Operações (Daiane)', cmo:'RH (Vitória) e Operações (Felipe)', pc:'Operações, com Compras e RH', ent:'Operações', cf:'Financeiro · contratos e reajustes', var:'Financeiro (Larissa abre e explica)', ebitda:'todos', r13:'Financeiro', imp:'Financeiro', sob:'todos', roy:'diretoria', ret:'diretoria', fim:'diretoria'};
   function farol(p, g, dir){ if(p===null || g===null) return ''; var ok = dir==='high' ? p>=g : p<=g, warn = dir==='high' ? p>=g*0.9 : p<=g*1.1; return ok ? 'f-ok' : (warn ? 'f-warn' : 'f-bad'); }
   var leituraOpen = false;
@@ -3267,7 +3273,7 @@
     var tot = 0, linhas = DG_VAR_GR.map(function(g){ var v = -g[1].reduce(function(a, l){ return a + (R.leaf[l]||0); }, 0); tot += v; return [g[0], v]; });
     var jur = -(R.leaf['Ações trabalhistas']||0);
     return '<div class="card kpi kv-card" style="--kc:rgba(255,184,77,.6);"><div class="kpi-label">Conta variável</div><div class="kpi-value tabular">'+brl0(tot)+'</div>'+
-      '<div class="kpi-sub">'+fmt1.format(tot/rb*100)+'% do faturamento bruto · meta ≤5% <b style="color:'+(tot/rb*100<=5?'var(--good)':'var(--critical)')+'">'+brl0(Math.abs(tot - 0.05*rb))+(tot/rb*100<=5?' abaixo':' acima')+'</b></div>'+
+      '<div class="kpi-dono">Dono: '+LEIT_DONO['var']+'</div><div class="kpi-sub">'+fmt1.format(tot/rb*100)+'% do faturamento bruto · meta ≤5% <b style="color:'+(tot/rb*100<=5?'var(--good)':'var(--critical)')+'">'+brl0(Math.abs(tot - 0.05*rb))+(tot/rb*100<=5?' abaixo':' acima')+'</b></div>'+
       '<table class="kv-t">'+linhas.map(function(x){ return '<tr><td>'+x[0]+'</td><td class="num tabular">'+brl0(x[1])+'</td><td class="num tabular">'+fmt1.format(x[1]/rb*100)+'%</td></tr>'; }).join('')+
       '<tr class="kv-memo"><td>Jurídico (ações trabalhistas)<br><small>já está no CMO, não somado aqui</small></td><td class="num tabular">'+brl0(jur)+'</td><td class="num tabular">'+fmt1.format(jur/rb*100)+'%</td></tr></table></div>';
   }
@@ -3347,7 +3353,7 @@
         'CMV '+fmt1.format(P.cmvP)+'% + CMO '+fmt1.format(P.cmoP)+'% · meta ≤'+PC_META+'% · % sobre o faturamento bruto'+
         (PP ? vsPrevHtml(P.pc, PP.pc, 'low', 'pp', m, fmt1.format(PP.pc)+'%') : '')+
         '<div class="kpi-desp">CMV '+brl0(P.cmv)+' · CMO '+brl0(P.cmo)+'</div>'+pcMetasHtml(P)+'<div class="kpi-desp">Mercado (Vox): 65% Brasil · 70% média de Londrina</div>',
-        '<span class="chip '+(cl==='sig-good'?'good':(cl==='sig-warn'?'warning':'critical'))+'">'+(dpc>0.05 ? '+'+fmt1.format(dpc)+'pp acima da meta de '+PC_META+'%' : 'dentro da meta de '+PC_META+'%')+'</span>');
+        '<div class="kpi-dono">Dono: '+LEIT_DONO.pc+'</div>'+'<span class="chip '+(cl==='sig-good'?'good':(cl==='sig-warn'?'warning':'critical'))+'">'+(dpc>0.05 ? '+'+fmt1.format(dpc)+'pp acima da meta de '+PC_META+'%' : 'dentro da meta de '+PC_META+'%')+'</span>');
     }
     // 4–6) CMV, CMO e custos fixos pela DRE gerencial (mesma base e metas do sinaleiro); clique leva à linha da DRE gerencial
     var SM = dgSigM(s, m), SP = temPrev ? dgSigM(s, m-1) : null;
@@ -3359,7 +3365,7 @@
       html += kpiCard(it[1], fmt1.format(p)+'%', cor,
         'meta ≤'+fmt1.format(d.g)+'% · % sobre '+(d.base==='fb' ? 'o faturamento bruto' : 'a receita líquida gerencial')+kpiAltHtml(k, p, SM, SP, m)+(pp!==null ? vsPrevHtml(p, pp, 'low', 'pp', m, fmt1.format(pp)+'%') : '')+
         '<div class="kpi-desp">'+it[2]+brl0(rs).replace('R$ ','')+'</div>'+(SM.rbB>0 ? '<div class="kpi-desp" style="font-weight:700;color:'+(dif>0?'var(--critical)':'var(--good)')+';">'+brl0(Math.abs(dif)/100*SM.rbB)+(dif>0?' acima':' abaixo')+' da meta de '+fmt1.format(d.g)+'%</div>' : ''),
-        '<span class="chip '+chip+'">'+(dif>0.05 ? '+'+fmt1.format(dif)+'pp acima da meta' : (dif< -0.05 ? '−'+fmt1.format(-dif)+'pp abaixo da meta' : 'na meta'))+'</span><div class="kpi-hint">Ver na DRE gerencial ↓</div>')
+        '<div class="kpi-dono">Dono: '+donoDe(k)+'</div>'+'<span class="chip '+chip+'">'+(dif>0.05 ? '+'+fmt1.format(dif)+'pp acima da meta' : (dif< -0.05 ? '−'+fmt1.format(-dif)+'pp abaixo da meta' : 'na meta'))+'</span><div class="kpi-hint">Ver na DRE gerencial ↓</div>')
         .replace('<div class="card kpi">', '<div class="card kpi kpi-click" data-dgo="'+k+'" role="button" tabindex="0" style="--kc:'+d.color+';" title="Ver '+it[1]+' na DRE gerencial">');
     });
     html += contaVarCard(s, m);
@@ -4641,6 +4647,15 @@
     var up = Math.abs(cur) > Math.abs(prev), p = (Math.abs(cur)-Math.abs(prev))/Math.abs(prev)*100;
     return '<td class="num dg-var"><span class="'+cls+'">'+(up?'▲ +':'▼ −')+fmt2.format(Math.abs(p))+'%</span><small>'+dtxt+'</small></td>';
   }
+  // meta, diferença em R$ e dono, ao lado das linhas que têm régua
+  function dgMetaChip(id, cur){
+    var v = cur.v, rb = v.rb; if(!(rb>0)) return '';
+    var M = {cmv:[ -(v.cmv||0), SIG.cmv.g, '', 'cmv'], cmov:[ -((v.cmof||0)+(v.cmov||0)), SIG.cmo.g, 'CMO total ', 'cmo'], pcr:[ -(v.pcr||0), PC_META, '', 'pc'],
+      adm:[ -((v.ocu||0)+(v.ope||0)+(v.adm||0)), SIG.cf.g, 'conta fixa total ', 'cf'], 'var':[ -(v['var']||0), 5, '', 'var']}[id];
+    if(!M) return '';
+    var p = M[0]/rb*100, d = p - M[1], rs = d/100*rb, ok = d<=0;
+    return '<span class="dg-mc '+(ok?'ok':'bad')+'">'+M[2]+fmt1.format(p)+'% · meta '+M[1]+'% · '+(rs>0?'+':'−')+brl0(Math.abs(rs))+(ok?' abaixo':' acima')+' · '+LEIT_DONO[M[3]]+'</span>';
+  }
   function renderDreGer(){
     var box = document.getElementById('dgCard'); if(!box) return;
     var s = fState.scope, m = fState.month;
@@ -4702,7 +4717,7 @@
       if(d.f){
         var lbl = d.t, tag = '';
         if(d.id==='ll' && incompleto){ lbl = '6. Lucro ou prejuízo líquido — parcial'; tag = '<span class="dg-tag">dados incompletos</span>'; }
-        h += '<tr class="dg-tot"'+clk(d.id, d.id==='ll' ? 'Ver os ajustes após o EBITDA' : 'Ver a fórmula e os valores usados')+'><td>'+ar(d.id)+lbl+tag+'</td><td class="num tabular">'+dgR(cur.v[d.id])+'</td><td class="num tabular">'+pc(cur.v[d.id])+'</td>'+
+        h += '<tr class="dg-tot"'+clk(d.id, d.id==='ll' ? 'Ver os ajustes após o EBITDA' : 'Ver a fórmula e os valores usados')+'><td>'+ar(d.id)+lbl+tag+dgMetaChip(d.id, cur)+'</td><td class="num tabular">'+dgR(cur.v[d.id])+'</td><td class="num tabular">'+pc(cur.v[d.id])+'</td>'+
           prevTd(pv(d.id))+dgVarTd(curC.v[d.id], pv(d.id), d, naoAplic)+'</tr>';
         if(dgOpen[d.id] && d.id==='ll'){
           h += '<tr class="dg-form"><td colspan="5">Ajustes após o EBITDA — resultado líquido = EBITDA + ajustes abaixo.'+(incompleto ? '<span class="dg-note">Resultado parcial: depreciação/amortização e tributos sobre o lucro não têm conta na base.</span>' : '')+'</td></tr>';
@@ -4744,7 +4759,7 @@
       var cv = cur.v[d.id], pvv = pv(d.id);
       if(d.opt && !dgZero && dgZ(cv) && dgZ(pvv)) return;
       var val = d.aus ? '<span class="dg-aus">Dado ausente</span>' : (d.vazio ? '<span class="dg-eq">—</span>' : dgR(cv));
-      h += '<tr class="dg-macro"'+clk(d.id, 'Abrir ou fechar as contas')+'><td>'+ar(d.id)+d.t+(d.aus?'<span class="dg-tag">sem conta na base</span>':'')+'</td><td class="num tabular">'+val+'</td><td class="num tabular">'+(d.aus||d.vazio ? '<span class="dg-eq">—</span>' : pc(cv))+'</td>'+
+      h += '<tr class="dg-macro"'+clk(d.id, 'Abrir ou fechar as contas')+'><td>'+ar(d.id)+d.t+dgMetaChip(d.id, cur)+(d.aus?'<span class="dg-tag">sem conta na base</span>':'')+'</td><td class="num tabular">'+val+'</td><td class="num tabular">'+(d.aus||d.vazio ? '<span class="dg-eq">—</span>' : pc(cv))+'</td>'+
         (d.aus||d.vazio ? '<td class="num"><span class="dg-eq">—</span></td><td class="num"><span class="dg-eq">—</span></td>' : prevTd(pvv)+dgVarTd(curC.v[d.id], pvv, d, naoAplic))+'</tr>';
       if(!dgOpen[d.id]) return;
       if(d.aus || d.vazio || d.obs) h += '<tr class="dg-obs"><td colspan="5">'+(d.aus || d.vazio || d.obs)+
@@ -4801,7 +4816,7 @@
     var mcRb = cur.v.rb ? (cur.v.mc + (cur.v.roy||0))/cur.v.rb : 0, pe = mcRb>0 ? cfG/mcRb : null, prime = -((cur.v.cmv||0) + cmoT);
     var royR = -(cur.v.roy||0);
     var ind = '<div class="dg-box"><h4>Indicadores com os mesmos dados</h4><ul>'+
-      '<li><b>Prime Cost</b> = CMV + CMO total = '+dgR(prime)+' ('+pc(prime)+' da receita líquida gerencial). O card Prime Cost usa o faturamento líquido de itens como base (meta 53%).</li>'+
+      '<li><b>Prime Cost</b> = CMV + CMO total = '+dgR(prime)+' ('+pc(prime)+' do faturamento bruto · meta '+PC_META+'%).</li>'+
       '<li><b>Ponto de equilíbrio (receita bruta necessária)</b> = custos após a margem de contribuição '+dgR(cfG)+' ÷ margem de contribuição sobre a receita bruta ('+fmt2.format(mcRb*100)+'%) = '+(pe===null ? 'não calculável (margem de contribuição negativa)' : '<b>'+dgR(pe)+'</b>')+' — receita bruta para EBITDA zero.</li>'+
       '<li><b>Royalties e gestão realizados</b>: '+dgR(royR)+' = '+(cur.v.rb ? fmt2.format(royR/cur.v.rb*100) : 'n/d')+'% da <b>receita bruta</b> (base contratual).</li>'+
       '<li>“Para onde foi cada R$ 100 faturados” continua sobre a <b>receita bruta</b>.</li>'+
@@ -5037,9 +5052,9 @@
   }
   var mandSel = null;
   function mandMetaHtml(p, meta, rotulo){
-    if(p===null) return '<span class="mi-l">'+rotulo+'</span><b>—</b><span class="mand-na">receita líquida indisponível</span>';
+    if(p===null) return '<span class="mi-l">'+rotulo+'</span><b>—</b><span class="mand-na">faturamento indisponível</span>';
     var d = p - meta, ok = d<=0;
-    return '<span class="mi-l">'+rotulo+'</span><b>'+fmt1.format(p)+'%</b>meta ≤'+fmt1.format(meta)+'%<br><span class="mi-d '+(ok?'mand-ok':'mand-bad')+'">'+(d>0?'+':(d<0?'−':''))+fmt1.format(Math.abs(d))+' pp '+(ok?'abaixo':'acima')+'</span>';
+    return '<span class="mi-l">'+rotulo+'</span><b>'+fmt1.format(p)+'%</b>meta ≤'+fmt1.format(meta)+'%<br><span class="mi-d '+(ok?'mand-ok':'mand-bad')+'">'+(d>0?'+':(d<0?'−':''))+fmt1.format(Math.abs(d))+' pp '+(ok?'abaixo':'acima')+(arguments[3] ? ' · '+brl0(Math.abs(d)/100*arguments[3]) : '')+'</span>';
   }
   function mandCentro(c){
     var t, sub = '';
@@ -5062,8 +5077,8 @@
       '<div class="mand-nome">'+clEsc(o.t)+'</div><div class="mand-body">'+
       '<div class="mand-ind pos-t"><span class="mi-l">Faturamento</span><b>'+(o.rb!==undefined ? brl0(o.rb) : '—')+'</b>bruto realizado</div>'+
       '<div class="mand-ind pos-r"><span class="mi-l">Venda mínima</span><b>'+(c.vm!==null ? brl0(c.vm) : '—')+'</b>'+(c.vm!==null ? 'ponto de equilíbrio' : (c.st==='semPE' ? 'margem ≤ 0' : 'indisponível'))+'</div>'+
-      '<div class="mand-ind pos-b">'+mandMetaHtml(o.na ? null : o.cmvP, gM, 'CMV')+'</div>'+
-      '<div class="mand-ind pos-l">'+mandMetaHtml(o.na ? null : o.cmoP, oM, 'CMO')+'</div>'+
+      '<div class="mand-ind pos-b">'+mandMetaHtml(o.na ? null : o.cmvP, gM, 'CMV', o.rb)+'</div>'+
+      '<div class="mand-ind pos-l">'+mandMetaHtml(o.na ? null : o.cmoP, oM, 'CMO', o.rb)+'</div>'+
       mandCentro(c)+'</div></div>';
   }
   function mandDetHtml(o, m){
@@ -5118,7 +5133,7 @@
     var v = dgCalc(sc, mm, false).v; if(v.rb===null || !(v.rb>0)) return null;
     var rl = v.rl, cmv = -(v.cmv||0), cmo = -((v.cmof||0)+(v.cmov||0));
     var lojas = scopeStores(sc).filter(function(t){ return scopeHasData(t, mm); });
-    return {fb:v.rb, rl:rl, lop:v.ebitda, ll:v.ll, pctLop:v.ebitda/v.rb*100, pctMc:rl>0 ? v.mc/rl*100 : null, pctCmv:rl>0 ? cmv/rl*100 : null, pctCmo:rl>0 ? cmo/rl*100 : null, pctPc:rl>0 ? (cmv+cmo)/rl*100 : null,
+    return {fb:v.rb, rl:rl, lop:v.ebitda, ll:v.ll, pctLop:v.ebitda/v.rb*100, pctMc:v.rb>0 ? v.mc/v.rb*100 : null, pctCmv:v.rb>0 ? cmv/v.rb*100 : null, pctCmo:v.rb>0 ? cmo/v.rb*100 : null, pctPc:v.rb>0 ? (cmv+cmo)/v.rb*100 : null,   // tudo sobre o faturamento bruto
       n:lojas.length, neg:lojas.filter(function(t){ var e = dgCalc(t, mm, false).v.ebitda; return e!==null && e<0; }).length};
   }
   function renderDgCmp(){
@@ -5141,10 +5156,10 @@
       ['Receita líquida', function(x){ return brl0(x.M.rl)+rv(x.M.rl, x.P && x.P.rl); }],
       ['EBITDA gerencial', function(x){ return '<span class="'+(x.M.lop<0?'dn':'up')+'">'+brl0(x.M.lop)+'</span>'; }],
       ['EBITDA % do faturamento bruto', function(x){ return pc(x.M.pctLop)+pp(x.M.pctLop, x.P && x.P.pctLop); }],
-      ['Margem de contribuição (% receita líquida)', function(x){ return pc(x.M.pctMc)+pp(x.M.pctMc, x.P && x.P.pctMc); }],
-      ['CMV (% receita líquida)', function(x){ return pc(x.M.pctCmv)+pp(x.M.pctCmv, x.P && x.P.pctCmv, true); }],
-      ['CMO (% receita líquida)', function(x){ return pc(x.M.pctCmo)+pp(x.M.pctCmo, x.P && x.P.pctCmo, true); }],
-      ['Prime Cost (% receita líquida)', function(x){ return pc(x.M.pctPc)+pp(x.M.pctPc, x.P && x.P.pctPc, true); }],
+      ['Margem de contribuição (% do faturamento bruto)', function(x){ return pc(x.M.pctMc)+pp(x.M.pctMc, x.P && x.P.pctMc); }],
+      ['CMV (% do faturamento bruto)', function(x){ return pc(x.M.pctCmv)+pp(x.M.pctCmv, x.P && x.P.pctCmv, true); }],
+      ['CMO (% do faturamento bruto)', function(x){ return pc(x.M.pctCmo)+pp(x.M.pctCmo, x.P && x.P.pctCmo, true); }],
+      ['Prime Cost (% do faturamento bruto)', function(x){ return pc(x.M.pctPc)+pp(x.M.pctPc, x.P && x.P.pctPc, true); }],
       ['Resultado líquido', function(x){ return '<span class="'+(x.M.ll<0?'dn':'up')+'">'+brl0(x.M.ll)+'</span>'; }],
       ['Lojas no prejuízo (EBITDA)', function(x){ return x.M.neg+' de '+x.M.n; }]
     ];

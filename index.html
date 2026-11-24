@@ -983,6 +983,10 @@
   #resumo{padding-top:8px;}
   #resumo > .section-head{margin-top:0; margin-bottom:6px;}
   .pz-card{margin-top:12px; padding:14px 16px;}
+  .lt-t td{white-space:nowrap;} .lt-t td:first-child{white-space:normal;} .lt-tot td{font-weight:800; border-top:1px solid var(--border);}
+  .lt-dot{display:inline-block; width:9px; height:9px; border-radius:50%; margin-right:6px; background:var(--ink-muted); vertical-align:middle;}
+  .f-ok .lt-dot{background:var(--good);} .f-warn .lt-dot{background:var(--warning);} .f-bad .lt-dot{background:var(--critical);}
+  .lt-dono{font-size:11.5px; color:var(--ink-2);}
   .pz-head{display:flex; flex-wrap:wrap; justify-content:space-between; gap:12px 24px; align-items:flex-end; margin-bottom:8px;}
   .pz-t{font-size:14px; font-weight:800;}
   .pz-big{font-size:26px; font-weight:800; margin-top:2px;}
@@ -1192,6 +1196,7 @@
 
     <div class="hero-wrap"><div class="hero-fat" id="heroFat"></div><div class="grid kpi-row" id="resumoKpis"></div></div>
     <div class="loss-panel" id="lossPanelGer" hidden></div>
+    <div class="card pz-card" id="leitura"></div>
     <div class="card pz-card" id="fatCmp"></div>
     <div class="card pz-card" id="difPanel"></div>
     <div class="chart-title" style="margin-top:18px; text-align:center;" id="sigTitle">Sinaleiro da DRE</div>
@@ -1202,7 +1207,7 @@
       <span><i class="sig-dot sig-warn"></i>Atenção</span>
       <span><i class="sig-dot sig-orange"></i>Alerta (só custos fixos)</span>
       <span><i class="sig-dot sig-bad"></i>Fora da meta</span>
-      <span><b>Bases:</b> OPEX e custos fixos sobre a receita líquida; CMV, CMO, royalties, deduções, entregas e EBITDA sobre o faturamento bruto — cada um comparado com a meta da mesma base.</span>
+      <span><b>Base única:</b> todos os indicadores sobre o faturamento bruto, comparados com a meta na mesma base.</span>
     </div>
 
 
@@ -2390,7 +2395,7 @@
   // base: 'fli' (fat. líquido, convenção Voxel p/ CMV e pessoal), 'flt' (margem) ou 'fb' (fat. bruto).
   var SIG = {
     cmv:      {label:'CMV', color:'var(--cat-1)', base:'fb', dir:'low',  g:30, y:34},
-    cf:       {label:'Conta fixa', color:'var(--cat-2)', base:'fb', dir:'low', g:15, y:20, o:25},  // régua do grupo: 10–15 / 15–20 / 20–25 / >25
+    cf:       {label:'Conta fixa', color:'var(--cat-2)', base:'fb', dir:'low', g:10, y:11},  // régua do grupo: 10–15 / 15–20 / 20–25 / >25
     opex:     {label:'OPEX', color:'#3fb6c6', base:'fli', dir:'low', g:1, y:2},   // meta ≤1% (já usada nos KPIs da DRE Voxel); faixa amarela até 2% provisória
     cartao:   {label:'Cartão + apps', color:'var(--cat-3)', base:'fb', dir:'low', g:10, y:13},
     desc:     {label:'Descontos', color:'var(--cat-4)', base:'fb', dir:'low', g:3, y:6},
@@ -2398,7 +2403,7 @@
     entregas: {label:'Entregas + devoluções', color:'var(--cat-6)', base:'fb', dir:'low', g:2, y:3},
     cmo:      {label:'Pessoal (CMO)', color:'var(--ink-muted)', base:'fb', dir:'low', g:25, y:28},
     mc:       {label:'Margem de contribuição', color:'var(--accent)', base:'flt', dir:'high', g:50, y:40},
-    lop:      {label:'EBITDA (antes de royalties)', color:'var(--accent)', base:'fb', dir:'high', g:8, y:0}
+    lop:      {label:'Margem operacional', color:'var(--accent)', base:'fb', dir:'high', g:8, y:0}
   };
   // deduções da receita da DRE gerencial (impostos, cancelamentos, descontos, comissões e taxas iFood…) — meta provisória ≤10% / atenção até 13%
   SIG.ded = {label:'Deduções da receita', color:'var(--cat-4)', base:'fb', dir:'low', g:10, y:13};
@@ -2454,13 +2459,13 @@
     var g = function(l){ return R.leaf[l]||0; }, v = R.v;
     var opex = -DG_OPEX.reduce(function(acc, l){ return acc + g(l); }, 0);
     // tudo sobre a receita líquida (igual à coluna % da DRE gerencial); royalties seguem sobre o faturamento bruto (contrato de 10,5%)
-    return {rbB:v.rb, rlL:v.rl, fb:v.rb, fli:v.rl, flt:v.rl, cmv:-(v.cmv||0), cmo:-((v.cmof||0)+(v.cmov||0)), opex:opex, cfFix:-((v.ocu||0)+(v.ope||0)+(v.adm||0)) - opex,
+    return {rbB:v.rb, rlL:v.rl, fb:v.rb, fli:v.rl, flt:v.rl, cmv:-(v.cmv||0), cmo:-((v.cmof||0)+(v.cmov||0)), opex:opex, cfFix:-((v.ocu||0)+(v.ope||0)+(v.adm||0)),
       roy:-(v.roy||0), ded:-(v.ded||0), ent:-(v.ent||0), desc:-g('Descontos'), cartao:-g('Taxas de Cartão e Apps de Delivery'), entregas:-(v.ent||0) - g('Devoluções de Vendas'), mc:v.mc, lop:v.ebitda};
   }
   // % sobre o faturamento bruto (clique no botão do card; o card em si continua levando à DRE gerencial)
   var sigBrutoOpen = {};
   function sigBaseTxt(k){ return SIG[k] && SIG[k].base==='fb' ? 'faturamento bruto' : 'receita líquida'; }
-  function sigBrutoHtml(k, p, M, MP){
+  function sigBrutoHtml(k, p, M, MP){ return '';
     if(p===null || !M || !(M.rbB>0) || !(M.rlL>0)) return '';
     var noBruto = SIG[k].base==='fb', f = function(X){ return noBruto ? X.rbB/X.rlL : X.rlL/X.rbB; };
     var pb = p*f(M), ppb = null;
@@ -2929,10 +2934,11 @@
     var triM = triN ? tri/triN : null, mlab = MONTH_FULL[m].toLowerCase(), pl = VOXEL_MONTH_LABELS[m-1].toLowerCase();
     var triLab = VOXEL_MONTH_LABELS[Math.max(0,m-3)].toLowerCase()+'–'+pl;
     var linhas = [
-      ['Meta do mês', temMeta ? brl0(meta) : '—', temMeta ? pzVar(real, meta) : '<span class="pz-na">sem meta cadastrada</span>', temMeta ? (fmt1.format(real/meta*100)+'% da meta') : ''],
+      ['Meta do mês (painel de vendas)', temMeta ? brl0(meta) : '—', temMeta ? pzVar(real, meta) : '<span class="pz-na">sem meta cadastrada</span>', temMeta ? (fmt1.format(real/meta*100)+'% da meta') : ''],
       [VOXEL_MONTH_LABELS[m-1]+'/2026', brl0(ant), pzVar(real, ant), ''],
       [VOXEL_MONTH_LABELS[m]+'/2025', f25 ? brl0(f25) : '—', f25 ? pzVar(real - (semB13.length ? lojas.filter(function(t){ return semB13.indexOf(t)>=0; }).reduce(function(a, t){ return a + (fatRb(t, m)||0); }, 0) : 0), f25) : '<span class="pz-na">sem dado</span>', semB13.length ? 'sem '+semB13.join(', ')+' (não existia em 2025)' : ''],
-      ['Média do trimestre ('+triLab+')', triM===null ? '—' : brl0(triM), pzVar(real, triM), '']
+      ['Média do trimestre ('+triLab+')', triM===null ? '—' : brl0(triM), pzVar(real, triM), ''],
+      ['Mercado (cenários do orçamento)', '—', '<span class="pz-na">Paraná +7,5% · Brasil +9,7%</span>', mesmas[1] ? 'mesmas lojas: '+(mesmas[0]>=mesmas[1]?'+':'−')+fmt1.format(Math.abs((mesmas[0]-mesmas[1])/mesmas[1]*100))+'% contra 2025' : '']
     ];
     var h = '<div class="pz-head"><div><div class="pz-t">Faturamento de '+mlab+' · '+scopeName(s)+'</div><div class="pz-big tabular">'+brl0(real)+'</div></div>'+
       '<div class="pz-same"><div class="pz-st">Mesmas lojas ('+(lojas.length - semB13.length)+(semB13.length ? ', sem '+semB13.join(', ') : '')+')</div><div class="tabular"><b>'+brl0(mesmas[0])+'</b> em '+mlab+'/26 vs <b>'+brl0(mesmas[1])+'</b> em '+mlab+'/25</div><div>'+pzVar(mesmas[0], mesmas[1])+(mesmas[1] ? ' <span class="pz-na">— '+(mesmas[0]>=mesmas[1] ? 'cresceram' : 'caíram')+'</span>' : '')+'</div></div></div>'+
@@ -2973,12 +2979,49 @@
       '<div class="dif-grid">'+difBloco(s, m, 'CMV', SIG.cmv.g, ['cmv'])+difBloco(s, m, 'CMO', SIG.cmo.g, ['cmof','cmov'])+'</div>';
   }
   // cartão de conta variável aberta
+  var LEIT_DONO = {rb:'Luiz Otávio · Receita', ded:'Financeiro', cmv:'Compras e Operações (Daiane)', cmo:'RH (Vitória) e Operações (Felipe)', pc:'Operações, com Compras e RH', ent:'Operações', cf:'Financeiro · contratos e reajustes', var:'Financeiro (Larissa abre e explica)', ebitda:'todos', r13:'Financeiro', imp:'Financeiro', sob:'todos', roy:'diretoria', ret:'diretoria', fim:'diretoria'};
+  function farol(p, g, dir){ if(p===null || g===null) return ''; var ok = dir==='high' ? p>=g : p<=g, warn = dir==='high' ? p>=g*0.9 : p<=g*1.1; return ok ? 'f-ok' : (warn ? 'f-warn' : 'f-bad'); }
+  function renderLeitura(s, m){
+    var box = document.getElementById('leitura'); if(!box) return;
+    if(!scopeHasData(s, m)){ box.hidden = true; return; } box.hidden = false;
+    var v = dgCalc(s, m, false).v, rb = v.rb; if(!(rb>0)){ box.hidden = true; return; }
+    var meta = (FAT_META[m] ? scopeStores(s).filter(function(t){ return scopeHasData(t, m); }).reduce(function(a, t){ return a + (FAT_META[m][t]||0); }, 0) : null);
+    var neg = function(x){ return -(x||0); };
+    var L = [
+      ['rb', 'Faturamento bruto', meta ? 'meta '+brl0(meta) : 'falta a meta', rb, null, meta ? (rb>=meta?'f-ok':(rb>=meta*0.9?'f-warn':'f-bad')) : '', meta ? (rb-meta) : null, true],
+      ['ded', 'Taxas e deduções', 'sem régua', neg(v.ded), null],
+      ['cmv', 'CMV', '30%', neg(v.cmv), 30],
+      ['cmo', 'CMO (equipe fixa + freelancers)', '25%', neg((v.cmof||0)+(v.cmov||0)), 25],
+      ['pc', 'Prime Cost (CMV + CMO)', '55% (mira 50%)', neg((v.cmv||0)+(v.cmof||0)+(v.cmov||0)), 55],
+      ['ent', 'Entregas', 'sem régua', neg(v.ent), null],
+      ['cf', 'Conta fixa', '10%', neg((v.ocu||0)+(v.ope||0)+(v.adm||0)), 10],
+      ['var', 'Conta variável', '5%', neg(v['var']), 5],
+      ['ebitda', 'Margem operacional', '', v.ebitda, null, null, null, true],
+      ['r13', 'Reserva do 13º', '2%', neg(v.r13), null],
+      ['imp', 'Imposto, como reserva', '10%', neg(v.imp), null],
+      ['sob', 'Sobra do negócio', '23% (exemplo)', v.sob, 23, null, null, true, 'high'],
+      ['roy', 'Royalties', 'sem régua', neg(v.roy), null],
+      ['ret', 'Retiradas', 'sem régua', neg(v.ret), null],
+      ['fim', 'Resultado final', '', v.fim, null, null, null, true]
+    ].filter(function(x){ return !(dgLojaVer && (x[0]==='roy' || x[0]==='ret' || x[0]==='fim')); });
+    var h = '<div class="pz-t">Leitura do mês · '+scopeName(s)+' · '+periodName(m)+'</div><div class="chart-note" style="margin:2px 0 8px;">Regime de competência (o caixa é outra apresentação) · tudo em % do faturamento bruto, com R$ ao lado · farol: verde na meta, amarelo até 10% pior, vermelho além disso.</div>'+
+      '<div class="table-scroll"><table class="pz-t4 lt-t"><thead><tr><th>Linha</th><th>Régua</th><th class="num">Realizado</th><th class="num">R$</th><th class="num">Diferença</th><th>Quem responde</th></tr></thead><tbody>';
+    L.forEach(function(x){
+      var id = x[0], val = x[3], p = val/rb*100, g = x[4], dir = x[8] || 'low';
+      var cls = x[5]!==undefined && x[5]!==null ? x[5] : (g!==null && g!==undefined ? farol(p, g, dir) : '');
+      var dif = '';
+      if(id==='rb' && x[6]!==null && x[6]!==undefined) dif = (x[6]>=0?'+':'−')+brl0(Math.abs(x[6]))+' ('+fmt1.format(rb/meta*100)+'% da meta)';
+      else if(g!==null && g!==undefined){ var d = p - g, rs = d/100*rb; dif = (d>=0?'+':'−')+fmt1.format(Math.abs(d))+' pts · '+(d>=0?'+':'−')+brl0(Math.abs(rs)); if(id==='pc'){ var d2 = p - 50; dif += '<span class="pz-obs">contra 50%: '+(d2>=0?'+':'−')+fmt1.format(Math.abs(d2))+' pts · '+brl0(Math.abs(d2/100*rb))+'</span>'; } }
+      h += '<tr class="'+(x[7]?'lt-tot ':'')+cls+'"><td>'+(cls ? '<i class="lt-dot"></i>' : '')+x[1]+(id==='cmo' ? '<span class="pz-obs">sem os encargos da parte da empresa</span>' : '')+'</td><td>'+x[2]+'</td><td class="num tabular">'+(id==='rb' ? '100%' : fmt1.format(p)+'%')+'</td><td class="num tabular">'+brl0(val)+'</td><td class="num tabular">'+dif+'</td><td class="lt-dono">'+(LEIT_DONO[id]||'')+'</td></tr>';
+    });
+    box.innerHTML = h + '</tbody></table></div>';
+  }
   function contaVarCard(s, m){
     var R = dgCalc(s, m, false), rb = R.v.rb; if(!(rb>0)) return '';
     var tot = 0, linhas = DG_VAR_GR.map(function(g){ var v = -g[1].reduce(function(a, l){ return a + (R.leaf[l]||0); }, 0); tot += v; return [g[0], v]; });
     var jur = -(R.leaf['Ações trabalhistas']||0);
     return '<div class="card kpi" style="--kc:rgba(255,184,77,.6);"><div class="kpi-label">Conta variável</div><div class="kpi-value tabular">'+brl0(tot)+'</div>'+
-      '<div class="kpi-sub">'+fmt1.format(tot/rb*100)+'% do faturamento bruto · sem meta cadastrada</div>'+
+      '<div class="kpi-sub">'+fmt1.format(tot/rb*100)+'% do faturamento bruto · meta ≤5% <b style="color:'+(tot/rb*100<=5?'var(--good)':'var(--critical)')+'">'+brl0(Math.abs(tot - 0.05*rb))+(tot/rb*100<=5?' abaixo':' acima')+'</b></div>'+
       '<table class="kv-t">'+linhas.map(function(x){ return '<tr><td>'+x[0]+'</td><td class="num tabular">'+brl0(x[1])+'</td><td class="num tabular">'+fmt1.format(x[1]/rb*100)+'%</td></tr>'; }).join('')+
       '<tr class="kv-memo"><td>Jurídico (ações trabalhistas)<br><small>já está no CMO, não somado aqui</small></td><td class="num tabular">'+brl0(jur)+'</td><td class="num tabular">'+fmt1.format(jur/rb*100)+'%</td></tr></table></div>';
   }
@@ -2988,7 +3031,7 @@
   }
   // % do indicador na outra base (sem meta nessa base) — abre ao clicar, sem sair do card
   var kpiAltOpen = {};
-  function kpiAltHtml(k, p, M, MP, m){
+  function kpiAltHtml(k, p, M, MP, m){ return '';   // uma base só (faturamento bruto), a pedido da diretoria
     if(p===null || !M || !(M.rbB>0) || !(M.rlL>0)) return '';
     var noBruto = SIG[k].base==='fb', f = function(X){ return noBruto ? X.rbB/X.rlL : X.rlL/X.rbB; };
     var alt = p*f(M), pp = (MP && MP.rbB>0 && MP.rlL>0) ? sigPct(k, MP) : null, altP = pp===null ? null : pp*f(MP);
@@ -3046,9 +3089,9 @@
     var rb = cur.v.rb, eb = cur.v.ebitda, rl = cur.v.rl, html = '';
     // 1) resultado operacional = EBITDA da DRE gerencial
     var desp = rb - eb;
-    html += kpiCard('EBITDA <span style="font-weight:600;color:var(--ink-muted);text-transform:none;letter-spacing:0;">· antes de royalties</span>', brl0(eb), eb<0 ? 'var(--critical)' : 'var(--good)',
+    html += kpiCard('Margem operacional <span style="font-weight:600;color:var(--ink-muted);text-transform:none;letter-spacing:0;">· antes de royalties</span>', brl0(eb), eb<0 ? 'var(--critical)' : 'var(--good)',
       fmt1.format(eb/rb*100)+'% do faturamento bruto'+(prev ? vsPrevHtml(eb, prev.v.ebitda, 'high', 'brl', m, brl0(prev.v.ebitda)) : '')+
-      '<div class="kpi-desp">Faturamento '+brl0(rb)+' − despesas <b>'+brl0(desp)+'</b> ('+fmt1.format(desp/rb*100)+'%)</div>'+(cur.v.fim!==null && cur.v.fim!==undefined ? '<div class="kpi-desp">Depois da reserva de 10% de imposto, royalties e retiradas: <b style="color:'+(cur.v.fim<0?'var(--critical)':'var(--good)')+'">'+brl0(cur.v.fim)+'</b></div>' : ''),
+      '<div class="kpi-desp">Faturamento '+brl0(rb)+' − despesas <b>'+brl0(desp)+'</b> ('+fmt1.format(desp/rb*100)+'%)</div>'+(cur.v.fim!==null && cur.v.fim!==undefined ? '<div class="kpi-desp">Depois das reservas (13º e imposto), royalties e retiradas: <b style="color:'+(cur.v.fim<0?'var(--critical)':'var(--good)')+'">'+brl0(cur.v.fim)+'</b></div>' : ''),
       prev ? '<span class="chip '+((eb/rb - prev.v.ebitda/prev.v.rb)>=0?'good':'critical')+'">'+((eb/rb - prev.v.ebitda/prev.v.rb)>=0?'+':'−')+fmt1.format(Math.abs(eb/rb - prev.v.ebitda/prev.v.rb)*100)+' pp vs. '+VOXEL_MONTH_LABELS[m-1].toLowerCase()+'</span>' : '');
     // 2) lojas no prejuízo (EBITDA gerencial por loja) ou, numa loja, margem de contribuição
     var grupo = scopeStores(s).filter(function(t){ return scopeHasData(t, m); });
@@ -3057,7 +3100,7 @@
       var neg = L.filter(function(x){ return x.v<0; });
       var negP = temPrev ? scopeStores(s).filter(function(t){ return scopeHasData(t, m-1); }).map(function(t){ return dgCalc(t, m-1, prevNoEst(m)).v.ebitda; }).filter(function(v){ return v!==null && v<0; }).length : null;
       html += kpiCard('Lojas no prejuízo', neg.length+' <span class="kpi-of">/ '+L.length+'</span>', null,
-        'EBITDA gerencial por loja'+(negP!==null ? vsPrevHtml(neg.length, negP, 'low', 'n', m, negP+' lojas') : '')+
+        'margem operacional por loja (antes de royalties)'+(negP!==null ? vsPrevHtml(neg.length, negP, 'low', 'n', m, negP+' lojas') : '')+
         lossMovHtml(s, m, L),
         '<div class="kpi-hint">'+(lossGerOpen ? 'Ocultar lojas ▴' : 'Ver lojas e resultado ▾')+'</div>').replace('<div class="card kpi">', '<div class="card kpi kpi-click" id="lossCardGer" role="button" tabindex="0" aria-expanded="'+lossGerOpen+'" aria-controls="lossPanelGer">');
       var pn = document.getElementById('lossPanelGer');
@@ -3080,15 +3123,13 @@
       var cl = pcCls(P.pc), dpc = P.pc - PC_META;
       html += kpiCard((s==='Consolidado' ? 'Prime Cost da rede' : 'Prime Cost')+' (CMV + CMO)', fmt1.format(P.pc)+'%', pcColor(P.pc),
         'CMV '+fmt1.format(P.cmvP)+'% + CMO '+fmt1.format(P.cmoP)+'% · metas ≤'+PC_META+'% e ≤'+PC_META2+'% · % sobre o faturamento bruto'+
-        '<div class="kpi-alt"><button type="button" class="sig-bt'+(kpiAltOpen.pc?' on':'')+'" data-kalt="pc" aria-expanded="'+!!kpiAltOpen.pc+'">'+(kpiAltOpen.pc?'▾':'▸')+' % s/ receita líquida</button>'+
-        (kpiAltOpen.pc ? '<div class="kpi-alt-v"><b>'+fmt1.format(P.pcL)+'%</b> da receita líquida (CMV '+fmt1.format(P.cmvL)+'% + CMO '+fmt1.format(P.cmoL)+'%)'+(PP ? ' <span>· '+VOXEL_MONTH_LABELS[m-1].slice(0,3).toLowerCase()+' '+fmt1.format(PP.pcL)+'%</span>' : '')+' · só informativo (meta sobre o bruto)</div>' : '')+'</div>'+
         (PP ? vsPrevHtml(P.pc, PP.pc, 'low', 'pp', m, fmt1.format(PP.pc)+'%') : '')+
-        '<div class="kpi-desp">CMV '+brl0(P.cmv)+' · CMO '+brl0(P.cmo)+'</div>'+pcMetasHtml(P),
+        '<div class="kpi-desp">CMV '+brl0(P.cmv)+' · CMO '+brl0(P.cmo)+'</div>'+pcMetasHtml(P)+'<div class="kpi-desp">Mercado (Vox): 65% Brasil · 70% média de Londrina</div>',
         '<span class="chip '+(cl==='sig-good'?'good':(cl==='sig-warn'?'warning':'critical'))+'">'+(dpc>0.05 ? '+'+fmt1.format(dpc)+'pp acima da meta de '+PC_META+'%' : 'dentro da meta de '+PC_META+'%')+'</span>');
     }
     // 4–6) CMV, CMO e custos fixos pela DRE gerencial (mesma base e metas do sinaleiro); clique leva à linha da DRE gerencial
     var SM = dgSigM(s, m), SP = temPrev ? dgSigM(s, m-1) : null;
-    [['cmv','CMV','CMV R$ '], ['cmo','CMO (equipe fixa + Free)','CMO R$ '], ['cf','Conta fixa','aluguel, energia, gás, limpeza, telefonia, sistemas, contabilidade · R$ ']].forEach(function(it){
+    [['cmv','CMV','CMV R$ '], ['cmo','CMO (equipe fixa + Free)','sem os encargos da parte da empresa · CMO R$ '], ['cf','Conta fixa','aluguel, energia, gás, limpeza, telefonia, sistemas, contabilidade · R$ ']].forEach(function(it){
       var k = it[0], d = SIG[k], p = sigPct(k, SM); if(p===null) return;
       var pp = SP ? sigPct(k, SP) : null, cls = sigClass(k, p), dif = p - d.g, rs = k==='cf' ? SM.cfFix : SM[k];
       var cor = cls==='sig-good' ? 'var(--good)' : (cls==='sig-warn' ? 'var(--warning)' : (cls==='sig-orange' ? '#ff8a3d' : 'var(--critical)'));
@@ -3102,7 +3143,7 @@
     html += contaVarCard(s, m);
     box.innerHTML = html;
     lossPos();
-    renderFatCmp(s, m); renderDifPanel(s, m);
+    renderLeitura(s, m); renderFatCmp(s, m); renderDifPanel(s, m);
   }
   document.addEventListener('click', function(e){ if(e.target.closest && e.target.closest('#lossCardGer')){ lossGerOpen = !lossGerOpen; renderKpiGer(fState.scope, fState.month); return; }
     if(lossGerOpen && e.target.closest && e.target.closest('[data-lvclose]')){ lossGerOpen = false; renderKpiGer(fState.scope, fState.month); return; }
@@ -3172,7 +3213,7 @@
   var BN_GER = [
     {k:'cmv', label:'CMV (insumos, embalagens)', g:['cmv']},
     {k:'cmo', label:'CMO (equipe fixa + Free)', g:['cmof','cmov']},
-    {k:'cf', label:'Custos fixos (ocupação, operacionais, adm.)', g:['ocu','ope','adm']},
+    {k:'cf', label:'Conta fixa e conta variável', g:['ocu','ope','adm','var']},
     {k:'ded', label:'Deduções da receita (inclui taxas iFood)', g:['ded']},
     {k:'roy', label:'Royalties', g:['roy']},
     {k:'ent', label:'Despesas com entregas', g:['ent']}
@@ -3208,7 +3249,7 @@
       '<span class="sig-pill '+rc+'"><i class="sig-dot '+rc+'"></i><span class="tabular">'+pct(perRes)+'</span><span class="sig-meta">do faturamento bruto</span></span>'+bnVs(perRes, perResP, false)+'</div>'+
       '<div class="bn-value tabular" style="color:'+(perRes<0?'var(--critical)':'var(--good)')+'">'+(perRes<0?'-':'+')+'R$ '+fmt2.format(Math.abs(perRes))+' <span class="bn-sub" style="font-weight:600;">a cada R$ 100</span></div></div>';
     grid.innerHTML = html;
-    foot.textContent = 'Atenção às bases: os valores "a cada R$ 100" são sobre o faturamento bruto. O selo colorido repete o indicador do sinaleiro na base em que a meta foi definida — custos fixos sobre a receita líquida; CMV, CMO, deduções, royalties, entregas e EBITDA sobre o bruto. Por isso o % do selo pode diferir do valor a cada R$ 100.';
+    foot.textContent = 'Tudo sobre o faturamento bruto: as fatias e o resultado somam R$ 100, e o selo mostra a meta na mesma base.';
   }
 
   // better: 'high' = maior é melhor, 'low' = menor é melhor, null = neutro
@@ -4157,32 +4198,34 @@
   // c: contas de origem [conta, observação]; f: fórmula (soma de linhas já calculadas); k:'pct' = margem sobre a receita líquida.
   var DG_EST = ['Estoque Inicial','Estoque Final'];
   var DG = [
-    {id:'rb', t:'1. Faturamento', sl:'Faturamento', k:'tot', c:[['Faturamento Bruto de Itens','salão, delivery, balcão, retirada e iFood'],['Faturamento de Serviços (Bilheteria e Eventos)','eventos']]},
-    {id:'ded', t:'(–) Deduções da receita', sl:'Deduções', c:[['Impostos sobre Vendas'],['Devoluções e Cancelamentos'],['Devoluções de Vendas'],['Descontos','descontos concedidos pela loja'],['Taxas de Cartão e Apps de Delivery','cartões e aplicativos — conta agrupada na origem'],['Taxa de serviço iFood'],['Promoção bancada pelo iFood'],['Ressarcimento de Pedido Cancelado','reembolso de cancelamento — reduz a dedução'],['Diferença entre as fontes iFood'],['Retido Santander e Safra iFood'],['Taxa embutida no repasse iFood'],['Taxa debitada na conta iFood'],['Taxas Vouchers'],['Comissões sobre Vendas'],['Reembolso taxa de transação iFood benefícios','reembolso — reduz a dedução'],['Reembolso taxa de serviço iFood','reembolso — reduz a dedução']]},
+    {id:'rb', t:'1. Faturamento bruto', sl:'Faturamento', k:'tot', c:[['Faturamento Bruto de Itens','salão, delivery, balcão, retirada e iFood'],['Faturamento de Serviços (Bilheteria e Eventos)','eventos']]},
+    {id:'ded', t:'(–) Taxas e deduções', sl:'Deduções', c:[['Impostos sobre Vendas'],['Devoluções e Cancelamentos'],['Devoluções de Vendas'],['Descontos','descontos concedidos pela loja'],['Taxas de Cartão e Apps de Delivery','cartões e aplicativos — conta agrupada na origem'],['Taxa de serviço iFood'],['Promoção bancada pelo iFood'],['Ressarcimento de Pedido Cancelado','reembolso de cancelamento — reduz a dedução'],['Diferença entre as fontes iFood'],['Retido Santander e Safra iFood'],['Taxa embutida no repasse iFood'],['Taxa debitada na conta iFood'],['Taxas Vouchers'],['Comissões sobre Vendas'],['Reembolso taxa de transação iFood benefícios','reembolso — reduz a dedução'],['Reembolso taxa de serviço iFood','reembolso — reduz a dedução']]},
     {id:'rl', t:'2. Receita líquida', sl:'Receita líquida', k:'tot', f:['rb','ded']},
-    {id:'cmv', t:'(–) CMV — Custo das Mercadorias Vendidas', sl:'CMV', c:[['Estoque Inicial','ajuste de estoque — soma ao custo'],['Insumos','alimentos, bebidas e ingredientes'],['Embalagens'],['Produtos para Comercialização'],['Estoque Final','ajuste de estoque — reduz o custo']]},
-    {id:'lb', t:'3. Lucro bruto', sl:'Lucro bruto', k:'tot', f:['rl','cmv']},
-    {id:'ent', t:'(–) Despesas com entregas', sl:'Entregas', c:[['Entrega TAON'],['Entrega iFood']]},
-    {id:'mc', t:'4. Margem de contribuição — R$', sl:'Margem de contribuição', k:'tot', f:['lb','ent']},
-    {id:'mcp', t:'Margem de contribuição — %', k:'pct', of:'mc'},
+    {id:'cmv', t:'(–) CMV — mercadorias', sl:'CMV', c:[['Estoque Inicial','ajuste de estoque — soma ao custo'],['Insumos','alimentos, bebidas e ingredientes'],['Embalagens'],['Produtos para Comercialização'],['Estoque Final','ajuste de estoque — reduz o custo']]},
     {id:'cmof', t:'(–) CMO — equipe fixa', sl:'CMO equipe fixa', c:[['Salários'],['Bonificações'],['Impostos Sobre Salários','encargos'],['Vale Alimentação','benefício'],['Vale Transporte','benefício'],['Rescisões'],['Pró-Labore e Despesas de Sócios','conta agrupada na origem'],['Outros Encargos com Funcionários'],['Ações trabalhistas'],['Medicina do trabalho'],['Empréstimos / reembolsos de empréstimos'],['Seguro de vida / assistência'],['Taxa sindical'],['Uniformes'],['Crachás / identificação'],['Reembolso de aluguel'],['Reembolso a funcionário'],['Encargos e benefícios (Sicredi)'],['Férias'],['13º Salário']], obs:'Despesas com pessoal sem os freelancers e terceirizados (que estão no CMO Free).'},
-    {id:'cmov', t:'(–) CMO — Free', sl:'CMO Free', c:[['Freelancers e Terceirizados','freelancers e terceirizados — conta agrupada na origem']]},
-    {id:'ocu', t:'(–) Despesas de ocupação', sl:'Ocupação', c:[['Aluguel e Condomínio','aluguel e condomínio'],['IPTU e encargos do imóvel']], obs:'Outubro/2026: pagamentos identificados no Sicredi (sem as repetições de Biggs 12 e Mapoli). Seguros do imóvel não têm conta própria.'},
-    {id:'ope', t:'(–) Despesas operacionais', sl:'Operacionais', c:[['Água e Energia'],['Gás de Cozinha'],['Limpeza e Higiene'],['Manutenção Predial e de Equipamentos'],['Aluguel de Equipamentos'],['Segurança, Telefonia e Internet'],['Telefonia e internet'],['Segurança'],['Segurança presencial'],['Alarmes e monitoramento'],['Músicos'],['Transporte'],['Softwares e Terceirizados','sistemas e serviços terceirizados'],['Perdas e indenizações de equipamentos','terminais perdidos'],['Despesas com Marketing','marketing local — sem linha própria na DRE'],['Endomarketing','marketing local — sem linha própria na DRE'],['Pacote Anúncios Ifood','marketing local — sem linha própria na DRE']]},
-    {id:'adm', t:'(–) Despesas administrativas', sl:'Administrativas', c:[['Materiais de Escritório'],['Contabilidade'],['Outras Despesas Administrativas'],['Despesas a Identificar','pendente de classificação']]},
-    {id:'ebitda', t:'5. EBITDA — antes de royalties', sl:'EBITDA', k:'tot', f:['mc','cmof','cmov','ocu','ope','adm']},
-    {id:'ebp', t:'Margem EBITDA — %', k:'pct', of:'ebitda'},
-    // ajustes após o EBITDA: não aparecem como linhas próprias; abrem dentro do resultado líquido
+    {id:'cmov', t:'(–) CMO — freelancers', sl:'CMO Free', c:[['Freelancers e Terceirizados','freelancers e terceirizados — conta agrupada na origem']]},
+    {id:'pcr', t:'= Prime Cost (CMV + CMO)', sl:'Prime Cost', k:'tot', f:['cmv','cmof','cmov']},
+    {id:'lb', t:'3. Margem depois do Prime Cost', sl:'Margem depois do Prime Cost', k:'tot', f:['rl','pcr']},
+    {id:'ent', t:'(–) Entregas', sl:'Entregas', c:[['Entrega TAON'],['Entrega iFood']]},
+    {id:'mc', hid:true, t:'Margem de contribuição — R$', sl:'Margem de contribuição', k:'tot', f:['rl','cmv','ent']},
+    {id:'mcp', hid:true, t:'Margem de contribuição — %', k:'pct', of:'mc'},
+    {id:'ocu', t:'(–) Conta fixa — ocupação', sl:'Ocupação', c:[['Aluguel e Condomínio','aluguel e condomínio'],['IPTU e encargos do imóvel']], obs:'Outubro/2026: pagamentos identificados no Sicredi (sem as repetições de Biggs 12 e Mapoli). Seguros do imóvel não têm conta própria.'},
+    {id:'ope', t:'(–) Conta fixa — operação', sl:'Operacionais', c:[['Água e Energia'],['Gás de Cozinha'],['Limpeza e Higiene'],['Aluguel de Equipamentos'],['Segurança, Telefonia e Internet'],['Telefonia e internet'],['Músicos'],['Softwares e Terceirizados','sistemas e serviços terceirizados']]},
+    {id:'adm', t:'(–) Conta fixa — administrativo', sl:'Administrativas', c:[['Materiais de Escritório'],['Contabilidade']]},
+    {id:'var', t:'(–) Conta variável — manutenção, segurança de loja e demais', sl:'Conta variável', c:[['Manutenção Predial e de Equipamentos'],['Segurança presencial'],['Alarmes e monitoramento'],['Segurança'],['Perdas e indenizações de equipamentos'],['Endomarketing'],['Despesas com Marketing'],['Pacote Anúncios Ifood'],['Transporte'],['Outras Despesas Administrativas'],['Despesas a Identificar']], obs:'Onde a lupa entra: manutenção, segurança de loja, perdas e demais gastos que variam no mês. Jurídico (ações trabalhistas) está dentro do CMO.'},
+    {id:'ebitda', t:'4. Margem operacional — antes de royalties', sl:'Margem operacional', k:'tot', f:['lb','ent','ocu','ope','adm','var']},
+    {id:'ebp', t:'Margem operacional — %', k:'pct', of:'ebitda'},
     {id:'da', hid:true, t:'(–) Depreciação e amortização', sl:'Depreciação e amortização', c:[]},
     {id:'rf', hid:true, t:'(+) Receitas financeiras', sl:'Receitas financeiras', c:[['Rendimento de Aplicações']]},
     {id:'df', hid:true, t:'(–) Despesas financeiras', sl:'Despesas financeiras', c:[['Tarifas Bancárias'],['Juros e IOF'],['Impostos sobre Aplicações']]},
     {id:'ir', hid:true, t:'(–) Tributos sobre o lucro', sl:'Tributos sobre o lucro', c:[]},
-    {id:'ll', t:'6. Resultado antes do imposto e dos royalties', sl:'Resultado antes do imposto', k:'tot', f:['ebitda','da','rf','df','ir']},
+    {id:'ll', t:'5. Resultado antes das reservas', sl:'Resultado antes das reservas', k:'tot', f:['ebitda','da','rf','df','ir']},
+    {id:'r13', t:'(–) Reserva do 13º — 2% do faturamento bruto', sl:'Reserva do 13º', c:[['Reserva do 13º (2%)','reserva mensal para o 13º salário']]},
     {id:'imp', t:'(–) Reserva de impostos — 10% do faturamento bruto', sl:'Reserva de impostos', c:[['Reserva de impostos (10%)','reserva até o levantamento da contabilidade']]},
-    {id:'sob', t:'7. Sobra depois do imposto', sl:'Sobra depois do imposto', k:'tot', f:['ll','imp']},
+    {id:'sob', t:'6. Sobra do negócio', sl:'Sobra do negócio', k:'tot', f:['ll','r13','imp']},
     {id:'roy', t:'(–) Royalties — gestão e estrutura corporativa', sl:'Royalties', c:[['Royalties contratuais']], obs:'Na última linha, a pedido da diretoria. Calculado sobre o faturamento bruto de cada loja (10,5% a partir de outubro/2026).'},
     {id:'ret', t:'(–) Retiradas de lucro', sl:'Retiradas', c:[['Retiradas de Lucro','distribuição aos sócios']]},
-    {id:'fim', t:'8. Resultado final', sl:'Resultado final', k:'tot', f:['sob','roy','ret']}
+    {id:'fim', t:'7. Resultado final', sl:'Resultado final', k:'tot', f:['sob','roy','ret']}
   ];
   // movimentações que não são despesa/receita da DRE (continuam na DRE Voxel, bloco abaixo do operacional)
   var DG_FORA = [['Investimento em Equipamentos e Estrutura','investimento em ativo'],['Empréstimos - Entrada','principal'],['Empréstimos - Saída','principal'],['Aportes'],['Transferências de Entrada'],['Transferências de Saída'],['Saldo Inicial'],['Ajuste de Caixa']];
@@ -4327,6 +4370,7 @@
     return 'Royalties ('+pct+')<span class="dg-note">lançado na Voxel: '+(parts.join(' · ') || 'R$ 0,00')+(dgZ(aj) ? '' : ' · ajuste ao contratual '+dgR(aj))+'</span>';
   }
   function dgLeaf(scope, line, m, semEst){
+    if(line==='Reserva do 13º (2%)'){ var x13 = dgLeaf(scope, 'Reserva de impostos (10%)', m, semEst); return x13===null ? null : Math.round(x13*0.2*100)/100; }
     if(line==='Reserva de impostos (10%)'){ if(m===-1) return VOXEL_ACC_FIM>=DG_IFOOD_MES ? dgLeaf(scope, line, DG_IFOOD_MES, semEst) : 0; if(m<DG_IFOOD_MES) return 0; var fbI = dgLeaf(scope, 'Faturamento Bruto de Itens', m, semEst)||0, fbS = dgLeaf(scope, 'Faturamento de Serviços (Bilheteria e Eventos)', m, semEst)||0; return Math.round(-0.10*(fbI+fbS)*100)/100; }
     if(line==='Entrega TAON'){ var tt = 0, any = false; DG_TAON.forEach(function(l){ var x = dgLeaf(scope, l, m, semEst); if(x!==null){ tt += x; any = true; } }); return any ? Math.round(tt*100)/100 : null; }
     if(DG_IFOOD.hasOwnProperty(line) && voxelLineIndex[line]===undefined && !dgIfoodOn(scope, line, m)) return 0;   // linhas que só existem no relatório do iFood
@@ -4349,7 +4393,7 @@
       } else if(d.f){
         var sm = 0, ok = false; d.f.forEach(function(id){ var x = R.v[id]; if(x!==null && x!==undefined){ sm += x; ok = true; } }); R.v[d.id] = ok ? sm : null;
       } else if(d.k==='pct'){
-        var rl = R.v.rl, x2 = R.v[d.of]; R.v[d.id] = (rl>0 && x2!==null && x2!==undefined) ? x2/rl*100 : null;
+        var rl = R.v.rb, x2 = R.v[d.of]; R.v[d.id] = (rl>0 && x2!==null && x2!==undefined) ? x2/rl*100 : null;   // % do faturamento bruto
       }
     });
     return R;
@@ -4385,7 +4429,7 @@
     var prev = temPrev ? dgCalc(s, m-1, prevNoEst(m)) : null;
     var rl = cur.v.rl, multi = grupo.length>1;
     var incompleto = DG.some(function(d){ return d.aus; });
-    function pc(v){ if(v===null || v===undefined || !(rl>0)) return 'n/d'; var p = Math.round(v/rl*10000)/100; if(Math.abs(p)<0.005) p = 0; return (p<0?'−':'')+fmt2.format(Math.abs(p))+'%'; }
+    function pc(v){ var fbB = cur.v.rb; if(v===null || v===undefined || !(fbB>0)) return 'n/d'; var p = Math.round(v/fbB*10000)/100; if(Math.abs(p)<0.005) p = 0; return (p<0?'−':'')+fmt2.format(Math.abs(p))+'%'; }
     function ar(k){ return '<span class="dg-ar">'+(dgOpen[k]?'▼':'▶')+'</span>'; }
     function clk(k, lbl){ return ' data-dg="'+clEsc(k)+'" tabindex="0" role="button" aria-expanded="'+(!!dgOpen[k])+'" title="'+clEsc(lbl)+'"'; }
     function pv(id){ return prev ? prev.v[id] : null; }
@@ -4393,10 +4437,10 @@
     var cob = (multi ? (s==='Consolidado' ? 'consolidado das lojas' : 'consolidado da marca')+' · '+comDados.length+' de '+grupo.length+' lojas' : '1 loja') +
       (comDados.length<grupo.length ? ' · <b>cobertura incompleta</b> (Biggs 13 só tem DRE a partir de agosto)' : '') +
       (m===-1 && grupo.indexOf('Biggs 13')>=0 ? ' · Biggs 13 somada só de agosto a '+VOXEL_MONTH_LABELS[VOXEL_ACC_FIM].toLowerCase() : '');
-    var h = '<div class="dg-head"><div><h3>'+titulo+'</h3><div class="dg-sub">'+periodName(m)+' · '+cob+' · % sobre a <b>receita líquida gerencial</b> · valores em R$ com centavos, despesas negativas · clique numa categoria para abrir as contas e num resultado para ver a fórmula</div></div>'+
+    var h = '<div class="dg-head"><div><h3>'+titulo+'</h3><div class="dg-sub">'+periodName(m)+' · '+cob+' · <b>regime de competência</b> (o caixa é outra apresentação) · tudo em % do <b>faturamento bruto</b> · valores em R$ com centavos, despesas negativas · clique numa categoria para abrir as contas e num resultado para ver a fórmula</div></div>'+
       '<div class="dg-tools"><button type="button" class="dre-tool-btn" id="dgExp">Expandir tudo</button><button type="button" class="dre-tool-btn" id="dgCol">Recolher tudo</button>'+
       '<label><input type="checkbox" id="dgLojaChk"'+(dgLojaVer?' checked':'')+'> Versão para a loja (sem royalties e retiradas)</label><label><input type="checkbox" id="dgZeroChk"'+(dgZero?' checked':'')+'> Mostrar contas zeradas</label></div></div>';
-    h += '<div class="table-scroll"><table class="dg-table"><thead><tr><th>Estrutura da DRE</th><th class="num">Realizado R$</th><th class="num">% da receita líquida</th><th class="num">'+(naoAplic ? 'Período anterior' : 'Mês anterior R$'+(temPrev ? ' ('+VOXEL_MONTH_LABELS[m-1].toLowerCase()+')' : ''))+'</th><th class="num">Variação</th></tr></thead><tbody>';
+    h += '<div class="table-scroll"><table class="dg-table"><thead><tr><th>Estrutura da DRE</th><th class="num">Realizado R$</th><th class="num">% do faturamento bruto</th><th class="num">'+(naoAplic ? 'Período anterior' : 'Mês anterior R$'+(temPrev ? ' ('+VOXEL_MONTH_LABELS[m-1].toLowerCase()+')' : ''))+'</th><th class="num">Variação</th></tr></thead><tbody>';
     var prevTd = function(v, isPct){ return '<td class="num tabular">'+(naoAplic ? '<span class="dg-eq">Não aplicável</span>' : (v===null || v===undefined ? '<span class="dg-eq">—</span>' : (isPct ? fmt2.format(v)+'%' : dgR(v))))+'</td>'; };
     function leafRows(d){
       var shown = 0;
@@ -4456,7 +4500,7 @@
           var capT = dgSoma(DG_CAPITAL, s);
           var movT = supT + trfT + gamT + capT, dash = '<td class="num"><span class="dg-eq">—</span></td>';
           if(movT || dgZero){
-            h += '<tr class="dg-tot dg-movtot"'+clk('MOVINT', 'Abrir as movimentações internas')+'><td>'+ar('MOVINT')+'9. Movimentações financeiras e patrimoniais<span class="dg-tag">Sem impacto no resultado</span></td><td class="num tabular">'+dgR(movT)+'</td>'+dash+dash+dash+'</tr>';
+            h += '<tr class="dg-tot dg-movtot"'+clk('MOVINT', 'Abrir as movimentações internas')+'><td>'+ar('MOVINT')+'8. Movimentações financeiras e patrimoniais<span class="dg-tag">Sem impacto no resultado</span></td><td class="num tabular">'+dgR(movT)+'</td>'+dash+dash+dash+'</tr>';
             if(dgOpen.MOVINT){
               h += '<tr class="dg-obs"><td colspan="5">Movimentações entre contas, caixas do grupo e aportes. Não compõem receitas nem despesas e não alteram EBITDA ou resultado líquido.</td></tr>';
               h += '<tr class="dg-leaf"'+(multi ? clk('MOV:sup', 'Ver por unidade') : '')+'><td>'+(multi ? ar('MOV:sup') : '')+'Suprimento de caixa<span class="dg-note">transferência do banco para o caixa das lojas · os gastos feitos com esse dinheiro estão nas respectivas contas</span></td><td class="num tabular">'+dgR(supT)+'</td>'+dash+dash+dash+'</tr>';
@@ -4529,7 +4573,7 @@
       linha('Resultado líquido '+dgR(cur.v.ll)+' = Lucro líquido Voxel '+dgR(llO)+' − investimentos em ativo (fora da DRE) '+dgR(inv)+' + reembolsos reclassificados '+dgR(reemb)+(dgZ(royAdj) ? '' : ' + ajuste de royalties ao percentual contratual '+dgR(royAdj))+'.', cur.v.ll, llEsp)+
       '</ul></div>';
     // ---- indicadores com a mesma base ----
-    var cfG = -((cur.v.cmof||0)+(cur.v.cmov||0)+(cur.v.ocu||0)+(cur.v.ope||0)+(cur.v.adm||0));
+    var cfG = -((cur.v.cmof||0)+(cur.v.cmov||0)+(cur.v.ocu||0)+(cur.v.ope||0)+(cur.v.adm||0)+(cur.v['var']||0));
     var mcRb = cur.v.rb ? (cur.v.mc + (cur.v.roy||0))/cur.v.rb : 0, pe = mcRb>0 ? cfG/mcRb : null, prime = -((cur.v.cmv||0) + cmoT);
     var royR = -(cur.v.roy||0);
     var ind = '<div class="dg-box"><h4>Indicadores com os mesmos dados</h4><ul>'+
@@ -4752,7 +4796,7 @@
     return x;
   }
   // CMO Free: estrutura do período (na DRE gerencial fica abaixo da margem de contribuição, junto da equipe fixa)
-  var MAND_FIXOS = [['cmof','CMO — equipe fixa'],['cmov','CMO — Free'],['ocu','Despesas de ocupação'],['ope','Despesas operacionais'],['adm','Despesas administrativas']];
+  var MAND_FIXOS = [['cmof','CMO — equipe fixa'],['cmov','CMO — Free'],['ocu','Despesas de ocupação'],['ope','Despesas operacionais'],['adm','Despesas administrativas'],['var','Conta variável']];
   function mandData(t, m){
     var o = {t:t};
     if(!scopeHasData(t, m)){ o.na = 'sem DRE gerencial em '+periodName(m); o.calc = mandCalc({rb:null}); return o; }
@@ -4801,7 +4845,7 @@
   function mandDetHtml(o, m){
     if(!o) return '';
     if(o.na) return '<div class="card mand-det" id="mandDet"><h4>'+clEsc(o.t)+' · memória de cálculo</h4><p class="mand-sub">Sem cálculo: '+clEsc(o.na)+'.</p></div>';
-    var c = o.calc, R = o.R, pc = function(x){ return o.rl>0 ? fmt1.format(x/o.rl*100)+'%' : '—'; };
+    var c = o.calc, R = o.R, pc = function(x){ return o.rb>0 ? fmt1.format(x/o.rb*100)+'%' : '—'; };
     var contas = function(id, tot){
       var d = dgDef(id), lis = [], soma = 0;
       (d && d.c ? d.c : []).forEach(function(cc){ var lv = R.leaf[cc[0]]; if(lv===null || lv===undefined || Math.abs(lv)<0.005) return; soma += -lv; lis.push(clEsc(cc[0])+' '+dgR(-lv)); });
@@ -4823,7 +4867,7 @@
       '<b>Diferença</b> = faturamento '+dgR(o.rb)+' − venda mínima '+dgR(c.vm)+' = <b class="'+(c.dif>=0?'mand-ok':'mand-bad')+'">'+dgR(c.dif)+'</b> ('+mandStatusTxt(c)+')<br>'+
       '<b>Atingimento</b> = '+dgR(o.rb)+' ÷ '+dgR(c.vm)+' = <b>'+fmt1.format(c.ating)+'%</b> do equilíbrio')+
       '<br><span class="mand-na">Estimativa com a estrutura e a margem observadas no período'+(m===-1 ? ' (acumulado: soma das competências e razões recalculadas sobre os totais)' : '')+'.</span></div>';
-    h += '<div class="table-scroll" style="border:0;"><table><tr class="mg"><td>CMV, CMO e Prime Cost</td><td class="num">R$</td><td class="num">% receita líquida</td><td class="num">% do Prime Cost</td></tr>';
+    h += '<div class="table-scroll" style="border:0;"><table><tr class="mg"><td>CMV, CMO e Prime Cost</td><td class="num">R$</td><td class="num">% do faturamento bruto</td><td class="num">% do Prime Cost</td></tr>';
     var ppc = function(x){ return o.pc>0 ? fmt1.format(x/o.pc*100)+'%' : '—'; };
     h += '<tr><td>CMV'+contas('cmv', o.cmv)+'</td><td class="num">'+dgR(o.cmv)+'</td><td class="num">'+pc(o.cmv)+' <span class="'+(o.cmvP!==null && o.cmvP<=SIG.cmv.g ? 'mand-ok' : 'mand-bad')+'">('+(o.cmvP===null ? '—' : fmt1.format(o.cmvP))+'% do bruto · meta ≤'+fmt1.format(SIG.cmv.g)+'% s/ bruto)</span></td><td class="num">'+ppc(o.cmv)+'</td></tr>';
     h += '<tr><td>CMO — equipe fixa</td><td class="num">'+dgR(o.cmof)+'</td><td class="num">'+pc(o.cmof)+'</td><td class="num">'+ppc(o.cmof)+'</td></tr>';

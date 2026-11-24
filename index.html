@@ -1042,6 +1042,10 @@
   :is(#resumoKpis,#resumoKpis2) .kv-card{grid-column:auto;} @media (max-width:560px){ :is(#resumoKpis,#resumoKpis2) .kv-card{grid-column:auto;} }
   :is(#resumoKpis,#resumoKpis2) .kv-t{font-size:11px; margin-top:4px;} :is(#resumoKpis,#resumoKpis2) .kv-t td{padding:2px 0;}
   #heroFat.hero-fat{max-width:300px;} #heroFat .val{font-size:clamp(26px,2.4vw,34px);}
+  /* conta variável: números com espaço próprio, sem encostar no texto */
+  :is(#resumoKpis,#resumoKpis2) .kv-t td{padding:3px 0; vertical-align:top; line-height:1.3;}
+  :is(#resumoKpis,#resumoKpis2) .kv-t td.num{padding-left:10px; white-space:nowrap; width:1%;}
+  :is(#resumoKpis,#resumoKpis2) .kv-t td:first-child{overflow-wrap:anywhere;}
   .dg-fbar{margin:10px 0 0; padding:10px 14px; border:1px solid var(--border); border-radius:14px; background:var(--surface);}
   .dg-cmp-wrap{margin:22px 0 0;}
   #dgCmp .cmp-bt{font:inherit; color:inherit; background:transparent; border:1px solid transparent; border-radius:999px; padding:3px 9px; cursor:pointer;}
@@ -2497,7 +2501,7 @@
     return '<div class="vs-prev '+cls+'" title="Comparação com '+MONTH_FULL[m-1].toLowerCase()+'"><b>'+arrow+' '+txt+'</b> vs. '+VOXEL_MONTH_LABELS[m-1].toLowerCase()+(wasTxt ? ' <span class="vs-was">('+wasTxt+')</span>' : '')+'</div>';
   }
   // métricas no formato do sinaleiro, calculadas pela DRE gerencial (base "fli/flt" = receita líquida gerencial)
-  var DG_VAR_GR = [['Manutenção', ['Manutenção Predial e de Equipamentos']], ['Segurança de loja', ['Segurança presencial','Alarmes e monitoramento','Segurança']], ['Demais (endomarketing, perdas, outras despesas)', ['Endomarketing','Outras Despesas Administrativas','Despesas a Identificar','Perdas e indenizações de equipamentos','Transporte','Despesas com Marketing','Pacote Anúncios Ifood']]];
+  var DG_VAR_GR = [['Manutenção', ['Manutenção Predial e de Equipamentos']], ['Segurança de loja', ['Segurança presencial','Alarmes e monitoramento','Segurança']], ['Demais despesas', ['Endomarketing','Outras Despesas Administrativas','Despesas a Identificar','Perdas e indenizações de equipamentos','Transporte','Despesas com Marketing','Pacote Anúncios Ifood']]];
   var DG_OPEX = []; DG_VAR_GR.forEach(function(g){ DG_OPEX = DG_OPEX.concat(g[1]); });
   function dgSigM(sc, mm){
     if(mm<0 && mm!==-1) return null;

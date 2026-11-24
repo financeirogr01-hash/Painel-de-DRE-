@@ -985,6 +985,7 @@
   .pz-card{margin-top:12px; padding:14px 16px;}
   #fatAnoPanel{position:fixed; z-index:80; overflow:auto; border-radius:16px; box-shadow:0 18px 50px rgba(0,0,0,.55); animation:lvPop .16s ease-out;}
   #fatAnoPanel .lv-card{margin:0;}
+  #kpiPop{position:fixed; z-index:80; overflow:auto; border-radius:16px; box-shadow:0 18px 50px rgba(0,0,0,.55); animation:lvPop .16s ease-out;} #kpiPop .lv-card{margin:0; padding:14px 16px;} #kpiPop .vx-card{width:100%;}
   #difPop{position:fixed; z-index:80; overflow:auto; border-radius:16px; box-shadow:0 18px 50px rgba(0,0,0,.55); animation:lvPop .16s ease-out;} #difPop .lv-card{margin:0; padding:14px 16px;}
   .dc-l{display:flex; justify-content:space-between; gap:8px; font-size:12px; margin-top:3px;} .dc-l small{color:var(--ink-muted); font-size:10.5px;} .dc-l b{font-variant-numeric:tabular-nums;}
   .fa-bar{display:block; height:10px; border-radius:3px; min-width:3px;} .fa-bar.up{background:var(--good);} .fa-bar.dn{background:var(--critical);}
@@ -1226,7 +1227,7 @@
     <div class="loss-panel" id="lossPanelGer" hidden></div>
     <div class="fa-pop" id="fatAnoPanel" hidden></div>
     <div class="fa-pop" id="difPop" hidden></div>
-    <div class="card pz-card" id="leitura"></div>
+    <div class="fa-pop" id="kpiPop" hidden></div>
     <div class="chart-title" style="margin-top:18px; text-align:center;" id="sigTitle">Sinaleiro da DRE</div>
     <div class="sig-panel" id="sigPanel"></div>
     <div class="sig-legend" style="justify-content:center;">
@@ -1239,7 +1240,6 @@
     </div>
 
 
-    <div class="dg-cmp-wrap"><div id="dgCmp"></div><div class="vx-cmp-panel" id="dgCmpPanel" hidden></div></div>
     <div class="filterbar dg-fbar" role="region" aria-label="Filtros de mês e loja (DRE gerencial)">
       <div class="filter-group"><span class="filter-label">Mês</span><div class="voxel-tabs" id="fMonth2"></div></div>
       <div class="filter-group"><label class="filter-label" for="fBrand2">Marca</label><select id="fBrand2" autocomplete="off" class="fselect" style="min-width:130px;"></select></div>
@@ -2439,7 +2439,7 @@
   SIG.ded = {label:'Deduções da receita', color:'var(--cat-4)', base:'fb', dir:'low', g:10, y:13};
   // despesas com entregas da DRE gerencial (TAON + iFood) — devoluções ficam nas deduções
   SIG.ent = {label:'Despesas com entregas', color:'var(--cat-6)', base:'fb', dir:'low', g:2, y:3};
-  var SIG_ORDER = ['roy','ded','ent','lop'];   // CMV, CMO, conta fixa e conta variável ficam nos cartões do topo   // CMV, CMO e custos fixos ficam nos cartões do topo
+  var SIG_ORDER = ['cmv','cmo','roy','ded','ent','lop'];   // conta fixa e conta variável ficam nos cartões do topo
   // linha da DRE Voxel -> indicador (a 1ª linha de cada indicador recebe o sinal; as demais, só a cor)
   var SIG_LINES = {
     'CMV - Custo da Mercadoria Vendida':{k:'cmv', sig:true}, 'Insumos':{k:'cmv'}, 'Embalagens':{k:'cmv'}, 'Produtos para Comercialização':{k:'cmv'},
@@ -3039,12 +3039,66 @@
     if(difOpen && (e.target.closest('[data-difclose]') || !e.target.closest('#difPop'))){ difOpen = false; renderKpiGer(fState.scope, fState.month); }
   });
   document.addEventListener('keydown', function(e){ if(e.key==='Escape' && difOpen){ difOpen = false; renderKpiGer(fState.scope, fState.month); } if((e.key==='Enter' || e.key===' ') && e.target.id==='difCard'){ e.preventDefault(); e.target.click(); } });
+  // cartões "Leitura do mês" e "Comparativo por marca"; o detalhe abre num painel flutuante
+  var kpiPopOpen = null;
+  function leituraCardHtml(s, m){
+    if(!scopeHasData(s, m)) return '';
+    var v = dgCalc(s, m, false).v, rb = v.rb; if(!(rb>0)) return '';
+    var meta = FAT_META[m] ? scopeStores(s).filter(function(t){ return scopeHasData(t, m); }).reduce(function(a, t){ return a + (FAT_META[m][t]||0); }, 0) : null;
+    var pc = -((v.cmv||0)+(v.cmof||0)+(v.cmov||0))/rb*100, sob = v.sob/rb*100;
+    var lin = function(nome, val, cls){ return '<div class="dc-l"><span><i class="lt-dot '+cls+'"></i>'+nome+'</span><b>'+val+'</b></div>'; };
+    var fCls = meta ? (rb>=meta ? 'f-ok' : (rb>=meta*0.9 ? 'f-warn' : 'f-bad')) : '';
+    return '<div class="card kpi kpi-click" id="leitCard" data-kpop="leit" role="button" tabindex="0" aria-expanded="'+(kpiPopOpen==='leit')+'" aria-controls="kpiPop"><div class="kpi-label">Leitura do mês</div>'+
+      '<div class="kpi-sub">régua, realizado, diferença e dono, linha a linha</div>'+
+      lin('Faturamento', meta ? fmt1.format(rb/meta*100)+'% da meta' : brl0(rb), fCls)+
+      lin('Prime Cost', fmt1.format(pc)+'% · meta '+PC_META+'%', farol(pc, PC_META, 'low'))+
+      lin('Sobra do negócio', fmt1.format(sob)+'%', farol(sob, 23, 'high'))+
+      '<div class="kpi-hint">'+(kpiPopOpen==='leit' ? 'Fechar ▴' : 'Abrir a leitura ▾')+'</div></div>';
+  }
+  function cmpCardHtml(s, m){
+    var mm = m, L = BRANDS.map(function(b){ var M = dgCmpM('Marca:'+b.id, mm); return M ? {b:b.id, M:M} : null; }).filter(Boolean);
+    if(!L.length) return '';
+    var best = L.slice().sort(function(a, b){ return b.M.pctLop - a.M.pctLop; })[0];
+    return '<div class="card kpi kpi-click" id="cmpCard" data-kpop="cmp" role="button" tabindex="0" aria-expanded="'+(kpiPopOpen==='cmp')+'" aria-controls="kpiPop"><div class="kpi-label">Comparativo por marca</div>'+
+      '<div class="kpi-sub">margem operacional em % do faturamento bruto</div>'+
+      L.map(function(x){ return '<div class="dc-l"><span>'+brandIcon(x.b)+' '+x.b+'</span><b class="'+(x.M.lop<0?'pz-dn':'pz-up')+'">'+fmt1.format(x.M.pctLop)+'%</b></div>'; }).join('')+
+      '<div class="kpi-desp">melhor resultado: <b>'+best.b+'</b></div>'+
+      '<div class="kpi-hint">'+(kpiPopOpen==='cmp' ? 'Fechar ▴' : 'Ver marcas e escolher a loja ▾')+'</div></div>';
+  }
+  function kpiPopPos(){
+    var pn = document.getElementById('kpiPop'); if(!pn) return;
+    var cd = kpiPopOpen ? document.querySelector('[data-kpop="'+kpiPopOpen+'"]') : null;
+    if(!kpiPopOpen || !cd){ pn.hidden = true; pn.innerHTML = ''; return; }
+    if(pn.parentNode!==document.body) document.body.appendChild(pn);
+    var s = fState.scope, m = fState.month;
+    if(kpiPopOpen==='leit'){
+      pn.innerHTML = '<div class="card lv-card"><button type="button" class="lv-x" data-kpclose aria-label="Fechar">✕</button><div id="leitPopBody"></div></div>';
+      renderLeitura(s, m, 'leitPopBody', true);
+    } else {
+      pn.innerHTML = '<div class="card lv-card"><button type="button" class="lv-x" data-kpclose aria-label="Fechar">✕</button><div id="dgCmp"></div><div class="vx-cmp-panel" id="dgCmpPanel" hidden></div></div>';
+      dgCmpOpen = true; renderDgCmp();
+    }
+    pn.hidden = false;
+    var rc = cd.getBoundingClientRect(), vw = window.innerWidth, vh = window.innerHeight, w = Math.min(kpiPopOpen==='leit' ? 1000 : 900, vw - 32);
+    var left = Math.max(16, Math.min(rc.left - 200, vw - w - 16)), top = rc.bottom + 8;
+    if(vh - top < 360) top = Math.max(16, vh - Math.min(720, vh - 32) - 16);
+    pn.style.left = left+'px'; pn.style.top = top+'px'; pn.style.width = w+'px'; pn.style.maxHeight = (vh - top - 16)+'px';
+  }
+  window.addEventListener('resize', function(){ if(kpiPopOpen) kpiPopPos(); });
+  document.addEventListener('click', function(e){
+    if(!e.target.closest) return;
+    var c = e.target.closest('[data-kpop]');
+    if(c){ var k = c.getAttribute('data-kpop'); kpiPopOpen = kpiPopOpen===k ? null : k; renderKpiGer(fState.scope, fState.month); return; }
+    if(kpiPopOpen && e.target.closest('[data-cmpl]')){ kpiPopOpen = null; renderKpiGer(fState.scope, fState.month); return; }
+    if(kpiPopOpen && (e.target.closest('[data-kpclose]') || !e.target.closest('#kpiPop'))){ kpiPopOpen = null; renderKpiGer(fState.scope, fState.month); }
+  });
+  document.addEventListener('keydown', function(e){ if(e.key==='Escape' && kpiPopOpen){ kpiPopOpen = null; renderKpiGer(fState.scope, fState.month); } if((e.key==='Enter' || e.key===' ') && e.target.getAttribute && e.target.getAttribute('data-kpop')){ e.preventDefault(); e.target.click(); } });
   // cartão de conta variável aberta
   var LEIT_DONO = {rb:'Luiz Otávio · Receita', ded:'Financeiro', cmv:'Compras e Operações (Daiane)', cmo:'RH (Vitória) e Operações (Felipe)', pc:'Operações, com Compras e RH', ent:'Operações', cf:'Financeiro · contratos e reajustes', var:'Financeiro (Larissa abre e explica)', ebitda:'todos', r13:'Financeiro', imp:'Financeiro', sob:'todos', roy:'diretoria', ret:'diretoria', fim:'diretoria'};
   function farol(p, g, dir){ if(p===null || g===null) return ''; var ok = dir==='high' ? p>=g : p<=g, warn = dir==='high' ? p>=g*0.9 : p<=g*1.1; return ok ? 'f-ok' : (warn ? 'f-warn' : 'f-bad'); }
   var leituraOpen = false;
   function renderLeitura(s, m){
-    var box = document.getElementById('leitura'); if(!box) return;
+    var box = document.getElementById(arguments[2] || 'leitura'); if(!box) return;
     if(!scopeHasData(s, m)){ box.hidden = true; return; } box.hidden = false;
     var v = dgCalc(s, m, false).v, rb = v.rb; if(!(rb>0)){ box.hidden = true; return; }
     var meta = (FAT_META[m] ? scopeStores(s).filter(function(t){ return scopeHasData(t, m); }).reduce(function(a, t){ return a + (FAT_META[m][t]||0); }, 0) : null);
@@ -3068,7 +3122,8 @@
     ].filter(function(x){ return !(dgLojaVer && (x[0]==='roy' || x[0]==='ret' || x[0]==='fim')); });
     var resumo = L.filter(function(x){ return ['rb','pc','sob'].indexOf(x[0])>=0; }).map(function(x){ var p = x[3]/rb*100; return '<span>'+x[1].replace(' (CMV + CMO)','')+' <b>'+(x[0]==='rb' ? brl0(x[3]) : fmt1.format(p)+'%')+'</b></span>'; }).join('');
     var h = '<div class="lt-head" id="leituraBtn" role="button" tabindex="0" aria-expanded="'+leituraOpen+'"><div><div class="pz-t">Leitura do mês · '+scopeName(s)+' · '+periodName(m)+'</div><div class="lt-res">'+resumo+'</div></div><span class="lt-ar">'+(leituraOpen ? 'recolher ▴' : 'abrir a leitura linha a linha ▾')+'</span></div>';
-    if(!leituraOpen){ box.innerHTML = h; return; }
+    if(arguments[3]) h = '<div class="pz-t">Leitura do mês · '+scopeName(s)+' · '+periodName(m)+'</div>';
+    else if(!leituraOpen){ box.innerHTML = h; return; }
     h += '<div class="chart-note" style="margin:8px 0 8px;">Regime de competência (o caixa é outra apresentação) · tudo em % do faturamento bruto, com R$ ao lado · farol: verde na meta, amarelo até 10% pior, vermelho além disso.</div>'+
       '<div class="table-scroll"><table class="pz-t4 lt-t"><thead><tr><th>Linha</th><th>Régua</th><th class="num">Realizado</th><th class="num">R$</th><th class="num">Diferença</th><th>Quem responde</th></tr></thead><tbody>';
     L.forEach(function(x){
@@ -3232,7 +3287,8 @@
     }
     // 4–6) CMV, CMO e custos fixos pela DRE gerencial (mesma base e metas do sinaleiro); clique leva à linha da DRE gerencial
     var SM = dgSigM(s, m), SP = temPrev ? dgSigM(s, m-1) : null;
-    [['cmv','CMV','CMV R$ '], ['cmo','CMO (equipe fixa + Free)','sem os encargos da parte da empresa · CMO R$ '], ['cf','Conta fixa','aluguel, energia, gás, limpeza, telefonia, sistemas, contabilidade · R$ ']].forEach(function(it){
+    html += leituraCardHtml(s, m) + cmpCardHtml(s, m);
+    [['cf','Conta fixa','aluguel, energia, gás, limpeza, telefonia, sistemas, contabilidade · R$ ']].forEach(function(it){
       var k = it[0], d = SIG[k], p = sigPct(k, SM); if(p===null) return;
       var pp = SP ? sigPct(k, SP) : null, cls = sigClass(k, p), dif = p - d.g, rs = k==='cf' ? SM.cfFix : SM[k];
       var cor = cls==='sig-good' ? 'var(--good)' : (cls==='sig-warn' ? 'var(--warning)' : (cls==='sig-orange' ? '#ff8a3d' : 'var(--critical)'));
@@ -3245,7 +3301,7 @@
     });
     html += contaVarCard(s, m);
     box.innerHTML = html;
-    lossPos(); fatAnoPos(); difPos();
+    lossPos(); fatAnoPos(); difPos(); kpiPopPos();
     renderLeitura(s, m); renderFatCmp(s, m); renderDifPanel(s, m);
   }
   document.addEventListener('click', function(e){ if(e.target.closest && e.target.closest('#lossCardGer')){ lossGerOpen = !lossGerOpen; renderKpiGer(fState.scope, fState.month); return; }
@@ -5007,7 +5063,7 @@
     var best = L.slice().sort(function(a, b){ return b.M.pctLop - a.M.pctLop; })[0];
     box.innerHTML = '<div class="vx-card vx-cmp" id="dgCmpBtn" role="button" tabindex="0" aria-expanded="'+dgCmpOpen+'" aria-controls="dgCmpPanel"><div class="vx-t">Comparativo por marca · DRE gerencial · '+periodName(m)+' <span>'+(dgCmpOpen?'ocultar ▴':'ver ▾')+'</span></div>'+
       '<div class="vx-brands">'+L.map(function(x){ return '<button type="button" class="vx-b cmp-bt'+(dgCmpBrand===x.b?' on':'')+'" data-cmpb="'+clEsc(x.b)+'" aria-expanded="'+(dgCmpBrand===x.b)+'" title="Escolher uma loja da marca '+clEsc(x.b)+'"><i>'+brandIcon(x.b)+'</i>'+x.b+' <b class="'+(x.M.lop<0?'dn':'up')+'">'+fmt1.format(x.M.pctLop)+'%</b> <small>'+(dgCmpBrand===x.b?'▴':'▾')+'</small></button>'; }).join('')+'</div>'+
-      '<div class="vx-mini">EBITDA gerencial em % do faturamento bruto'+(best ? ' · melhor resultado: <b>'+best.b+'</b> ('+fmt1.format(best.M.pctLop)+'%)' : '')+' · clique numa marca para escolher a loja</div></div>'+dgCmpLojasHtml(m);
+      '<div class="vx-mini">Margem operacional em % do faturamento bruto'+(best ? ' · melhor resultado: <b>'+best.b+'</b> ('+fmt1.format(best.M.pctLop)+'%)' : '')+' · clique numa marca para escolher a loja</div></div>'+dgCmpLojasHtml(m);
     var pn = document.getElementById('dgCmpPanel'); if(!pn) return;
     if(!dgCmpOpen){ pn.hidden = true; pn.innerHTML = ''; return; }
     var R = dgCmpM('Consolidado', m), cols = L.concat(R ? [{b:'Rede', M:R, P:(m>0 ? dgCmpM('Consolidado', m-1) : null)}] : []);

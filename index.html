@@ -3096,12 +3096,14 @@
     });
     var per = m===-1 ? 'jan–'+VOXEL_MONTH_LABELS[VOXEL_ACC_FIM].toLowerCase()+'/2025' : MONTH_FULL[m].toLowerCase()+'/2025';
     if(!(ant>0)) return kpiCard('Faturamento x ano anterior', '—', null, 'sem faturamento de '+per+' para comparar');
+    // destaque: total da rede contra o ano anterior; mesmas lojas logo abaixo
+    var dT = tot - ant, pT = dT/ant*100, corT = dT>=0 ? 'var(--good)' : 'var(--critical)';
     var d = mesm - ant, p = d/ant*100, cor = d>=0 ? 'var(--good)' : 'var(--critical)';
-    return kpiCard('Faturamento x ano anterior <span style="font-weight:600;color:var(--ink-muted);text-transform:none;letter-spacing:0;">· mesmas lojas</span>', (p>=0?'+':'−')+fmt1.format(Math.abs(p))+'%', cor,
-      '<b>'+brl0(mesm)+'</b> contra <b>'+brl0(ant)+'</b> em '+per+
-      '<div class="kpi-desp" style="font-weight:700;color:'+cor+';">'+(d>=0?'+':'−')+brl0(Math.abs(d))+(d>=0?' a mais':' a menos')+' nas mesmas lojas</div>'+
-      (novas.length ? '<div class="kpi-desp">Com '+novas.join(', ')+' (não existia em 2025): '+brl0(tot)+' · '+((tot-ant)>=0?'+':'−')+fmt1.format(Math.abs((tot-ant)/ant*100))+'%</div>' : ''),
-      '<span class="chip '+(d>=0?'good':'critical')+'">'+(d>=0?'cresceram':'caíram')+' contra '+per+'</span><div class="kpi-hint">'+(fatAnoOpen ? 'Fechar detalhe ▴' : 'Ver por loja ▾')+'</div>')
+    return kpiCard('Faturamento x ano anterior', (pT>=0?'+':'−')+fmt1.format(Math.abs(pT))+'%', corT,
+      '<b>'+brl0(tot)+'</b> contra <b>'+brl0(ant)+'</b> em '+per+
+      '<div class="kpi-desp" style="font-weight:700;color:'+corT+';">'+(dT>=0?'+':'−')+brl0(Math.abs(dT))+(dT>=0?' a mais':' a menos')+' no total'+(novas.length ? ' (com '+novas.join(', ')+')' : '')+'</div>'+
+      (novas.length ? '<div class="kpi-desp">Mesmas lojas, sem '+novas.join(', ')+': <b style="color:'+cor+';">'+(p>=0?'+':'−')+fmt1.format(Math.abs(p))+'%</b> ('+(d>=0?'+':'−')+brl0(Math.abs(d))+')</div>' : ''),
+      '<span class="chip '+(dT>=0?'good':'critical')+'">'+(dT>=0?'cresceu':'caiu')+' contra '+per+'</span><div class="kpi-hint">'+(fatAnoOpen ? 'Fechar detalhe ▴' : 'Ver por loja ▾')+'</div>')
       .replace('<div class="card kpi">', '<div class="card kpi kpi-click" id="fatAnoCard" role="button" tabindex="0" aria-expanded="'+fatAnoOpen+'" aria-controls="fatAnoPanel">');
   }
   document.addEventListener('click', function(e){ if(e.target.closest && e.target.closest('#leituraBtn')){ leituraOpen = !leituraOpen; renderLeitura(fState.scope, fState.month); } });

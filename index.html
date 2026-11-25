@@ -1004,7 +1004,7 @@
   .dc-l{display:flex; justify-content:space-between; gap:8px; font-size:12px; margin-top:3px;} .dc-l small{color:var(--ink-muted); font-size:10.5px;} .dc-l b{font-variant-numeric:tabular-nums;}
   .fa-bar{display:block; height:10px; border-radius:3px; min-width:3px;} .fa-bar.up{background:var(--good);} .fa-bar.dn{background:var(--critical);}
   .lt-head{display:flex; justify-content:space-between; align-items:center; gap:12px; cursor:pointer;} .lt-head:focus-visible{outline:2px solid var(--accent); outline-offset:3px;}
-  .lt-res{display:flex; flex-wrap:wrap; gap:6px 16px; font-size:12.5px; color:var(--ink-2); margin-top:3px;} .lt-res b{color:var(--ink);}
+  .lt-res{display:flex; flex-wrap:wrap; gap:6px 16px; font-size:12.5px; color:var(--ink-2); margin-top:3px;} .lt-res b{color:var(--ink);} .lt-res b.pz-up{color:var(--good);} .lt-res b.pz-dn{color:var(--critical);} .lt-res small{color:var(--ink-muted); font-size:11px;}
   .lt-ar{font-size:12px; font-weight:700; color:var(--accent); white-space:nowrap;}
   .lt-t td{white-space:nowrap;} .lt-t td:first-child{white-space:normal;} .lt-tot td{font-weight:800; border-top:1px solid var(--border);}
   .lt-dot{display:inline-block; width:9px; height:9px; border-radius:50%; margin-right:6px; background:var(--ink-muted); vertical-align:middle;}
@@ -3008,7 +3008,8 @@
       }
     }
     h += '<p class="chart-note" style="margin:6px 0 0;">Meta e 2025: painel de vendas (meta de outubro = outubro/25 da loja + Dell’Iris; Biggs 13 = venda de agosto/26). Outubro/26 é o mesmo faturamento da DRE gerencial.</p>';
-    box.innerHTML = h;
+    if(!fatBoxOpen){ var hd = '<div class="lt-head" id="fatBoxBtn" role="button" tabindex="0" aria-expanded="false"><div><div class="pz-t">Faturamento de '+mlab+' · '+scopeName(s)+'</div><div class="lt-res"><span><b>'+brl0(real)+'</b></span>'+(temMeta && meta ? '<span>meta <b>'+fmt1.format(real/meta*100)+'%</b></span>' : '')+(ant ? '<span>vs '+pl+' <b class="'+(real>=ant?'pz-up':'pz-dn')+'">'+(real>=ant?'+':'−')+fmt1.format(Math.abs((real-ant)/ant*100))+'%</b></span>' : '')+(mesmas[1] ? '<span>mesmas lojas vs 2025 <b class="'+(mesmas[0]>=mesmas[1]?'pz-up':'pz-dn')+'">'+(mesmas[0]>=mesmas[1]?'+':'−')+fmt1.format(Math.abs((mesmas[0]-mesmas[1])/mesmas[1]*100))+'%</b></span>' : '')+'</div></div><span class="lt-ar">abrir os comparativos ▾</span></div>'; box.innerHTML = hd; return; }
+    box.innerHTML = '<div class="lt-head" id="fatBoxBtn" role="button" tabindex="0" aria-expanded="true" style="justify-content:flex-end;margin-bottom:4px;"><span class="lt-ar">recolher ▴</span></div>' + h;
   }
   document.addEventListener('click', function(e){ if(e.target.closest && e.target.closest('#fatCmpBtn')){ fatCmpOpen = !fatCmpOpen; renderFatCmp(fState.scope, fState.month); } });
   // de quem é a diferença: CMV contra 30% e CMO contra 25% do faturamento bruto, por conta e por loja
@@ -3027,7 +3028,18 @@
     if(lojas.length>1) h += '<div class="dif-st">Por loja (diferença contra a meta de cada loja)</div><table class="pz-t4"><tbody>'+lojas.map(function(x){ return '<tr><td>'+clEsc(x.t)+'</td><td class="num tabular">'+(x.p===null?'—':fmt1.format(x.p)+'%')+'</td><td class="num tabular '+(x.d>0?'pz-dn':'pz-up')+'">'+(x.d>0?'+':'−')+brl0(Math.abs(x.d))+'</td></tr>'; }).join('')+'</tbody></table>';
     return h + '</div>';
   }
-  function renderDifPanel(s, m){ var box = document.getElementById('difPanel'); if(!box) return; var h = difPanelHtml(s, m); box.hidden = !h; box.innerHTML = h; }
+  var fatBoxOpen = false, difBoxOpen = false;
+  function renderDifPanel(s, m){
+    var box = document.getElementById('difPanel'); if(!box) return;
+    var h = difPanelHtml(s, m); box.hidden = !h; if(!h){ box.innerHTML = ''; return; }
+    if(difBoxOpen){ box.innerHTML = '<div class="lt-head" id="difBoxBtn" role="button" tabindex="0" aria-expanded="true" style="justify-content:flex-end;margin-bottom:4px;"><span class="lt-ar">recolher ▴</span></div>' + h; return; }
+    var v = dgCalc(s, m, false).v, rb = v.rb, dV = -(v.cmv||0) - SIG.cmv.g/100*rb, dO = -((v.cmof||0)+(v.cmov||0)) - SIG.cmo.g/100*rb, sg = function(x){ return '<b class="'+(x>0?'pz-dn':'pz-up')+'">'+(x>0?'+':'−')+brl0(Math.abs(x))+'</b>'; };
+    box.innerHTML = '<div class="lt-head" id="difBoxBtn" role="button" tabindex="0" aria-expanded="false"><div><div class="pz-t">De quem é a diferença · '+scopeName(s)+' · '+periodName(m)+'</div><div class="lt-res"><span>CMV '+sg(dV)+' <small>Compras e Operações</small></span><span>CMO '+sg(dO)+' <small>RH e Operações</small></span><span>Prime Cost '+sg(dV+dO)+'</span></div></div><span class="lt-ar">abrir por conta e por loja ▾</span></div>';
+  }
+  document.addEventListener('click', function(e){ if(!e.target.closest) return;
+    if(e.target.closest('#fatBoxBtn')){ fatBoxOpen = !fatBoxOpen; renderFatCmp(fState.scope, fState.month); return; }
+    if(e.target.closest('#difBoxBtn')){ difBoxOpen = !difBoxOpen; renderDifPanel(fState.scope, fState.month); } });
+  document.addEventListener('keydown', function(e){ if((e.key==='Enter' || e.key===' ') && (e.target.id==='fatBoxBtn' || e.target.id==='difBoxBtn')){ e.preventDefault(); e.target.click(); } });
   function difPanelHtml(s, m){
     if(!scopeHasData(s, m)) return '';
     return '<div class="pz-t">De quem é a diferença · '+scopeName(s)+' · '+periodName(m)+'</div><div class="chart-note" style="margin:2px 0 10px;">CMV e CMO sobre o faturamento bruto, abertos por conta e por loja. A divisão por área (cozinha, salão, bar, delivery) depende de um rateio que a base ainda não traz.</div>'+

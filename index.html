@@ -1931,6 +1931,7 @@
   // último mês fechado: o painel abre nele e o acumulado/média vão até ele (outubro ainda parcial)
   var VOXEL_ACC_FIM = 9, VOXEL_PADRAO = 9;
   var VOXEL_VISIVEL_DESDE = 8;   // meses visíveis nos seletores: a partir de outubro/2026 (jan–set ocultos)
+  var VX_TAB_DESDE = 0;   // na aba DRE Voxel (histórico/rastreio) aparecem todos os meses da base Voxel: jan–out/2026
   var VOXEL_PARCIAL = {};   // meses parciais exibidos no filtro (nenhum no momento)   // setembro: 17 lojas fechadas pelos lançamentos completos (Biggs 13 com cartão/apps estimado)   // jan–set/2026 · Biggs 13 só tem DRE de agosto (índice 7)
   function voxelZeros(){ var z = []; for(var i=0;i<VOXEL_NM;i++) z.push(0); return z; }
   function voxelSum4(a,b){ return a.map(function(v, i){ return v + (b[i]||0); }); }
@@ -5286,7 +5287,7 @@
   function vxSalvar(){ try{ localStorage.setItem(VX_LS, JSON.stringify(vxMeses)); }catch(e){} }
   function vxAplicaColunas(){
     var st = document.getElementById('vxColStyle'); if(!st){ st = document.createElement('style'); st.id = 'vxColStyle'; document.head.appendChild(st); }
-    var css = ''; vxMeses.forEach(function(on, i){ if(!on || i < VOXEL_VISIVEL_DESDE) css += '#voxelTable tr > th:nth-child('+(i+2)+'), #voxelTable tr > td:nth-child('+(i+2)+'):not([colspan]){display:none;}\n'; });
+    var css = ''; vxMeses.forEach(function(on, i){ if(!on || i < VX_TAB_DESDE) css += '#voxelTable tr > th:nth-child('+(i+2)+'), #voxelTable tr > td:nth-child('+(i+2)+'):not([colspan]){display:none;}\n'; });
     st.textContent = css;
   }
   function vxBrand(b, m){ var s = 'Marca:'+b, M = storeMetrics(s, m); if(!M) return null; var P = (m>0 && scopeHasData(s, m-1)) ? storeMetrics(s, m-1) : null;
@@ -5295,9 +5296,9 @@
     var box = document.getElementById('vxBar'); if(!box) return;
     var m = fState.month, s = fState.scope;
     // 1) meses
-    var chips = VOXEL_MONTH_LABELS.map(function(l, i){ if(i < VOXEL_VISIVEL_DESDE) return ''; return '<button type="button" class="vx-chip'+(vxMeses[i]?' on':'')+'" data-vxm="'+i+'" aria-pressed="'+vxMeses[i]+'">'+l+'</button>'; }).join('');
-    var nOn = vxMeses.filter(function(on, i){ return on && i >= VOXEL_VISIVEL_DESDE; }).length;
-    var c1 = '<div class="vx-card"><div class="vx-t">Meses na tabela <span>'+nOn+' de '+(VOXEL_NM - VOXEL_VISIVEL_DESDE)+'</span></div><div class="vx-chips">'+chips+'</div>'+
+    var chips = VOXEL_MONTH_LABELS.map(function(l, i){ if(i < VX_TAB_DESDE) return ''; return '<button type="button" class="vx-chip'+(vxMeses[i]?' on':'')+'" data-vxm="'+i+'" aria-pressed="'+vxMeses[i]+'">'+l+'</button>'; }).join('');
+    var nOn = vxMeses.filter(function(on, i){ return on && i >= VX_TAB_DESDE; }).length;
+    var c1 = '<div class="vx-card"><div class="vx-t">Meses na tabela <span>'+nOn+' de '+(VOXEL_NM - VX_TAB_DESDE)+'</span></div><div class="vx-chips">'+chips+'</div>'+
       '</div>';
     // 2) visão
     var opts = '<option value="Consolidado">Consolidado da rede</option><optgroup label="Marcas">'+BRANDS.map(function(b){ return '<option value="Marca:'+b.id+'">Marca '+b.id+'</option>'; }).join('')+'</optgroup><optgroup label="Lojas">'+voxelTabsList.map(function(t){ return '<option value="'+t+'">'+t+'</option>'; }).join('')+'</optgroup>';
